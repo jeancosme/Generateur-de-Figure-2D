@@ -1,6 +1,6 @@
 ## 🖥️ Démo en ligne
 
-👉 [Clique ici pour tester l'application]([https://jeancosme.github.io/generateur-figures](https://jeancosme.github.io/Generateur-de-Figure-2D/))  
+👉 [Clique ici pour tester l'application](https://jeancosme.github.io/Generateur-de-Figure-2D/)  
 
 ---
 
