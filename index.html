@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Générateur de figure JSXGraph</title>
+
+    <!-- Lien vers le CSS -->
+  <link rel="stylesheet" href="style.css">
+
+    <!-- Libs externes -->
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
+
+
+  <link href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+
+  <!-- Lien vers ton script JS -->
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <h1>😮‍🔮 Générateur de figure JSXGraph</h1>
+    <!-- Barre avec prompt + bouton -->
+  <div class="controls">
+    <input type="text" id="promptInput" placeholder="Ex : carré de côté 4">
+    <button onclick="generateFigure()">Générer</button>
+    <button onclick="zoomIn()">➕</button>
+    <button onclick="zoomOut()">➖</button>
+    <button onclick="rotateFigure()">🔁 Rotation +10°</button>
+    <button onclick="resetBoard()">♻️ Réinitialiser</button>
+    <button id="toggleHelp">❓ Aide</button>
+  </div>
+
+  <div class="suggestions" id="suggestionBox" style="display: none;"></div>
+
+  <div style="display: flex; align-items: flex-start; gap: 20px;">
+  <!-- Zone de dessin -->
+  <div id="jxgbox" class="jxgbox"></div>
+
+  <!-- Options d'affichage -->
+  <div id="optionsPanel" class="option-box">
+      <h3>🛠️ Options d'affichage</h3>
+
+      <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
+      <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
+      <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
+
+      <select id="unitSelector">
+        <option value="mm">mm</option>
+        <option value="cm" selected>cm</option>
+        <option value="dm">dm</option>
+        <option value="m">m</option>
+        <option value="km">km</option>
+      </select>
+
+      <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
+      <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
+      <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
+      <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
+</div>
+
+ 
+  <!-- Explications -->
+  <div id="helpBox" style="display: none;">
+  <h3>🧠 Explications</h3>
+  <p>Utilise la barre de script pour décrire une figure, par exemple :</p>
+  <ul>
+    <li><code>carré de côté 4</code></li>
+    <li><code>rectangle de 5 sur 3</code></li>
+    <li><code>triangle équilatéral de côté 6</code></li>
+  </ul>
+  <p>Tu peux aussi afficher des éléments :</p>
+  <ul>
+    <li>✔️ les angles droits</li>
+    <li>✔️ les longueurs, les unités</li>
+    <li>✔️ les codages, diagonales, rayons, diamètres</li>
+  </ul>
+  <p>👉 Clique sur <strong>"Générer"</strong> pour afficher la figure. Tu peux la faire tourner ou la réinitialiser avec les boutons au-dessus.</p>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,123 @@
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      padding: 40px;
+      background-color: #fefefe;
+      background-image: linear-gradient(to bottom, #fefefe 98%, #dcdcdc 99%);
+      background-size: 100% 40px;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    input[type="text"] {
+      width: 350px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+    }
+
+    code {
+      background-color: #f1f1f1;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #3498db;
+      color: white;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #jxgbox {
+      width: 650px;
+      height: 420px;
+      border: 2px solid #ccc;
+      background-color: white;
+      border-radius: 12px;
+      margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    #helpBox {
+      background-color: #fff8c4; /* jaune pâle */
+      border: 2px solid black;
+      padding: 15px;
+      margin-left: 30px;
+      max-width: 320px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      line-height: 1.5em;
+    }
+    #helpBox h3 {
+      margin-top: 0;
+      color: black;
+    }
+
+    #main-options-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .option-box {
+  background-color: #e0f7ff;           /* bleu ciel */
+  border: 2px solid black;             /* bord noir */
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.option-box h3 {
+  margin-top: 0;
+}
+
+    .suggestions {
+      margin-top: 8px;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      max-width: 350px;
+      padding: 8px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .suggestions div {
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .suggestions div:hover, .suggestions .highlighted {
+      background-color: #ecf0f1;
+    }
