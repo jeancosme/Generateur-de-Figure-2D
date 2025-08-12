@@ -41,6 +41,19 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let radiusLabelAnchor = null;
     let extraElements = []; 
     let r = null;
+    let customLabels = [];
+
+    if (labelInput !== "") {
+  customLabels = labelInput.split(",").map(l => l.trim().toUpperCase());
+}
+
+function getLabel(index) {
+  const defaultLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+  if (customLabels && customLabels.length > index) {
+    return customLabels[index];
+  }
+  return defaultLabels[index];
+}
 
 // Fonction Cercles   
 function updateCircleExtras() {
@@ -520,6 +533,18 @@ function getRightAngleTriples() {
 function generateFigure() {
   const prompt = document.getElementById("promptInput").value.toLowerCase();
 
+  const labelInput = document.getElementById("labelInput").value.trim();
+    if (labelInput.includes(",")) {
+      // Cas 1 : séparés par des virgules
+      customLabels = labelInput.split(',').map(s => s.trim().toUpperCase());
+    } else if (labelInput.includes(" ")) {
+      // Cas 2 : séparés par des espaces
+      customLabels = labelInput.split(' ').map(s => s.trim().toUpperCase());
+    } else {
+      // Cas 3 : chaîne unique — on découpe chaque lettre
+      customLabels = labelInput.toUpperCase().split('');
+    }  
+
   // Réinitialiser proprement le board
   board.removeObject([...board.objectsList]); // <- ceci ne suffit pas toujours
   while (board.objectsList.length > 0) {
@@ -627,10 +652,10 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
         fillOpacity: 1
       });
 
-        let labelA = board.create('text', [A.X(), A.Y() - 0.3, "A"]);
-        let labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
-        let labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
-        let labelD = board.create('text', [D.X(), D.Y() + 0.3, "D"]);
+        let labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
+        let labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
+        let labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
+        let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
         texts.push(labelA, labelB, labelC, labelD);
 
         addDraggingToPolygon(polygon, points, texts);
@@ -684,10 +709,10 @@ function drawLosange(side) {
     fillOpacity: 1
   });
 
-  let labelA = board.create('text', [A.X(), A.Y() - 0.3, "A"]);
-  let labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
-  let labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
-  let labelD = board.create('text', [D.X(), D.Y() + 0.3, "D"]);
+  let labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
+  let labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
+  let labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
+  let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
   texts.push(labelA, labelB, labelC, labelD);
 
   updateDiagonals();
