@@ -24,7 +24,7 @@ Une application pédagogique interactive permettant de générer et manipuler de
 
 ## 🖥️ Démo en ligne
 
-👉 [Clique ici pour tester l'application](https://ton-nom.github.io/generateur-figures)  
+👉 [Clique ici pour tester l'application](https://jeancosme.github.io/generateur-figures)  
 
 ---
 
