@@ -1,3 +1,12 @@
+## 🖥️ Démo en ligne
+
+👉 [Clique ici pour tester l'application](https://jeancosme.github.io/generateur-figures)  
+👉 [Clique ici pour tester l'application](https://jeancosme.github.io/Generateur-de-Figure-2D/)
+
+> Lien direct : [https://jeancosme.github.io/Generateur-de-Figure-2D/](https://jeancosme.github.io/Generateur-de-Figure-2D/)
+
+---
+
 # 🎯 Générateur de figure JSXGraph
 
 Une application pédagogique interactive permettant de générer et manipuler des figures géométriques dynamiques à partir d'une simple description textuelle.
@@ -22,11 +31,7 @@ Une application pédagogique interactive permettant de générer et manipuler de
 
 ---
 
-## 🖥️ Démo en ligne
 
-👉 [Clique ici pour tester l'application](https://jeancosme.github.io/generateur-figures)  
-
----
 
 ## 🚀 Utilisation locale
 
