@@ -1,0 +1,15 @@
+# fichiers systèmes
+.DS_Store
+Thumbs.db
+
+# fichiers temporaires d’éditeurs
+*.log
+*.tmp
+*.swp
+*.bak
+
+# fichiers de sauvegarde
+*.orig
+*~
+
+.vscode/
