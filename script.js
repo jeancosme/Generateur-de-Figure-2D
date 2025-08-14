@@ -43,9 +43,6 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let r = null;
     let customLabels = [];
 
-    if (labelInput !== "") {
-  customLabels = labelInput.split(",").map(l => l.trim().toUpperCase());
-}
 
 function getLabel(index) {
   const defaultLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
@@ -925,18 +922,40 @@ function rotateFigure(step = Math.PI / 18) {
     function zoomOut() {
       board.zoomOut();
     }
-    function resetBoard() {
-    // Supprimer tous les objets manuellement
-    board.objectsList.forEach(obj => board.removeObject(obj));
-    
-    // Réinitialiser les variables
-    points = [];
-    texts = [];
-    polygon = null;
+function resetBoard() {
+  // Supprime complètement l'ancien board
+  JXG.JSXGraph.freeBoard(board);
 
-    // Redessiner le board proprement
-    board.fullupdate();
-    }  
+  // En recrée un tout neuf
+  board = JXG.JSXGraph.initBoard('jxgbox', {
+    boundingbox: [-5, 5, 5, -5],
+    axis: false,
+    showCopyright: false,
+    showNavigation: false,
+    keepaspectratio: true,
+    zoom: { enabled: false }
+  });
+
+  // Remet à zéro tous les tableaux liés aux éléments
+  points = [];
+  polygon = null;
+  texts = [];
+  rightAngleMarkers = [];
+  lengthLabels = [];
+  codingMarks = [];
+  codingSegments = [];
+  diagonals = [];
+  diameterSegment = null;
+  diameterPoints = [];
+  centerPoint = null;
+  circlePoint = null;
+  circleObject = null;
+  radiusSegment = null;
+  radiusLabel = null;
+  radiusLabelAnchor = null;
+  extraElements = [];
+  r = null;
+}
 
 function enableDrag() {
   if (points.length === 0) return;
@@ -1041,6 +1060,28 @@ function highlightSuggestion(items) {
   });
 }
 
+// Masque case "unités" si case "longueur" n'est pas cochée
+document.addEventListener("DOMContentLoaded", function () {
+  const toggleLengths = document.getElementById("toggleLengths");
+  const unitGroup = document.getElementById("unitGroup");
+
+  function updateUnitVisibility() {
+    unitGroup.style.display = toggleLengths.checked ? "block" : "none";
+
+    // Optionnel : décocher automatiquement "Afficher les unités"
+    if (!toggleLengths.checked) {
+      document.getElementById("showUnitsCheckbox").checked = false;
+    }
+  }
+
+  toggleLengths.addEventListener("change", updateUnitVisibility);
+
+  // Mise à jour initiale à l'ouverture
+  updateUnitVisibility();
+});
+
+
+
 // Masquer les suggestions si on clique ailleurs
 document.addEventListener("click", (e) => {
   if (!suggestionsDiv.contains(e.target) && e.target !== input) {
@@ -1057,6 +1098,34 @@ document.getElementById("toggleHelp").addEventListener("click", function () {
   box.style.display = (box.style.display === "none" || box.style.display === "") ? "block" : "none";
 });
 
+document.getElementById("promptInput").addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    const suggestions = document.querySelectorAll("#suggestionBox .suggestion-item");
+    if (suggestions.length > 0) {
+      const firstSuggestion = suggestions[0].textContent;
+      this.value = firstSuggestion;
+
+      // On cache la suggestion après l'insertion
+      document.getElementById("suggestionBox").style.display = "none";
+
+      // Optionnel : tu peux lancer automatiquement le bouton "Générer"
+      // document.querySelector("button[onclick='generateFigure()']").click();
+
+      event.preventDefault(); // empêche le rechargement du formulaire si c’est le cas
+    }
+  }
+});
+
+
+function updateSuggestionHighlight(suggestions) {
+  suggestions.forEach((item, index) => {
+    if (index === selectedSuggestionIndex) {
+      item.classList.add("highlighted");
+    } else {
+      item.classList.remove("highlighted");
+    }
+  });
+}
 
 
 // Tous les autres AddEvent

@@ -20,6 +20,7 @@
   <!-- Lien vers ton script JS -->
   <script defer src="script.js"></script>
 </head>
+
 <body>
   <h1>😮‍🔮 Générateur de figure 2D</h1>
     <!-- Barre avec prompt + bouton -->
@@ -40,26 +41,29 @@
   <!-- Zone de dessin -->
   <div id="jxgbox" class="jxgbox"></div>
 
-  <!-- Options d'affichage -->
-  <div id="optionsPanel" class="option-box">
-      <h3>🛠️ Options d'affichage</h3>
+<!-- Options d'affichage -->
+<div id="optionsPanel" class="option-box">
+  <h3>🛠️ Options d'affichage</h3>
 
-      <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
-      <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
-      <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
+  <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
+  <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
 
-      <select id="unitSelector">
-        <option value="mm">mm</option>
-        <option value="cm" selected>cm</option>
-        <option value="dm">dm</option>
-        <option value="m">m</option>
-        <option value="km">km</option>
-      </select>
+  <!-- Groupe à afficher / masquer -->
+  <div id="unitGroup" style="display: none; margin-left: 20px;">
+    <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
+    <select id="unitSelector">
+      <option value="mm">mm</option>
+      <option value="cm" selected>cm</option>
+      <option value="dm">dm</option>
+      <option value="m">m</option>
+      <option value="km">km</option>
+    </select>
+  </div>
 
-      <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
-      <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
-      <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
-      <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
+  <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
+  <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
+  <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
+  <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
 </div>
 
  
