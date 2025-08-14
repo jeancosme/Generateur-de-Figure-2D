@@ -42,6 +42,7 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let extraElements = []; 
     let r = null;
     let customLabels = [];
+    let angleMarkers = [];
 
 
 function getLabel(index) {
@@ -494,7 +495,9 @@ function updateRightAngleMarkers(visible) {
       rightAngleMarkers.push(marker);
     });
   }
-}   
+}  
+
+
 
 // Détection du type de figure pour ajuster les angles droits
 function detectCurrentFigure() {
@@ -526,6 +529,39 @@ function getRightAngleTriples() {
   }
   return [];
 }
+
+// Fonction pour ajouter les angles égaux
+function updateEqualAngleMarkers() {
+  // Nettoyer les anciens marqueurs
+  angleMarkers.forEach(marker => board.removeObject(marker));
+  angleMarkers = [];
+
+  if (!document.getElementById("toggleEqualAngles").checked) return;
+
+  if (!polygon || polygon.vertices.length !== 3) return;
+
+  const [A, B, C] = polygon.vertices;
+
+  const angleA = JXG.Math.Geometry.rad(polygon.board, B, A, C);
+  const angleB = JXG.Math.Geometry.rad(polygon.board, A, B, C);
+  const angleC = JXG.Math.Geometry.rad(polygon.board, A, C, B);
+
+  // Comparaison tolérante pour flotants
+  const ε = 0.05;
+  const equalAB = Math.abs(angleA - angleB) < ε;
+  const equalAC = Math.abs(angleA - angleC) < ε;
+  const equalBC = Math.abs(angleB - angleC) < ε;
+
+  if (equalAB) angleMarkers.push(drawAngleMark(A));
+  if (equalAC) angleMarkers.push(drawAngleMark(C));
+  if (equalBC) angleMarkers.push(drawAngleMark(B));
+}
+
+function drawAngleMark(vertex) {
+  // Très simple : petit texte au-dessus du point
+  return board.create('text', [vertex.X(), vertex.Y() + 0.5, '∠']);
+}
+
 
 function generateFigure() {
   const prompt = document.getElementById("promptInput").value.toLowerCase();
@@ -857,7 +893,7 @@ function drawEquilateralTriangle(side) {
   const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
   const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
   texts.push(labelA, labelB, labelC);
-
+  updateEqualAngleMarkers() 
   addDraggingToPolygon(polygon, points, texts);
 }
     
@@ -936,11 +972,14 @@ function resetBoard() {
     zoom: { enabled: false }
   });
 
+
   // Remet à zéro tous les tableaux liés aux éléments
   points = [];
   polygon = null;
   texts = [];
   rightAngleMarkers = [];
+  angleMarkers.forEach(marker => board.removeObject(marker));
+  angleMarkers = [];
   lengthLabels = [];
   codingMarks = [];
   codingSegments = [];
@@ -1140,3 +1179,4 @@ document.getElementById("toggleRadius").addEventListener("change", updateCircleE
 document.getElementById("unitSelector").addEventListener("change", updateCircleExtras);
 document.getElementById("toggleDiameter").addEventListener("change", updateCircleExtras);
 document.getElementById("toggleCodings").addEventListener("change", updateCircleExtras);
+document.getElementById("toggleEqualAngles").addEventListener("change", updateEqualAngleMarkers);
