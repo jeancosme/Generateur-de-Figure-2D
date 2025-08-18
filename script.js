@@ -43,6 +43,8 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let r = null;
     let customLabels = [];
     let angleMarkers = [];
+    let lengthHandles = []; // <-- NEW: handles for draggable length labels
+
 
 
 function getLabel(index) {
@@ -94,72 +96,95 @@ function updateCircleExtras() {
   }
 
   // === Rayon ===
-  if (showRadius) {
-    circlePoint.setAttribute({
-      fixed: false,
-      size: 0,
-      strokeOpacity: 0,
-      fillOpacity: 0
-    });
+// ...existing code...
+    if (showRadius) {
+      circlePoint.setAttribute({
+        fixed: false,
+        size: 0,
+        strokeOpacity: 0,
+        fillOpacity: 0
+      });
 
-    radiusSegment = board.create('segment', [centerPoint, circlePoint], {
-      strokeColor: 'black',
-      strokeWidth: 2,
-      fixed: true
-    });
+      radiusSegment = board.create('segment', [centerPoint, circlePoint], {
+        strokeColor: 'black',
+        strokeWidth: 2,
+        fixed: true
+      });
 
-    const showLengths = document.getElementById("toggleLengths")?.checked;
-    const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
+      const showLengths = document.getElementById("toggleLengths")?.checked;
+      const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
 
-    if (showLengths) {
+      // calculer position initiale du label (milieu du rayon + offset orthogonal)
+      const dx0 = circlePoint.X() - centerPoint.X();
+      const dy0 = circlePoint.Y() - centerPoint.Y();
+      const len0 = Math.sqrt(dx0 * dx0 + dy0 * dy0) || 1;
+      const offset0 = 0.3;
+      const nx0 = offset0 * (-dy0 / len0);
+      const ny0 = offset0 * (dx0 / len0);
+      const startX = (centerPoint.X() + circlePoint.X()) / 2 + nx0;
+      const startY = (centerPoint.Y() + circlePoint.Y()) / 2 + ny0;
+
+      // handle numérique déplaçable (zone cliquable invisible)
+      const handle = board.create('point', [startX, startY], {
+        size: 6,
+        strokeOpacity: 0,
+        fillOpacity: 0,
+        fixed: false,
+        name: '',
+        highlight: false,
+        showInfobox: false
+      });
+      try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
+
+      // label qui suit le handle ; affiche la longueur seulement si showLengths
       radiusLabel = board.create('text', [
+        () => handle.X(),
+        () => handle.Y(),
         () => {
           const dx = circlePoint.X() - centerPoint.X();
           const dy = circlePoint.Y() - centerPoint.Y();
           const len = Math.sqrt(dx * dx + dy * dy);
-
-          // Vecteur normal unitaire (orthogonal au rayon)
-          const offset = 0.3; // ↗ valeur à ajuster pour décaler plus ou moins
-          const nx = offset * (-dy / len);
-          const ny = offset * (dx / len);
-
-          return (centerPoint.X() + circlePoint.X()) / 2 + nx;
-        },
-        () => {
-          const dx = circlePoint.X() - centerPoint.X();
-          const dy = circlePoint.Y() - centerPoint.Y();
-          const len = Math.sqrt(dx * dx + dy * dy);
-
-          const offset = 0.3;
-          const nx = offset * (-dy / len);
-          const ny = offset * (dx / len);
-
-          return (centerPoint.Y() + circlePoint.Y()) / 2 + ny;
-        },
-        () => {
-          const dx = circlePoint.X() - centerPoint.X();
-          const dy = circlePoint.Y() - centerPoint.Y();
-          const len = Math.sqrt(dx * dx + dy * dy);
-          return showUnits ? `${Number(len.toFixed(2))} ${unit}` : `${Number(len.toFixed(2))}`;        }
+          if (!showLengths) return ''; // texte vide si on ne veut pas afficher la valeur
+          return showUnits ? `${Number(len.toFixed(2))} ${unit}` : `${Number(len.toFixed(2))}`;
+        }
       ], {
         anchorX: 'middle',
         anchorY: 'middle',
         fontSize: 14,
-        fixed: true
+        fixed: false,
+        name: ''
       });
-      } 
 
-  } else {
-    circlePoint.setAttribute({
-      size: 2,
-      strokeColor: 'black',
-      fillColor: 'black',
-      strokeOpacity: 1,
-      fillOpacity: 1,
-      fixed: false
-    });
-  }
+      // rendre la zone de texte draggable : on relaie les événements souris vers le handle
+      try {
+        if (radiusLabel.rendNode) {
+          radiusLabel.rendNode.style.cursor = 'move';
+          radiusLabel.rendNode.addEventListener('mousedown', function (ev) {
+            ev.stopPropagation();
+            ev.preventDefault();
+            const start = board.getUsrCoordsOfMouse(ev);
+            function onMove(e) {
+              const pos = board.getUsrCoordsOfMouse(e);
+              const dxm = pos[0] - start[0];
+              const dym = pos[1] - start[1];
+              handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
+              start[0] = pos[0]; start[1] = pos[1];
+              board.update();
+            }
+            function onUp() {
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }, { passive: false });
+        }
+      } catch (e) { /* ignore if DOM not accessible */ }
 
+      // conserver pour nettoyage global si nécessaire
+      lengthHandles.push(handle);
+      lengthLabels.push(radiusLabel);
+    } 
   // === Diamètre ===
   if (showDiameter) {
     const angleA = Math.atan2(dy, dx);
@@ -282,18 +307,6 @@ function updateDiagonals() {
   diagonals.push(diag1, diag2);
 }
 
-function updateLengthLabels() {
-  // Supprimer les longueurs précédentes
-  lengthLabels.forEach(label => board.removeObject(label));
-  lengthLabels = [];
-
-  const showLengths = document.getElementById("toggleLengths").checked;
-  const showUnits = document.getElementById("showUnitsCheckbox").checked;
-  const unit = document.getElementById("unitSelector").value;
-
-  if (!showLengths || points.length === 0) return;
-
-  // Fonction pour formater les longueurs
   function formatLength(len) {
     const rounded = Math.round(len * 10) / 10;
     const space = '\u00A0'; // espace insécable
@@ -336,20 +349,74 @@ function updateLengthLabels() {
     const len = Math.sqrt(dx * dx + dy * dy);
     const offset = 0.3;
 
+    // Position initiale du label (au milieu du segment, décalé)
+    const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
+    const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
+
+    // Créer un handle (point invisible mais cliquable) que l'utilisateur peut déplacer
+    const handle = board.create('point', [
+      () => midX,
+      () => midY
+    ], {
+      size: 6,                // zone cliquable
+      strokeOpacity: 0,      // invisible visuellement
+      fillOpacity: 0,        // invisible visuellement
+      fixed: false,
+      name: '',
+      highlight: false,
+      showInfobox: false
+    });
+
+    // Forcer le curseur "move" sur le handle pour UX
+    try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
+
+    // Créer un label qui suit le handle
     const label = board.create('text', [
-      () => (pt1.X() + pt2.X()) / 2 + offset * (dy / len),
-      () => (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len),
+      () => handle.X(),
+      () => handle.Y(),
       () => formatLength(Math.sqrt((pt2.X() - pt1.X())**2 + (pt2.Y() - pt1.Y())**2))
     ], {
       fontSize: 14,
-      fixed: true,
+      fixed: false,            // non fixe => suit le handle dynamiquement
       anchorX: 'middle',
-      anchorY: 'middle'
+      anchorY: 'middle',
+      highlight: false,
+      name: ''
     });
 
+    // Rendre la zone du texte également draggable : relayer les événements souris au handle
+    try {
+      if (label.rendNode) {
+        label.rendNode.style.cursor = 'move';
+        label.rendNode.addEventListener('mousedown', function (ev) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          const start = board.getUsrCoordsOfMouse(ev);
+          function onMove(e) {
+            const pos = board.getUsrCoordsOfMouse(e);
+            const dxm = pos[0] - start[0];
+            const dym = pos[1] - start[1];
+            // déplacer handle (point.moveTo attend des coordonnées)
+            handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
+            // mettre à jour start
+            start[0] = pos[0]; start[1] = pos[1];
+            board.update();
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        }, { passive: false });
+      }
+    } catch (e) { /* ignore if DOM not accessible */ }
+
+    lengthHandles.push(handle);
     lengthLabels.push(label);
   }
-}
+
+
 
 function drawCodingMark(pt1, pt2, index = 1) {
   const dx = pt2.X() - pt1.X();
@@ -490,125 +557,314 @@ function updateCodings() {
 
 // Fonction pour ajouter les angles droits
 function updateRightAngleMarkers(visible) {
-  // Supprimer les anciens
-  rightAngleMarkers.forEach(marker => board.removeObject(marker));
+  // accepter event ou bool
+  if (typeof visible === 'object' && visible !== null && 'target' in visible) {
+    visible = !!visible.target.checked;
+  } else {
+    visible = !!visible;
+  }
+
+  // Supprimer anciens marqueurs
+  rightAngleMarkers.forEach(marker => {
+    try { board.removeObject(marker); } catch (e) { /* ignore */ }
+  });
   rightAngleMarkers = [];
 
-  if (!visible || !points.length) return;
+  if (!visible || !points || points.length < 3) return;
 
-  // Supprimer la vérification sur figureType
-  const triples = getRightAngleTriples();
+  const n = points.length;
+  const fig = typeof detectCurrentFigure === 'function' ? detectCurrentFigure() : '';
 
+  // Choix des triples à marquer :
+  // - pour carré/rectangle : on force tous les sommets
+  // - sinon : on détecte les angles droits (tolérance dans getRightAngleTriples)
+  let triples = [];
+  if (fig === 'square' || fig === 'rectangle') {
+    for (let i = 0; i < n; i++) {
+      const A = points[(i - 1 + n) % n];
+      const B = points[i];
+      const C = points[(i + 1) % n];
+      if (A && B && C) triples.push([A, B, C]);
+    }
+  } else {
+    triples = getRightAngleTriples();
+  }
+
+  // Créer un marqueur "petit carré" pour chaque triple
   triples.forEach(([A, B, C]) => {
-    const marker = board.create('nonreflexangle', [A, B, C], {
-      type: 'square',
-      radius: 0.4,
-      orthoType: 'square',
-      visible: true,
-      strokeColor: 'black',
-      fillColor: 'white',
-      fillOpacity: 1,
-      name: '',
-      label: { visible: false }
-    });
-    rightAngleMarkers.push(marker);
+    if (!A || !B || !C) return;
+
+    // taille relative (s'adapte à la taille locale)
+    const d1 = Math.hypot(A.X() - B.X(), A.Y() - B.Y());
+    const d2 = Math.hypot(C.X() - B.X(), C.Y() - B.Y());
+    const base = Math.min(d1, d2);
+    const radius = Math.min(0.35, Math.max(0.12, base * 0.18)); // bornes pour lisibilité
+
+    // Utiliser l'objet 'angle' avec type square (contour noir, fond blanc)
+    try {
+      const ang = board.create('angle', [A, B, C], {
+        type: 'square',
+        orthoType: 'square',
+        radius: radius,
+        withLabel: false,
+        name: '',
+        strokeColor: 'black',
+        strokeWidth: 1.2,
+        fillColor: 'white',
+        fillOpacity: 1,
+        fixed: true,
+        highlight: false
+      });
+      rightAngleMarkers.push(ang);
+    } catch (e) {
+      // fallback : petit polygone si 'angle' ne s'affiche pas pour une raison quelconque
+      const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
+      const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
+      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+      if (len1 === 0 || len2 === 0) return;
+      const u1x = v1x / len1, u1y = v1y / len1;
+      const u2x = v2x / len2, u2y = v2y / len2;
+      const size = Math.min(radius, Math.min(len1, len2) * 0.35);
+      const p0 = [() => B.X(), () => B.Y()];
+      const p1 = [() => B.X() + u1x * size, () => B.Y() + u1y * size];
+      const p2 = [() => B.X() + (u1x + u2x) * size, () => B.Y() + (u1y + u2y) * size];
+      const p3 = [() => B.X() + u2x * size, () => B.Y() + u2y * size];
+      const sq = board.create('polygon', [p0, p1, p2, p3], {
+        fillColor: 'white',
+        fillOpacity: 1,
+        strokeColor: 'black',
+        strokeWidth: 1.2,
+        fixed: true,
+        highlight: false,
+        name: ''
+      });
+      rightAngleMarkers.push(sq);
+    }
   });
+
+  board.update();
 }
 
+// Fonction pour ajouter les marqueurs d'angles égaux
+function updateEqualAngleMarkers(visible) {
+  if (typeof visible === 'object' && visible !== null && 'target' in visible) visible = !!visible.target.checked;
+  else visible = !!visible;
 
+  // supprimer anciens marqueurs
+  angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  angleMarkers = [];
+  if (!visible || !points || points.length < 3) { board.update(); return; }
+
+  // Ne pas afficher pour carré/rectangle
+  const fig = typeof detectCurrentFigure === 'function' ? detectCurrentFigure() : '';
+  if (fig === 'square' || fig === 'rectangle') { board.update(); return; }
+
+  // helper : point in polygon (ray-casting)
+  function pointInPolygon(x, y, polyPts) {
+    let inside = false;
+    for (let i = 0, j = polyPts.length - 1; i < polyPts.length; j = i++) {
+      const xi = polyPts[i][0], yi = polyPts[i][1];
+      const xj = polyPts[j][0], yj = polyPts[j][1];
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // construire tableau de coordonnées polygonales pour tests
+  const polyCoords = points.map(p => [p.X(), p.Y()]);
+
+  const n = points.length;
+  const angles = new Array(n).fill(null);
+
+  // calculer tous les angles (cos -> acos stable)
+  for (let i = 0; i < n; i++) {
+    const A = points[(i - 1 + n) % n];
+    const B = points[i];
+    const C = points[(i + 1) % n];
+    if (!A || !B || !C) continue;
+
+    const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
+    const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
+    const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+    if (len1 === 0 || len2 === 0) continue;
+    let cosv = (v1x * v2x + v1y * v2y) / (len1 * len2);
+    cosv = Math.max(-1, Math.min(1, cosv));
+    angles[i] = Math.acos(cosv);
+  }
+
+  // grouper angles égaux (tolérance)
+  const groups = {};
+  for (let i = 0; i < n; i++) {
+    const ang = angles[i];
+    if (ang == null) continue;
+    const key = (Math.round(ang * 100) / 100).toFixed(2);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(i);
+  }
+
+  // paramètres d'affichage
+  const baseRadius = 0.42;
+  const segments = 36; // précision de l'arc
+
+  // pour chaque groupe d'angles égaux, dessiner un arc à l'intérieur
+  for (const key in groups) {
+    const indices = groups[key];
+    if (indices.length < 2) continue;
+
+    for (const idx of indices) {
+      const B = points[idx];
+      const A = points[(idx - 1 + n) % n];
+      const C = points[(idx + 1) % n];
+      if (!A || !B || !C) continue;
+
+      const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
+      const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
+      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+      if (len1 === 0 || len2 === 0) continue;
+      const u1x = v1x / len1, u1y = v1y / len1;
+      const u2x = v2x / len2, u2y = v2y / len2;
+
+      // angles des rayons
+      let a1 = Math.atan2(u1y, u1x);
+      let a2 = Math.atan2(u2y, u2x);
+
+      // normaliser diff en [-PI,PI)
+      function normAng(a) { while (a <= -Math.PI) a += 2*Math.PI; while (a > Math.PI) a -= 2*Math.PI; return a; }
+      let delta = normAng(a2 - a1);
+
+      // radius adapté
+      const radius = Math.min(baseRadius, Math.min(len1, len2) * 0.22);
+
+      // tester si le petit arc (sens court) est à l'intérieur : prendre milieu angulaire du petit arc
+      const midSmall = a1 + delta / 2;
+      const midX = B.X() + Math.cos(midSmall) * radius * 0.9;
+      const midY = B.Y() + Math.sin(midSmall) * radius * 0.9;
+      const smallInside = pointInPolygon(midX, midY, polyCoords);
+
+      // si le petit arc n'est pas à l'intérieur, on inverse le sens en prenant l'arc long (ajout/soustraction 2PI)
+      if (!smallInside) {
+        if (delta > 0) delta = delta - 2 * Math.PI;
+        else delta = delta + 2 * Math.PI;
+      }
+
+      // construire une curve paramétrique t in [0,1] -> angle = a1 + t*delta
+      const curve = board.create('curve', [
+        function(t) { return B.X() + Math.cos(a1 + t * delta) * radius; },
+        function(t) { return B.Y() + Math.sin(a1 + t * delta) * radius; },
+        0,
+        1
+      ], {
+        strokeColor: 'black',
+        strokeWidth: 1.4,
+        fixed: true,
+        highlight: false,
+        dash: 0,
+        name: ''
+      });
+
+      angleMarkers.push(curve);
+    }
+  }
+
+  board.update();
+}
 
 
 // Détection du type de figure pour ajuster les angles droits
 function detectCurrentFigure() {
+  // Quadrilatère : vérifier si 4 angles droits (produit scalaire)
   if (points.length === 4 && polygon) {
-    const [A, B, C, D] = points;
-
-    const dAB = A.Dist(B);
-    const dBC = B.Dist(C);
-    const dCD = C.Dist(D);
-    const dDA = D.Dist(A);
-
-    const angleA = JXG.Math.Geometry.rad(board, D, A, B);
-    const angleB = JXG.Math.Geometry.rad(board, A, B, C);
-    const angleC = JXG.Math.Geometry.rad(board, B, C, D);
-    const angleD = JXG.Math.Geometry.rad(board, C, D, A);
-
-    const right = angle => Math.abs(angle - Math.PI / 2) < 0.05;
-
-    if (right(angleA) && right(angleB) && right(angleC) && right(angleD)) {
-      if (Math.abs(dAB - dBC) < 0.01) return "square";
-      else return "rectangle";
+    const n = 4;
+    const REL_TOL = 5e-4;
+    for (let i = 0; i < n; i++) {
+      const A = points[(i - 1 + n) % n];
+      const B = points[i];
+      const C = points[(i + 1) % n];
+      if (!A || !B || !C) return "";
+      const ax = A.X(), ay = A.Y();
+      const bx = B.X(), by = B.Y();
+      const cx = C.X(), cy = C.Y();
+      const v1x = ax - bx, v1y = ay - by;
+      const v2x = cx - bx, v2y = cy - by;
+      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+      if (len1 === 0 || len2 === 0) return "";
+      const dot = v1x * v2x + v1y * v2y;
+      const tol = Math.max(1e-6, REL_TOL * (len1 * len2));
+      if (Math.abs(dot) > tol) return "";
     }
 
-    return ""; // ni carré ni rectangle
+    // tous les angles sont droits -> différencier carré/rectangle
+    const lens = [];
+    for (let i = 0; i < 4; i++) lens.push(points[i].Dist(points[(i + 1) % 4]));
+    const rounded = lens.map(l => Math.round(l * 100) / 100);
+    const unique = [...new Set(rounded.map(v => v.toFixed(2)))];
+    if (unique.length === 1) return "square";
+    return "rectangle";
   }
 
+  // Triangle rectangle ?
   if (points.length === 3) {
-    // Détection triangle rectangle
-    const [A, B, C] = points;
-    const angleA = JXG.Math.Geometry.rad(board, C, A, B);
-    const angleB = JXG.Math.Geometry.rad(board, A, B, C);
-    const angleC = JXG.Math.Geometry.rad(board, B, C, A);
-    const right = angle => Math.abs(angle - Math.PI / 2) < 0.05;
-    if (right(angleA) || right(angleB) || right(angleC)) return "rightTriangle";
+    const n = 3;
+    const REL_TOL = 5e-4;
+    for (let i = 0; i < n; i++) {
+      const A = points[(i - 1 + n) % n];
+      const B = points[i];
+      const C = points[(i + 1) % n];
+      if (!A || !B || !C) continue;
+      const ax = A.X(), ay = A.Y();
+      const bx = B.X(), by = B.Y();
+      const cx = C.X(), cy = C.Y();
+      const v1x = ax - bx, v1y = ay - by;
+      const v2x = cx - bx, v2y = cy - by;
+      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+      if (len1 === 0 || len2 === 0) continue;
+      const dot = v1x * v2x + v1y * v2y;
+      const tol = Math.max(1e-6, REL_TOL * (len1 * len2));
+      if (Math.abs(dot) <= tol) return "rightTriangle";
+    }
   }
 
   return "";
 }
 
-
-// Points d’angle droit (sens horaire)
+// Remplacement consolidé : détection et affichage des angles droits / égaux
 function getRightAngleTriples() {
-  const ANGLE_RIGHT_TOLERANCE = 0.05;
   if (!points || points.length < 3) return [];
 
   const rightTriples = [];
   const n = points.length;
-
-const isRight = angle => Math.abs(angle - Math.PI / 2) <ANGLE_RIGHT_TOLERANCE;
+  const REL_TOL = 5e-4;    // tolérance relative (ajustée)
+  const ABS_MIN = 1e-6;
 
   for (let i = 0; i < n; i++) {
     const A = points[(i - 1 + n) % n];
     const B = points[i];
     const C = points[(i + 1) % n];
+    if (!A || !B || !C) continue;
 
-    const angle = JXG.Math.Geometry.rad(board, A, B, C);
-    console.log(`Angle at point ${B.name}: ${angle}`); // Ajoute cette ligne
+    const ax = A.X(), ay = A.Y();
+    const bx = B.X(), by = B.Y();
+    const cx = C.X(), cy = C.Y();
 
-    if (isRight(angle)) {
+    const v1x = ax - bx, v1y = ay - by;
+    const v2x = cx - bx, v2y = cy - by;
+    const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
+    if (len1 === 0 || len2 === 0) continue;
+
+    const dot = v1x * v2x + v1y * v2y;
+    const tol = Math.max(ABS_MIN, REL_TOL * (len1 * len2));
+    if (Math.abs(dot) <= tol) {
       rightTriples.push([A, B, C]);
     }
   }
-  console.log("Detected right angle triples:", rightTriples); // Ajoute cette ligne
+
   return rightTriples;
 }
 
-// Fonction pour ajouter les angles égaux
-function updateEqualAngleMarkers() {
-  // Nettoyer les anciens marqueurs
-  angleMarkers.forEach(marker => board.removeObject(marker));
-  angleMarkers = [];
 
-  if (!document.getElementById("toggleEqualAngles").checked) return;
 
-  if (!polygon || polygon.vertices.length !== 3) return;
 
-  const [A, B, C] = polygon.vertices;
-
-  const angleA = JXG.Math.Geometry.rad(polygon.board, B, A, C);
-  const angleB = JXG.Math.Geometry.rad(polygon.board, A, B, C);
-  const angleC = JXG.Math.Geometry.rad(polygon.board, A, C, B);
-
-  // Comparaison tolérante pour flotants
-  const ε = 0.05;
-  const equalAB = Math.abs(angleA - angleB) < ε;
-  const equalAC = Math.abs(angleA - angleC) < ε;
-  const equalBC = Math.abs(angleB - angleC) < ε;
-
-  if (equalAB) angleMarkers.push(drawAngleMark(A));
-  if (equalAC) angleMarkers.push(drawAngleMark(C));
-  if (equalBC) angleMarkers.push(drawAngleMark(B));
-}
 
 function drawAngleMark(vertex) {
   // Très simple : petit texte au-dessus du point
@@ -657,6 +913,10 @@ function generateFigure() {
   } else if (prompt.includes("triangle équilatéral")) {
     const side = extractNumber(prompt, 4);
     drawEquilateralTriangle(side);
+  } else if (prompt.includes("triangle isocèle")) {
+    // extraire base et hauteur : exemple "triangle isocèle de base 6 et hauteur 4"
+    const [base, height] = extractTwoNumbers(prompt, [4, 3]);
+    drawIsoscelesTriangle(base, height);
   } else if (prompt.includes("losange")) {
     const size = extractNumber(prompt, 4);
     drawLosange(size);           
@@ -725,10 +985,10 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
     //  LISTE DES DRAWS
 
     function drawSquare(size) {
-      const A = board.create('point', [0, 0], {name: '',fixed: true, visible: true});
-      const B = board.create('point', [size, 0], {name: '',fixed: true, visible: true});
-      const C = board.create('point', [size, size], {name: '',fixed: true, visible: true});
-      const D = board.create('point', [0, size], {name: '',fixed: true, visible: true});
+      const A = board.create('point', [0, 0], {name: '',fixed: true, visible: false});
+      const B = board.create('point', [size, 0], {name: '',fixed: true, visible: false});
+      const C = board.create('point', [size, size], {name: '',fixed: true, visible: false});
+      const D = board.create('point', [0, size], {name: '',fixed: true, visible: false});
 
       points = [A, B, C, D];
       polygon = board.create('polygon', points, {
@@ -808,6 +1068,130 @@ function drawLosange(side) {
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
 
+function updateLengthLabels() {
+  // Supprimer les longueurs précédentes et leurs handles
+  lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
+  lengthHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+  lengthLabels = [];
+  lengthHandles = [];
+
+  const showLengths = document.getElementById("toggleLengths").checked;
+  const showUnits = document.getElementById("showUnitsCheckbox").checked;
+  const unit = document.getElementById("unitSelector").value;
+
+  if (!showLengths || points.length === 0) return;
+
+  // Fonction pour formater les longueurs
+  function formatLength(len) {
+    const rounded = Math.round(len * 10) / 10;
+    const space = '\u00A0'; // espace insécable
+    const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
+
+    return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
+  }
+
+  const n = points.length;
+  let sidesToShow = [];
+
+  if (n === 4) {
+    const sideLens = [];
+    for (let i = 0; i < 4; i++) {
+      const pt1 = points[i];
+      const pt2 = points[(i + 1) % 4];
+      const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
+      sideLens.push(len);
+    }
+
+    const rounded = sideLens.map(len => Math.round(len * 100) / 100);
+    const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
+
+    if (unique.length === 1) {
+      sidesToShow = [0];
+    } else if (unique.length === 2) {
+      sidesToShow = [0, 1];
+    } else {
+      sidesToShow = [0, 1, 2, 3];
+    }
+  } else {
+    sidesToShow = [...Array(n).keys()];
+  }
+
+  for (let i of sidesToShow) {
+    const pt1 = points[i];
+    const pt2 = points[(i + 1) % n];
+    const dx = pt2.X() - pt1.X();
+    const dy = pt2.Y() - pt1.Y();
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const offset = 0.3;
+
+    // Position initiale du label (au milieu du segment, décalé)
+    const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
+    const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
+
+    // Créer un handle (point invisible mais cliquable) que l'utilisateur peut déplacer
+    const handle = board.create('point', [
+      midX,
+      midY
+    ], {
+      size: 6,                // zone cliquable
+      strokeOpacity: 0,      // invisible visuellement
+      fillOpacity: 0,        // invisible visuellement
+      fixed: false,
+      name: '',
+      highlight: false,
+      showInfobox: false
+    });
+
+    // Forcer le curseur "move" sur le handle pour UX
+    try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
+
+    // Créer un label qui suit le handle
+    const label = board.create('text', [
+      () => handle.X(),
+      () => handle.Y(),
+      () => formatLength(Math.sqrt((pt2.X() - pt1.X())**2 + (pt2.Y() - pt1.Y())**2))
+    ], {
+      fontSize: 14,
+      fixed: false,            // non fixe => suit le handle dynamiquement
+      anchorX: 'middle',
+      anchorY: 'middle',
+      highlight: false,
+      name: ''
+    });
+
+    // Rendre la zone du texte également draggable : relayer les événements souris au handle
+    try {
+      if (label.rendNode) {
+        label.rendNode.style.cursor = 'move';
+        label.rendNode.addEventListener('mousedown', function (ev) {
+          ev.stopPropagation();
+          ev.preventDefault();
+          const start = board.getUsrCoordsOfMouse(ev);
+          function onMove(e) {
+            const pos = board.getUsrCoordsOfMouse(e);
+            const dxm = pos[0] - start[0];
+            const dym = pos[1] - start[1];
+            // déplacer handle (point.moveTo attend des coordonnées)
+            handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
+            // mettre à jour start
+            start[0] = pos[0]; start[1] = pos[1];
+            board.update();
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        }, { passive: false });
+      }
+    } catch (e) { /* ignore if DOM not accessible */ }
+
+    lengthHandles.push(handle);
+    lengthLabels.push(label);
+  }
+}
+
 
 function drawCircle(radius) {
   if (centerPoint) board.removeObject(centerPoint);
@@ -875,6 +1259,35 @@ const C = board.create('point', [offsetX, offsetY + height], {visible:false, fix
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
   console.log("→ Triangle rectangle généré avec base =", base, "et hauteur =", height);
 }
+
+function drawIsoscelesTriangle(base = 4, height = 3) {
+  // position : base sur l'axe des abscisses, sommet au milieu
+  const A = board.create('point', [0, 0], {visible: false, fixed: true});
+  const B = board.create('point', [base, 0], {visible: false, fixed: true});
+  const C = board.create('point', [base / 2, height], {visible: false, fixed: true});
+
+  points = [A, B, C];
+  polygon = board.create('polygon', points, {
+    borders: { strokeColor: 'black' },
+    fillColor: 'white',
+    fillOpacity: 1
+  });
+
+  const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
+  const labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
+  const labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
+  texts.push(labelA, labelB, labelC);
+
+  addDraggingToPolygon(polygon, points, texts);
+
+  // Mettre à jour les marqueurs/labels pertinents
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
+  updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
+  updateLengthLabels();
+  updateCodings();
+  updateDiagonals();
+}
+
 
 function drawParallelogram(base, height) {
   const offset = base / 3;
@@ -997,7 +1410,7 @@ function drawEquilateralTriangle(side) {
   const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
   const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
   texts.push(labelA, labelB, labelC);
-  updateEqualAngleMarkers();
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
   addDraggingToPolygon(polygon, points, texts);
 }
     
@@ -1050,7 +1463,7 @@ function rotateFigure(step = Math.PI / 18) {
   updateLengthLabels();
   updateCodings();
   updateDiagonals();
-  updateEqualAngleMarkers();
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
   updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
   board.update();
 }
@@ -1120,6 +1533,7 @@ const suggestionsList = [
   "rectangle de 5 sur 3",
   "triangle équilatéral de côté 4",
   "triangle rectangle de base 3 et hauteur 4",
+  "triangle isocèle de base 6 et hauteur 4",
   "cercle de rayon 2",
   "losange de côté 5",
   "parallélogramme base 5 hauteur 3",
@@ -1233,8 +1647,8 @@ document.addEventListener("click", (e) => {
   }
 });
 
-document.getElementById("toggleRightAngles").addEventListener("change", function () {
-  updateRightAngleMarkers(this.checked);
+document.getElementById("toggleRightAngles").addEventListener("change", function (e) {
+  updateRightAngleMarkers(e.target.checked);
 });
 
 document.getElementById("toggleHelp").addEventListener("click", function () {
@@ -1271,7 +1685,6 @@ function updateSuggestionHighlight(suggestions) {
   });
 }
 
-
 // Tous les autres AddEvent
 document.getElementById("toggleLengths").addEventListener("change", updateLengthLabels);
 document.getElementById("showUnitsCheckbox").addEventListener("change", updateLengthLabels);
@@ -1284,4 +1697,6 @@ document.getElementById("toggleRadius").addEventListener("change", updateCircleE
 document.getElementById("unitSelector").addEventListener("change", updateCircleExtras);
 document.getElementById("toggleDiameter").addEventListener("change", updateCircleExtras);
 document.getElementById("toggleCodings").addEventListener("change", updateCircleExtras);
-document.getElementById("toggleEqualAngles").addEventListener("change", updateEqualAngleMarkers);
+document.getElementById("toggleEqualAngles").addEventListener("change", function(e){
+  updateEqualAngleMarkers(e.target.checked);
+});
