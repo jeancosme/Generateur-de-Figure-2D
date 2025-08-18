@@ -1,2 +1,5 @@
-- Rotate à revoir complet
+ finir angle égaux triangle equilateral
 
+parallélogramme : figure déplacer > la lettre follow le sommet
+
+Export PDF et SVG
