@@ -391,12 +391,6 @@ function updateCodings() {
   codingMarks.forEach(m => board.removeObject(m));
   codingMarks = [];
 
-  board.on('boundingbox', () => {
-    if (document.getElementById("toggleCodings").checked) {
-      updateCodings();
-    }
-  });
-
   if (!document.getElementById("toggleCodings").checked || points.length < 3) return;
 
   const n = points.length;
@@ -417,7 +411,7 @@ function updateCodings() {
     groups[key].push(seg.index);
   });
 
-  let markCount = 1; // nombre de traits par groupe
+  let markCount = 1;
 
   for (const key in groups) {
     const indices = groups[key];
@@ -427,38 +421,65 @@ function updateCodings() {
       const pt1 = points[i];
       const pt2 = points[(i + 1) % n];
 
-      const midX = (pt1.X() + pt2.X()) / 2;
-      const midY = (pt1.Y() + pt2.Y()) / 2;
-
-      const dx = pt2.X() - pt1.X();
-      const dy = pt2.Y() - pt1.Y();
-      const norm = Math.sqrt(dx * dx + dy * dy);
-      const ux = dx / norm;
-      const uy = dy / norm;
-
-      // Vecteur oblique à 45°
-      const angle = Math.PI / 4;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      const vx = cos * ux - sin * uy;
-      const vy = sin * ux + cos * uy;
-
       for (let j = 0; j < markCount; j++) {
-        const shift = (j - (markCount - 1) / 2) * 0.1;  // écart horizontal entre traits
-        const cx = midX + shift * ux;
-        const cy = midY + shift * uy;
+        const shift = (j - (markCount - 1) / 2) * 0.15; // espacement entre traits
 
-        const len = 0.20; // allongé
-        const mark = board.create('segment', [
-          [cx - vx * len / 2, cy - vy * len / 2],
-          [cx + vx * len / 2, cy + vy * len / 2]
+        const segment = board.create('segment', [
+          () => {
+            const x1 = pt1.X(), y1 = pt1.Y();
+            const x2 = pt2.X(), y2 = pt2.Y();
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const norm = Math.sqrt(dx * dx + dy * dy);
+            const ux = dx / norm;
+            const uy = dy / norm;
+
+            const angle = Math.PI / 4;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const vx = cos * ux - sin * uy;
+            const vy = sin * ux + cos * uy;
+
+            const cx = midX + shift * ux;
+            const cy = midY + shift * uy;
+            const len = 0.20;
+
+            return [cx - vx * len / 2, cy - vy * len / 2];
+          },
+          () => {
+            const x1 = pt1.X(), y1 = pt1.Y();
+            const x2 = pt2.X(), y2 = pt2.Y();
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const norm = Math.sqrt(dx * dx + dy * dy);
+            const ux = dx / norm;
+            const uy = dy / norm;
+
+            const angle = Math.PI / 4;
+            const cos = Math.cos(angle);
+            const sin = Math.sin(angle);
+            const vx = cos * ux - sin * uy;
+            const vy = sin * ux + cos * uy;
+
+            const cx = midX + shift * ux;
+            const cy = midY + shift * uy;
+            const len = 0.20;
+
+            return [cx + vx * len / 2, cy + vy * len / 2];
+          }
         ], {
-          strokeWidth: 1.4, // plus fin
+          strokeWidth: 1.4,
           strokeColor: 'black',
           fixed: true
         });
 
-        codingMarks.push(mark);
+        codingMarks.push(segment);
       }
     }
 
@@ -475,59 +496,91 @@ function updateRightAngleMarkers(visible) {
 
   if (!visible || !points.length) return;
 
-  const figureType = detectCurrentFigure();
+  // Supprimer la vérification sur figureType
+  const triples = getRightAngleTriples();
 
-  if (figureType === "square" || figureType === "rectangle" || figureType === "rightTriangle") {
-    const triples = getRightAngleTriples();
-
-    triples.forEach(([A, B, C]) => {
-      const marker = board.create('nonreflexangle', [A, B, C], {
-        type: 'square',
-        radius: 0.4,
-        orthoType: 'square',
-        visible: true,
-        strokeColor: 'black',
-        fillColor: 'white',        // ✅ fond blanc
-        fillOpacity: 1,            // ✅ opacité totale
-        name: '', // pas de nom
-        label: { visible: false } // cache toute étiquette
-      });
-      rightAngleMarkers.push(marker);
+  triples.forEach(([A, B, C]) => {
+    const marker = board.create('nonreflexangle', [A, B, C], {
+      type: 'square',
+      radius: 0.4,
+      orthoType: 'square',
+      visible: true,
+      strokeColor: 'black',
+      fillColor: 'white',
+      fillOpacity: 1,
+      name: '',
+      label: { visible: false }
     });
-  }
-}  
+    rightAngleMarkers.push(marker);
+  });
+}
+
 
 
 
 // Détection du type de figure pour ajuster les angles droits
 function detectCurrentFigure() {
   if (points.length === 4 && polygon) {
-    const d1 = points[0].Dist(points[1]);
-    const d2 = points[1].Dist(points[2]);
-    const d3 = points[2].Dist(points[3]);
-    const d4 = points[3].Dist(points[0]);
-    if (Math.abs(d1 - d3) < 0.01 && Math.abs(d2 - d4) < 0.01) return "rectangle";
-    return "square";
+    const [A, B, C, D] = points;
+
+    const dAB = A.Dist(B);
+    const dBC = B.Dist(C);
+    const dCD = C.Dist(D);
+    const dDA = D.Dist(A);
+
+    const angleA = JXG.Math.Geometry.rad(board, D, A, B);
+    const angleB = JXG.Math.Geometry.rad(board, A, B, C);
+    const angleC = JXG.Math.Geometry.rad(board, B, C, D);
+    const angleD = JXG.Math.Geometry.rad(board, C, D, A);
+
+    const right = angle => Math.abs(angle - Math.PI / 2) < 0.05;
+
+    if (right(angleA) && right(angleB) && right(angleC) && right(angleD)) {
+      if (Math.abs(dAB - dBC) < 0.01) return "square";
+      else return "rectangle";
+    }
+
+    return ""; // ni carré ni rectangle
   }
-  if (points.length === 3) return "rightTriangle";
+
+  if (points.length === 3) {
+    // Détection triangle rectangle
+    const [A, B, C] = points;
+    const angleA = JXG.Math.Geometry.rad(board, C, A, B);
+    const angleB = JXG.Math.Geometry.rad(board, A, B, C);
+    const angleC = JXG.Math.Geometry.rad(board, B, C, A);
+    const right = angle => Math.abs(angle - Math.PI / 2) < 0.05;
+    if (right(angleA) || right(angleB) || right(angleC)) return "rightTriangle";
+  }
+
   return "";
 }
 
+
 // Points d’angle droit (sens horaire)
 function getRightAngleTriples() {
-  if (points.length === 4) {
-    return [
-      [points[3], points[0], points[1]],
-      [points[0], points[1], points[2]],
-      [points[1], points[2], points[3]],
-      [points[2], points[3], points[0]]
-    ];
+  const ANGLE_RIGHT_TOLERANCE = 0.05;
+  if (!points || points.length < 3) return [];
+
+  const rightTriples = [];
+  const n = points.length;
+
+const isRight = angle => Math.abs(angle - Math.PI / 2) <ANGLE_RIGHT_TOLERANCE;
+
+  for (let i = 0; i < n; i++) {
+    const A = points[(i - 1 + n) % n];
+    const B = points[i];
+    const C = points[(i + 1) % n];
+
+    const angle = JXG.Math.Geometry.rad(board, A, B, C);
+    console.log(`Angle at point ${B.name}: ${angle}`); // Ajoute cette ligne
+
+    if (isRight(angle)) {
+      rightTriples.push([A, B, C]);
+    }
   }
-  if (points.length === 3) {
-    // Le triangle rectangle a un angle droit en A (hypothèse), à adapter si besoin
-    return [[points[1], points[0], points[2]]];
-  }
-  return [];
+  console.log("Detected right angle triples:", rightTriples); // Ajoute cette ligne
+  return rightTriples;
 }
 
 // Fonction pour ajouter les angles égaux
@@ -672,10 +725,10 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
     //  LISTE DES DRAWS
 
     function drawSquare(size) {
-      const A = board.create('point', [0, 0], {name: '',fixed: true, visible: false});
-      const B = board.create('point', [size, 0], {name: '',fixed: true, visible: false});
-      const C = board.create('point', [size, size], {name: '',fixed: true, visible: false});
-      const D = board.create('point', [0, size], {name: '',fixed: true, visible: false});
+      const A = board.create('point', [0, 0], {name: '',fixed: true, visible: true});
+      const B = board.create('point', [size, 0], {name: '',fixed: true, visible: true});
+      const C = board.create('point', [size, size], {name: '',fixed: true, visible: true});
+      const D = board.create('point', [0, size], {name: '',fixed: true, visible: true});
 
       points = [A, B, C, D];
       polygon = board.create('polygon', points, {
@@ -825,26 +878,77 @@ const C = board.create('point', [offsetX, offsetY + height], {visible:false, fix
 
 function drawParallelogram(base, height) {
   const offset = base / 3;
-  const A = board.create('point', [0, 0], {visible: false});
-  const B = board.create('point', [base, 0], {visible: false});
-  const C = board.create('point', [base - offset, height], {visible: false});
-  const D = board.create('point', [-offset, height], {visible: false});
+
+  // Création des 4 points, invisibles, avec uniquement l'étiquette visible
+  const A = board.create('point', [0, 0], {
+    name: 'A',
+    visible: false,
+    fixed: true,
+    label: {
+      visible: true,
+      offset: [-10, -15],
+      fontSize: 16
+    }
+  });
+
+  const B = board.create('point', [base, 0], {
+    name: 'B',
+    visible: false,
+    fixed: true,
+    label: {
+      visible: true,
+      offset: [10, -15],
+      fontSize: 16
+    }
+  });
+
+  const C = board.create('point', [base - offset, height], {
+    name: 'C',
+    visible: false,
+    fixed: true,
+    label: {
+      visible: true,
+      offset: [10, 10],
+      fontSize: 16
+    }
+  });
+
+  const D = board.create('point', [-offset, height], {
+    name: 'D',
+    visible: false,
+    fixed: true,
+    label: {
+      visible: true,
+      offset: [-10, 10],
+      fontSize: 16
+    }
+  });
 
   points = [A, B, C, D];
+
+  // Création du parallélogramme
   polygon = board.create('polygon', points, {
-    borders: {strokeColor: "black"},
+    borders: { strokeColor: "black" },
     fillColor: "white",
     fillOpacity: 1
   });
 
-  const labelA = board.create('text', [A.X(), A.Y() - 0.3, "A"]);
-  const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
-  const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
-  const labelD = board.create('text', [D.X(), D.Y() + 0.3, "D"]);
-  texts.push(labelA, labelB, labelC, labelD);
+  // On rend les sommets du polygone déplaçables (manuellement)
+  polygon.borders.forEach(segment => {
+    segment.point1.setAttribute({ fixed: false });
+    segment.point2.setAttribute({ fixed: false });
+  });
 
-  addDraggingToPolygon(polygon, points, texts);
+  // Pas besoin de texts à part
+  addDraggingToPolygon(polygon, points, []);
+  updateDiagonals();
+  updateCodings();
+  updateLengthLabels();
+  updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
+
 }
+
+
 
 function drawRegularPolygon(n, side) {
   const center = [0, 0];

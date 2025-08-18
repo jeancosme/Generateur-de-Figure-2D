@@ -103,18 +103,57 @@
 
 /* Style pour le pied de page */
 footer {
-    text-align: left;
-    padding: 10px;
-    background-color: #f8f9fa;
-    position: fixed;
-    left: 20;
-    bottom: 3%;
-    width: 100%;
-    font-family: Arial, sans-serif;
-    font-size: 18px;
-    color: #6c757d;
+  background-color: #f8f9fa;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  color: #6c757d;
+  padding: 10px 30px;
+  width: 100%;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1);
+  z-index: 100;
 }
 
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 100%;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.footer-left,
+.footer-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-right {
+  text-align: right;
+  font-style: italic;
+  color: #555;
+  margin-left: auto;
+}
+
+
+@media (max-width: 600px) {
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .footer-right {
+    align-self: flex-end;
+    padding-top: 5px;
+  }
+}
+
+/*Boite de suggestions*/
     .suggestions {
       margin-top: 8px;
       background-color: #ffffff;
