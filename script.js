@@ -893,7 +893,7 @@ function drawEquilateralTriangle(side) {
   const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
   const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
   texts.push(labelA, labelB, labelC);
-  updateEqualAngleMarkers() 
+  updateEqualAngleMarkers();
   addDraggingToPolygon(polygon, points, texts);
 }
     
@@ -946,6 +946,7 @@ function rotateFigure(step = Math.PI / 18) {
   updateLengthLabels();
   updateCodings();
   updateDiagonals();
+  updateEqualAngleMarkers();
   updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
   board.update();
 }

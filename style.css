@@ -101,6 +101,20 @@
   margin-top: 0;
 }
 
+/* Style pour le pied de page */
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #f8f9fa;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #6c757d;
+}
+
     .suggestions {
       margin-top: 8px;
       background-color: #ffffff;
