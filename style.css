@@ -101,11 +101,83 @@
   margin-top: 0;
 }
 
+.jxg-controls button.rotate-btn {
+  font-size: 30px;          /* taille des flèches */
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+/* optionnel : hover */
+.jxg-controls button.rotate-btn:hover {
+  background: rgba(0,0,0,0.04);
+}
+
+.jxg-controls button {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 18px; /* pour les boutons textuels (↶ ↷ ou "réinitialiser" si transformé) */
+}
+
+/* icônes SVG un peu plus grandes et centrées */
+.jxg-controls button svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.jxg-controls button.reset-btn,
+.jxg-controls .small-row > .reset-btn {
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 8px 14px !important;
+  font-size: 15px !important;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* si tu veux qu'il garde le même style visuel que les autres boutons */
+.jxg-controls button.reset-btn {
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: #222;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+
+/* ajustement spécifique pour les boutons rotate si besoin (légèrement plus grand) */
+.jxg-controls button.rotate-btn {
+  font-size: 22px;
+}
+
+/* espacement entre boutons */
+.jxg-controls .small-row {
+  display: flex;
+  gap: 8px;
+}
+
+
 /* Style pour le pied de page */
 footer {
   background-color: #f8f9fa;
   font-family: Arial, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   color: #6c757d;
   padding: 10px 30px;
   width: 100%;
@@ -129,17 +201,20 @@ footer {
 .footer-left,
 .footer-right {
   display: flex;
-  flex-direction: column;
+  /* footer-left should lay out inline items; allow wrap on small screens */
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.footer-right {
-  text-align: right;
-  font-style: italic;
-  color: #555;
-  margin-left: auto;
+/* make the assistant note slightly muted/smaller */
+.footer-left .assistant-note {
+  color: #666;
+  font-size: 0.95rem;
 }
 
-
+/* keep previous mobile behaviour (footer-content switches to column) */
 @media (max-width: 600px) {
   .footer-content {
     flex-direction: column;
@@ -152,6 +227,7 @@ footer {
     padding-top: 5px;
   }
 }
+
 
 /*Boite de suggestions*/
     .suggestions {
@@ -179,3 +255,67 @@ footer {
     .suggestions div:hover, .suggestions .highlighted {
       background-color: #ecf0f1;
     }
+
+#jxgbox { position: relative; } /* nécessaire pour positionner les contrôles à l'intérieur */
+
+.jxg-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.jxg-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: inherit;
+  background: rgba(255,255,255,0.98);
+}
+
+.jxg-controls button i {
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+.jxg-controls .small-row {
+  display: flex;
+  gap: 6px;
+}
+
+.jxg-controls .reset-row {
+  justify-content: center; /* centre le bouton sous les rotates */
+}
+
+.jxg-controls button.reset-btn {
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 8px 14px !important;
+  font-size: 15px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255,255,255,0.98) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  color: #222 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+}
+
+/* s'assurer que les boutons de la même ligne restent identiques */
+.jxg-controls .small-row { gap: 8px; align-items: center; }
+    
+
+.jxg-controls button { color: #222 !important; }
+.jxg-controls button svg { width: 18px; height: 18px; display: block; }
+.jxg-controls button svg path,
+.jxg-controls button svg line,
+.jxg-controls button svg circle { stroke: black !important; fill: none !important; }
