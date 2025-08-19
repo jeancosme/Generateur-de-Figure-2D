@@ -5,21 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Générateur de figure 2D</title>
 
-    <!-- Lien vers le CSS -->
+  <!-- Lien vers le CSS -->
   <link rel="stylesheet" href="style.css">
-
   <link rel="icon" type="image/x-icon" href="favicon_io\favicon.ico">
 
-    <!-- Libs externes -->
-  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
+  <!-- JSXGraph (une seule inclusion, avant le script principal) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css">
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js" defer></script>
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-p1CmZ8+6K8Jq0qGzq3uQe6G0K7ZVx6d7b1z9e3f0u6rW1oF1zY5R3Hq0J1Kx0zJ1F+1Yd3JbQ7b0YvQ=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-
-  <link href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+  <!-- Font Awesome si utilisé ailleurs (optionnel) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 
   <!-- Lien vers ton script JS -->
   <script defer src="script.js"></script>
@@ -38,36 +33,45 @@
   
   <div class="suggestions" id="suggestionBox" style="display: none;"></div>
 
-  <div style="display: flex; align-items: flex-start; gap: 20px;">
-  <!-- Zone de dessin -->
+<div class="layout" style="display:flex; align-items:flex-start; gap:20px;">
+  <!-- zone de dessin (gauche) -->
   <div id="jxgbox" class="jxgbox"></div>
 
-<!-- Options d'affichage -->
-<div id="optionsPanel" class="option-box">
-  <h3>🛠️ Options d'affichage</h3>
+  <!-- colonne droite : panneau d'options puis bouton (empilés) -->
+  <div class="sidebar">
+    <div id="optionsPanel" class="option-box">
+      <h3>🛠️ Options d'affichage</h3>
 
-  <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
-  <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
+      <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
+      <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
 
-  <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
+      <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
 
-  <!-- Groupe à afficher / masquer -->
-  <div id="unitGroup" style="display: none; margin-left: 20px;">
-    <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
-    <select id="unitSelector">
-      <option value="mm">mm</option>
-      <option value="cm" selected>cm</option>
-      <option value="dm">dm</option>
-      <option value="m">m</option>
-      <option value="km">km</option>
-    </select>
+      <div id="unitGroup" style="display: none; margin-left: 20px;">
+        <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
+        <select id="unitSelector">
+          <option value="mm">mm</option>
+          <option value="cm" selected>cm</option>
+          <option value="dm">dm</option>
+          <option value="m">m</option>
+          <option value="km">km</option>
+        </select>
+      </div>
+
+      <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
+      <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
+      <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
+      <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
+    </div>
+
+    <!-- bouton placé directement sous le panneau, dans le HTML -->
+    <button id="exportSvgBtn" class="export-btn external-export-btn" type="button"
+            title="Télécharger la figure au format SVG" onclick="exportBoardToSVG()">
+      Exporter SVG
+    </button>
   </div>
-
-  <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
-  <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
-  <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
-  <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
 </div>
+
 
   <!-- Pied de page -->
 <footer id="footer">

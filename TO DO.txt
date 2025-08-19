@@ -1,5 +1,10 @@
- finir angle égaux triangle equilateral
 
-parallélogramme : figure déplacer > la lettre follow le sommet
 
 Export PDF et SVG
+
+
+Pb déplacement de figure LABEL SUIS
+
+DL SVG : plusieurs pages s'ouvrent *
+
+cercle : label A et O à déplacer

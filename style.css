@@ -312,7 +312,75 @@ footer {
 
 /* s'assurer que les boutons de la même ligne restent identiques */
 .jxg-controls .small-row { gap: 8px; align-items: center; }
-    
+
+.jxg-controls button.zoom-btn {
+  background: #d2b9f7 !important;   /* violet clair */
+  border: 1px solid #dfc7ff !important;
+  color: #222 !important;
+}
+
+.jxg-controls button.rotate-btn {
+  background: #e8f8ea !important;   /* vert clair */
+  border: 1px solid #cfeed0 !important;
+  color: #222 !important;
+}
+
+/* reset : fond gris, taille automatique (classe déjà présente) */
+.jxg-controls button.reset-btn {
+  background: #f3f3f4 !important;
+  border: 1px solid #ddd !important;
+  color: #222 !important;
+}
+
+/* réduire uniquement la taille des symboles + / - (zoom-btn) sans changer les boutons */
+.jxg-controls button.zoom-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+  display: block;
+}
+.jxg-controls button.zoom-btn svg path,
+.jxg-controls button.zoom-btn svg line {
+  stroke-width: 1.4 !important; /* trait un peu plus fin */
+}
+
+/* si + / - sont du texte (fallback), réduire la police seule */
+.jxg-controls button.zoom-btn {
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+.jxg-controls button.zoom-btn:hover { background: #e6d9ff !important; }
+.jxg-controls button.rotate-btn:hover { background: #dff2df !important; }
+.jxg-controls button.reset-btn:hover { background: #ececec !important; }
+
+/* maintenir la même taille visuelle */
+.jxg-controls button { transition: background .12s ease; }
+
+/* si le texte/icône est blanc par héritage, forcer la couleur */
+.jxg-controls button svg path,
+.jxg-controls button svg line,
+.jxg-controls button svg circle {
+  stroke: currentColor;
+}
+
+/* style pour le bouton d'export (sous le panneau d'options) */
+#optionsPanel + .external-export-btn,
+.external-export-btn {
+  display: inline-block;
+  margin-top: 10px;
+  margin-left: 12px;
+  padding: 10px 14px;
+  font-size: 15px;
+  border-radius: 8px;
+  background: #6c7ae0;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.external-export-btn:hover { background: #5967c7; }
+
+/* s'assurer que #jxgbox contient l'SVG rendu par JSXGraph */
+#jxgbox svg { width: 100% !important; height: 100% !important; display: block; }
 
 .jxg-controls button { color: #222 !important; }
 .jxg-controls button svg { width: 18px; height: 18px; display: block; }

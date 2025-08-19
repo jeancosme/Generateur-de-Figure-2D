@@ -26,12 +26,14 @@ function createBoardControls() {
   row1.className = 'small-row';
 
   const plus = document.createElement('button');
+  plus.className = 'zoom-btn';
   plus.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 2v12M2 8h12" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
   plus.title = 'Zoom +';
   plus.setAttribute('aria-label','Zoom +');
   plus.addEventListener('click', (e) => { e.stopPropagation(); zoomIn(); board.update(); });
 
   const minus = document.createElement('button');
+  minus.className = 'zoom-btn';
   minus.innerHTML = '<svg width="18" height="18" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 8h12" stroke="black" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';
   minus.title = 'Zoom -';
   minus.setAttribute('aria-label','Zoom -');
@@ -52,6 +54,7 @@ function createBoardControls() {
 
   // rotation droite
   const rotate = document.createElement('button');
+  rotate.className = 'rotate-btn';
   rotate.textContent = '↷';
   rotate.title = 'Rotation +10°';
   rotate.addEventListener('click', (e) => { e.stopPropagation(); rotateFigure(); board.update(); });
@@ -1819,18 +1822,194 @@ function updateSuggestionHighlight(suggestions) {
   });
 }
 
+
+// Exporter le board JSXGraph en SVG (téléchargement)
+function exportBoardToSVG(filename = 'figure.svg') {
+  const container = document.getElementById('jxgbox');
+  if (!container) { alert('Zone graphique introuvable'); return; }
+
+  const svg = container.querySelector('svg');
+  if (!svg) { alert('SVG introuvable (JSXGraph pas encore rendu)'); return; }
+
+  // Cloner le SVG et ajouter un fond blanc pour éviter les transparences
+  const clone = svg.cloneNode(true);
+  if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  // Déterminer dimensions (viewBox ou taille du conteneur)
+  const vb = clone.getAttribute('viewBox');
+  let w = clone.getAttribute('width');
+  let h = clone.getAttribute('height');
+  if (!vb && (!w || !h)) {
+    w = container.clientWidth;
+    h = container.clientHeight;
+    if (w) clone.setAttribute('width', w);
+    if (h) clone.setAttribute('height', h);
+  }
+
+  // Insérer un rectangle blanc en arrière-plan
+  try {
+    const NS = 'http://www.w3.org/2000/svg';
+    const rect = document.createElementNS(NS, 'rect');
+    if (vb) {
+      const parts = vb.split(/\s+/).map(Number);
+      rect.setAttribute('x', '0');
+      rect.setAttribute('y', '0');
+      rect.setAttribute('width', parts[2]);
+      rect.setAttribute('height', parts[3]);
+    } else {
+      rect.setAttribute('x', '0');
+      rect.setAttribute('y', '0');
+      rect.setAttribute('width', w || container.clientWidth);
+      rect.setAttribute('height', h || container.clientHeight);
+    }
+    rect.setAttribute('fill', '#ffffff');
+    // placer en premier enfant
+    clone.insertBefore(rect, clone.firstChild);
+  } catch (e) {
+    // ignore si insertion échoue
+  }
+
+  // Sérialiser et télécharger
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(clone);
+  if (!source.startsWith('<?xml')) {
+    source = '<?xml version="1.0" encoding="UTF-8"?>\n' + source;
+  }
+  const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// Crée le bouton "Exporter SVG" sous le panneau d'options (si non présent)
+function createExportButton() {
+  const panel = document.getElementById('optionsPanel');
+  if (!panel) return;
+  if (document.getElementById('exportSvgBtn')) return; // éviter doublon
+
+  const btn = document.createElement('button');
+  btn.id = 'exportSvgBtn';
+  btn.className = 'export-btn external-export-btn';
+  btn.textContent = 'Exporter SVG';
+  btn.title = 'Télécharger la figure au format SVG';
+  btn.addEventListener('click', () => exportBoardToSVG());
+
+  // insère le bouton juste après le panneau (externe au panneau)
+  panel.insertAdjacentElement('afterend', btn);
+}
+
+// appeler la création dès que possible (script chargé en defer)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', createExportButton);
+} else {
+  createExportButton();
+}
+
+
+window.exportBoardToSVG = function (filename = 'figure.svg') {
+  console.log('[export] exportBoardToSVG called');
+  const container = document.getElementById('jxgbox');
+  if (!container) { alert('Zone graphique introuvable'); return; }
+
+  const svg = container.querySelector('svg');
+  if (!svg) { alert('SVG introuvable (JSXGraph pas encore rendu)'); return; }
+
+  const clone = svg.cloneNode(true);
+  if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+  const vb = clone.getAttribute('viewBox');
+  let w = clone.getAttribute('width');
+  let h = clone.getAttribute('height');
+  if (!vb && (!w || !h)) {
+    w = container.clientWidth;
+    h = container.clientHeight;
+    if (w) clone.setAttribute('width', w);
+    if (h) clone.setAttribute('height', h);
+  }
+
+  try {
+    const NS = 'http://www.w3.org/2000/svg';
+    const rect = document.createElementNS(NS, 'rect');
+    if (vb) {
+      const parts = vb.split(/\s+/).map(Number);
+      rect.setAttribute('x', '0');
+      rect.setAttribute('y', '0');
+      rect.setAttribute('width', parts[2]);
+      rect.setAttribute('height', parts[3]);
+    } else {
+      rect.setAttribute('x', '0');
+      rect.setAttribute('y', '0');
+      rect.setAttribute('width', w || container.clientWidth);
+      rect.setAttribute('height', h || container.clientHeight);
+    }
+    rect.setAttribute('fill', '#ffffff');
+    clone.insertBefore(rect, clone.firstChild);
+  } catch (e) {
+    console.warn('[export] impossible d\'insérer le fond blanc', e);
+  }
+
+  const serializer = new XMLSerializer();
+  let source = serializer.serializeToString(clone);
+  if (!source.startsWith('<?xml')) source = '<?xml version="1.0" encoding="UTF-8"?>\n' + source;
+
+  const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+};
+
+// helper safeOn
+function safeOn(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(event, handler);
+}
+
+// Attacher proprement le listener du bouton Export (si bouton présent dans HTML)
+function attachExportButtonListener() {
+  const btn = document.getElementById('exportSvgBtn');
+  if (!btn) return;
+  btn.removeEventListener('click', window._exportClickHandler);
+  window._exportClickHandler = () => {
+    try { window.exportBoardToSVG(); } catch (e) { console.error('[export] erreur', e); alert('Erreur export SVG: ' + (e && e.message || e)); }
+  };
+  btn.addEventListener('click', window._exportClickHandler);
+}
+
+// appeler l'attachement après DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    attachExportButtonListener();
+  });
+} else {
+  attachExportButtonListener();
+}
+
+
 // Tous les autres AddEvent
-document.getElementById("toggleLengths").addEventListener("change", updateLengthLabels);
-document.getElementById("showUnitsCheckbox").addEventListener("change", updateLengthLabels);
-document.getElementById("unitSelector").addEventListener("change", updateLengthLabels);
-document.getElementById("toggleCodings").addEventListener("change", updateCodings);
-document.getElementById("toggleDiagonals").addEventListener("change", updateDiagonals);
-document.getElementById("toggleLengths").addEventListener("change", updateCircleExtras);
-document.getElementById("showUnitsCheckbox").addEventListener("change", updateCircleExtras);
-document.getElementById("toggleRadius").addEventListener("change", updateCircleExtras);
-document.getElementById("unitSelector").addEventListener("change", updateCircleExtras);
-document.getElementById("toggleDiameter").addEventListener("change", updateCircleExtras);
-document.getElementById("toggleCodings").addEventListener("change", updateCircleExtras);
-document.getElementById("toggleEqualAngles").addEventListener("change", function(e){
-  updateEqualAngleMarkers(e.target.checked);
-});
+safeOn("toggleLengths", "change", updateLengthLabels);
+safeOn("showUnitsCheckbox", "change", updateLengthLabels);
+safeOn("unitSelector", "change", updateLengthLabels);
+
+safeOn("toggleCodings", "change", updateCodings);
+safeOn("toggleDiagonals", "change", updateDiagonals);
+
+safeOn("toggleRadius", "change", updateCircleExtras);
+safeOn("toggleDiameter", "change", updateCircleExtras);
+
+safeOn("toggleLengths", "change", updateCircleExtras);
+safeOn("showUnitsCheckbox", "change", updateCircleExtras);
+safeOn("unitSelector", "change", updateCircleExtras);
+safeOn("toggleCodings", "change", updateCircleExtras);
+
+// si le handler a besoin de l'événement (ex: vérifier checked)
+safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
