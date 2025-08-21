@@ -1,10 +1,13 @@
 
 
-Export PDF et SVG
+
+DL SVG : plusieurs pages s'ouvrent 
++ tous les éléments
+
+Copier presse papier ?
 
 
-Pb déplacement de figure LABEL SUIS
 
-DL SVG : plusieurs pages s'ouvrent *
-
-cercle : label A et O à déplacer
+Hexagone trop gros
+check polynome degres n
+diago si possible

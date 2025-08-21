@@ -24,10 +24,20 @@
   <h1>Générateur de figure 2D</h1>
     <!-- Barre avec prompt + bouton -->
   <div class="controls">
-    <input type="text" id="promptInput" placeholder="Ex : carré de côté 4">
-    <input type="text" id="labelInput" placeholder="Lettres des points (ex: A,B,C,D)">
-    <button onclick="generateFigure()">Générer</button>
-    <button id="toggleHelp">❓ Aide</button>
+    <div class="control-group">
+      <label for="promptInput" class="control-label">Nature de la figure</label>
+      <input type="text" id="promptInput" placeholder="Ex : carré de côté 4">
+    </div>
+
+    <div class="control-group">
+      <label for="labelInput" class="control-label">Nom de la figure</label>
+      <input type="text" id="labelInput" placeholder="Lettres des points (ex: A,B,C,D)">
+    </div>
+
+    <div class="control-actions">
+      <button onclick="generateFigure()">Générer</button>
+      <button id="toggleHelp">❓ Aide</button>
+    </div>
   </div>
 
   
@@ -46,7 +56,7 @@
         <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
         <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
 
-        <label><input type="checkbox" id="toggleLengths"> Afficher les longueurs</label>
+        <label><input type="checkbox" id="toggleLengths"> Afficher les mesures</label>
 
         <div id="unitGroup" style="display: none; margin-left: 20px;">
           <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>

@@ -75,11 +75,12 @@ h1 { font-size: 28px; margin-bottom: 20px; color: #2c3e50; }
    Form controls / header controls
    ======================== */
 .controls {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-end; /* keep buttons aligned to inputs baseline */
+  padding-top: 8px; /* descend un peu les barres pour laisser la place aux labels */
 }
 
 input[type="text"] {
@@ -89,6 +90,33 @@ input[type="text"] {
   border: 1px solid #ccc;
   border-radius: 10px;
   box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2c3e50;
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+/* Agrandir et décaler les labels des contrôles */
+.control-group .control-label {
+  font-size: 17px;    /* augmenter la taille du texte */
+  padding-left: 6px;  /* décaler légèrement vers la droite */
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+}
+
+/* Si tu veux un décalage différent uniquement pour le 2e label */
+.control-group:nth-child(2) .control-label {
+  padding-left: 8px; /* ajuster si besoin */
 }
 
 /* Generic button style (used globally) */
@@ -104,6 +132,13 @@ button {
   cursor: pointer;
 }
 button:hover { background-color: #2980b9; }
+
+/* regroupe les actions (boutons) pour rester alignées */
+.control-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
 /* ========================
    Option panel
@@ -315,6 +350,9 @@ button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px;
   .controls input[type="text"] { width: 100%; max-width: 600px; }
   .layout { flex-direction: column; gap: 18px; }
   .sidebar { width: 100%; }
+  .controls { flex-direction: column; align-items: stretch; padding-top: 6px; }
+  .control-actions { justify-content: flex-start; }
+  input[type="text"] { width: 100%; }
 }
 
 /* ========================
@@ -418,3 +456,14 @@ button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px;
 /* ensure long names wrap nicely if needed */
 .figures-list li { display: flex; align-items: center; gap: 6px; }
 .figures-list .figure-name, .figures-list .figure-desc { white-space: normal; overflow: hidden; text-overflow: ellipsis; }
+
+/* Masquer les contrôles JSXGraph lors de l'export */
+.jxg-controls {
+  /* Utilise un attribut spécial pour masquer pendant l'export */
+  transition: opacity 0.1s;
+}
+
+/* Classe utilitaire pour masquer pendant l'export */
+.export-hide {
+  display: none !important;
+}
