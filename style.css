@@ -1,92 +1,114 @@
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
+/* ------------------------------------------------------------------
+   STYLE RESTRUCTURÉ — clair, modulaire et prioritaires d'override
+   Sauvegarde ce fichier et fais Ctrl+F5 pour recharger.
+   ------------------------------------------------------------------ */
 
-    body {
-      font-family: 'Nunito', sans-serif;
-      padding: 40px;
-      background-color: #fefefe;
-      background-image: linear-gradient(to bottom, #fefefe 98%, #dcdcdc 99%);
-      background-size: 100% 40px;
-      color: #333;
-    }
+/* ========================
+   Variables (thèmes / tailles)
+   ======================== */
+:root{
+  --font-sans: 'Nunito', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --bg-page: #fefefe;
+  --muted: #666;
+  --accent: #3498db;
+  --control-bg: rgba(255,255,255,0.98);
 
-    h1 {
-      font-size: 28px;
-      margin-bottom: 20px;
-      color: #2c3e50;
-    }
+  --btn-size: 48px;       /* taille visuelle des boutons */
+  --btn-radius: 10px;
+  --icon-default: 18px;   /* taille svg générique */
+  --zoom-icon: 10px;      /* symbole + / - — plus petit */
+  --rotate-icon: 24px;    /* symbole ↶/↷ — plus grand */
+}
 
-    .controls {
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
+/* ========================
+   Base / Reset
+   ======================== */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap');
 
-    input[type="text"] {
-      width: 350px;
-      padding: 10px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
-    }
+* { box-sizing: border-box; }
+html,body { height: 100%; }
 
-    code {
-      background-color: #f1f1f1;
-      padding: 2px 5px;
-      border-radius: 4px;
-      font-family: monospace;
-    }
+body {
+  font-family: var(--font-sans);
+  padding: 40px;
+  margin: 0;
+  background-color: var(--bg-page);
+  background-image: linear-gradient(to bottom, var(--bg-page) 98%, #dcdcdc 99%);
+  background-size: 100% 40px;
+  color: #333;
+}
 
-    button {
-      padding: 10px 14px;
-      font-size: 15px;
-      border: none;
-      border-radius: 8px;
-      background-color: #3498db;
-      color: white;
-      transition: background 0.2s ease-in-out;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      cursor: pointer;
-    }
+/* Headings */
+h1 { font-size: 28px; margin-bottom: 20px; color: #2c3e50; }
 
-    button:hover {
-      background-color: #2980b9;
-    }
+/* ========================
+   Layout
+   ======================== */
+.layout {
+  display:flex;
+  align-items:flex-start;
+  gap:20px;
+}
 
-    #jxgbox {
-      width: 650px;
-      height: 420px;
-      border: 2px solid #ccc;
-      background-color: white;
-      border-radius: 12px;
-      margin-top: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    
-    #helpBox {
-      background-color: #fff8c4; /* jaune pâle */
-      border: 2px solid black;
-      padding: 15px;
-      margin-left: 30px;
-      max-width: 320px;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      line-height: 1.5em;
-    }
-    #helpBox h3 {
-      margin-top: 0;
-      color: black;
-    }
+/* Sidebar containing options + export button */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
 
-    #main-options-container {
-      display: flex;
-      align-items: flex-start;
-      gap: 20px;
-    }
+/* JSXGraph drawing area */
+#jxgbox {
+  width: 650px;
+  height: 420px;
+  border: 2px solid #ccc;
+  background-color: white;
+  border-radius: 12px;
+  margin-top: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  position: relative; /* nécessaire pour positionner les contrôles */
+}
+#jxgbox svg { width: 100% !important; height: 100% !important; display: block; }
 
-    .option-box {
+/* ========================
+   Form controls / header controls
+   ======================== */
+.controls {
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+input[type="text"] {
+  width: 350px;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Generic button style (used globally) */
+button {
+  padding: 10px 14px;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--accent);
+  color: white;
+  transition: background 0.2s ease-in-out;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+button:hover { background-color: #2980b9; }
+
+/* ========================
+   Option panel
+   ======================== */
+.option-box {
   background-color: #e0f7ff;           /* bleu ciel */
   border: 2px solid black;             /* bord noir */
   border-radius: 12px;
@@ -96,89 +118,33 @@
   flex-direction: column;
   gap: 12px;
 }
+.option-box h3 { margin: 0 0 6px 0; }
 
-.option-box h3 {
-  margin-top: 0;
-}
-
-.jxg-controls button.rotate-btn {
-  font-size: 30px;          /* taille des flèches */
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* ========================
+   Suggestions box
+   ======================== */
+.suggestions {
+  margin-top: 8px;
+  background-color: #ffffff;
+  border: 1px solid #ccc;
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  max-width: 350px;
+  padding: 8px;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
-/* optionnel : hover */
-.jxg-controls button.rotate-btn:hover {
-  background: rgba(0,0,0,0.04);
-}
+.suggestion-item.highlighted { background-color: #d0eaff; font-weight: bold; }
+.suggestions div { padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.suggestions div:hover, .suggestions .highlighted { background-color: #ecf0f1; }
 
-.jxg-controls button {
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  min-height: 48px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  box-sizing: border-box;
-  font-size: 18px; /* pour les boutons textuels (↶ ↷ ou "réinitialiser" si transformé) */
-}
-
-/* icônes SVG un peu plus grandes et centrées */
-.jxg-controls button svg {
-  width: 22px;
-  height: 22px;
-  display: block;
-}
-
-.jxg-controls button.reset-btn,
-.jxg-controls .small-row > .reset-btn {
-  width: auto !important;
-  min-width: 0 !important;
-  height: auto !important;
-  min-height: 0 !important;
-  padding: 8px 14px !important;
-  font-size: 15px !important;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* si tu veux qu'il garde le même style visuel que les autres boutons */
-.jxg-controls button.reset-btn {
-  background: rgba(255,255,255,0.98);
-  border: 1px solid rgba(0,0,0,0.06);
-  color: #222;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-}
-
-
-/* ajustement spécifique pour les boutons rotate si besoin (légèrement plus grand) */
-.jxg-controls button.rotate-btn {
-  font-size: 22px;
-}
-
-/* espacement entre boutons */
-.jxg-controls .small-row {
-  display: flex;
-  gap: 8px;
-}
-
-
-/* Style pour le pied de page */
+/* ========================
+   Footer
+   ======================== */
 footer {
   background-color: #f8f9fa;
   font-family: Arial, sans-serif;
   font-size: 14px;
-  color: #6c757d;
+  color: var(--muted);
   padding: 10px 30px;
   width: 100%;
   position: fixed;
@@ -187,77 +153,13 @@ footer {
   box-shadow: 0 -1px 5px rgba(0, 0, 0, 0.1);
   z-index: 100;
 }
+.footer-content { display:flex; justify-content:space-between; align-items:center; max-width:100%; margin:0 auto; flex-wrap:wrap; width:100%; }
+.footer-left, .footer-right { display:flex; flex-direction:row; align-items:center; gap:10px; flex-wrap:wrap; }
+.footer-left .assistant-note { color: #666; font-size:0.95rem; }
 
-.footer-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 100%;
-  margin: 0 auto;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.footer-left,
-.footer-right {
-  display: flex;
-  /* footer-left should lay out inline items; allow wrap on small screens */
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-/* make the assistant note slightly muted/smaller */
-.footer-left .assistant-note {
-  color: #666;
-  font-size: 0.95rem;
-}
-
-/* keep previous mobile behaviour (footer-content switches to column) */
-@media (max-width: 600px) {
-  .footer-content {
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-  }
-
-  .footer-right {
-    align-self: flex-end;
-    padding-top: 5px;
-  }
-}
-
-
-/*Boite de suggestions*/
-    .suggestions {
-      margin-top: 8px;
-      background-color: #ffffff;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      max-width: 350px;
-      padding: 8px;
-      font-size: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-
-    .suggestion-item.highlighted {
-  background-color: #d0eaff;
-  font-weight: bold;
-}
-
-    .suggestions div {
-      padding: 6px 8px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .suggestions div:hover, .suggestions .highlighted {
-      background-color: #ecf0f1;
-    }
-
-#jxgbox { position: relative; } /* nécessaire pour positionner les contrôles à l'intérieur */
-
+/* ========================
+   JSXGraph controls (floating buttons inside #jxgbox)
+   ======================== */
 .jxg-controls {
   position: absolute;
   top: 8px;
@@ -267,108 +169,123 @@ footer {
   gap: 6px;
   z-index: 9999;
   pointer-events: auto;
+  font-family: inherit;
 }
 
+/* row container */
+.jxg-controls .small-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* default button inside controls (base size & look) */
 .jxg-controls button {
+  width: var(--btn-size);
+  height: var(--btn-size);
+  min-width: var(--btn-size);
+  min-height: var(--btn-size);
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-family: inherit;
-  background: rgba(255,255,255,0.98);
+  border-radius: var(--btn-radius);
+  box-sizing: border-box;
+  background: var(--control-bg);
+  color: #222;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  transition: background .12s ease;
 }
 
-.jxg-controls button i {
-  font-size: 16px;
-  line-height: 1;
+/* small svg icon default */
+.jxg-controls button svg {
+  width: var(--icon-default);
+  height: var(--icon-default);
+  display: block;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
 }
 
-
-.jxg-controls .small-row {
-  display: flex;
-  gap: 6px;
+/* Specific control types (background colors) */
+.jxg-controls button.zoom-btn {
+  background: #d2b9f7 !important;   /* violet clair */
+  border: 1px solid #dfc7ff !important;
 }
-
-.jxg-controls .reset-row {
-  justify-content: center; /* centre le bouton sous les rotates */
+.jxg-controls button.rotate-btn {
+  background: #e8f8ea !important;   /* vert clair */
+  border: 1px solid #cfeed0 !important;
 }
-
 .jxg-controls button.reset-btn {
-  width: auto !important;
+  background: #f3f3f4 !important;
+  border: 1px solid #ddd !important;
+  width: auto !important;           /* reset is sized by its text */
   min-width: 0 !important;
   height: auto !important;
   min-height: 0 !important;
   padding: 8px 14px !important;
   font-size: 15px !important;
   border-radius: 10px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: rgba(255,255,255,0.98) !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
-  color: #222 !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
 }
 
-/* s'assurer que les boutons de la même ligne restent identiques */
-.jxg-controls .small-row { gap: 8px; align-items: center; }
-
-.jxg-controls button.zoom-btn {
-  background: #d2b9f7 !important;   /* violet clair */
-  border: 1px solid #dfc7ff !important;
-  color: #222 !important;
-}
-
-.jxg-controls button.rotate-btn {
-  background: #e8f8ea !important;   /* vert clair */
-  border: 1px solid #cfeed0 !important;
-  color: #222 !important;
-}
-
-/* reset : fond gris, taille automatique (classe déjà présente) */
-.jxg-controls button.reset-btn {
-  background: #f3f3f4 !important;
-  border: 1px solid #ddd !important;
-  color: #222 !important;
-}
-
-/* réduire uniquement la taille des symboles + / - (zoom-btn) sans changer les boutons */
-.jxg-controls button.zoom-btn svg {
-  width: 14px !important;
-  height: 14px !important;
-  display: block;
-}
-.jxg-controls button.zoom-btn svg path,
-.jxg-controls button.zoom-btn svg line {
-  stroke-width: 1.4 !important; /* trait un peu plus fin */
-}
-
-/* si + / - sont du texte (fallback), réduire la police seule */
-.jxg-controls button.zoom-btn {
-  font-size: 10px !important;
-  line-height: 1 !important;
-}
-
+/* Hover states */
 .jxg-controls button.zoom-btn:hover { background: #e6d9ff !important; }
 .jxg-controls button.rotate-btn:hover { background: #dff2df !important; }
 .jxg-controls button.reset-btn:hover { background: #ececec !important; }
 
-/* maintenir la même taille visuelle */
-.jxg-controls button { transition: background .12s ease; }
+/* center reset row */
+.jxg-controls .reset-row { justify-content: center; }
 
-/* si le texte/icône est blanc par héritage, forcer la couleur */
-.jxg-controls button svg path,
-.jxg-controls button svg line,
-.jxg-controls button svg circle {
-  stroke: currentColor;
+/* ========================
+   Icons sizing overrides (only icons, not buttons)
+   ======================== */
+
+/* Zoom icons (+ / -) — réduire taille ET trait */
+.jxg-controls button.zoom-btn svg {
+  width: var(--zoom-icon) !important;
+  height: var(--zoom-icon) !important;
+  display: block;
+  vertical-align: middle;
+}
+.jxg-controls button.zoom-btn svg path,
+.jxg-controls button.zoom-btn svg line {
+  stroke-width: 0.9 !important; /* trait plus fin */
 }
 
-/* style pour le bouton d'export (sous le panneau d'options) */
-#optionsPanel + .external-export-btn,
+/* fallback texte pour + / - (si utilisé) : réduire la police uniquement */
+.jxg-controls button.zoom-btn {
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+/* Rotate icons — agrandir et épaissir (s'applique aux SVG ou au texte) */
+.jxg-controls button.rotate-btn svg {
+  width: var(--rotate-icon) !important;
+  height: var(--rotate-icon) !important;
+  display: block;
+  vertical-align: middle;
+}
+.jxg-controls button.rotate-btn {
+  font-size: 20px !important;      /* pour les flèches textuelles (↶/↷) */
+  font-weight: 700 !important;     /* rendre gras */
+  line-height: 1 !important;
+}
+
+/* s'assurer que nos tailles spécifiques sont prioritaires */
+.jxg-controls button svg { max-width: none !important; }
+
+/* si certains SVG héritent d'un stroke trop fin, forcer un stroke légèrement plus épais pour rotate */
+.jxg-controls button.rotate-btn svg path,
+.jxg-controls button.rotate-btn svg line {
+  stroke-width: 1.6 !important;
+}
+
+/* ========================
+   Export button (placed next to optionsPanel in HTML)
+   ======================== */
 .external-export-btn {
   display: inline-block;
   margin-top: 10px;
-  margin-left: 12px;
   padding: 10px 14px;
   font-size: 15px;
   border-radius: 8px;
@@ -376,14 +293,57 @@ footer {
   color: #fff;
   border: none;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 .external-export-btn:hover { background: #5967c7; }
 
-/* s'assurer que #jxgbox contient l'SVG rendu par JSXGraph */
-#jxgbox svg { width: 100% !important; height: 100% !important; display: block; }
+/* helper to make it full width like the option box if needed */
+.external-export-btn.full-width { width: 100%; align-self: stretch; }
 
-.jxg-controls button { color: #222 !important; }
-.jxg-controls button svg { width: 18px; height: 18px; display: block; }
+/* ========================
+   Accessibility / utilities
+   ======================== */
+.jxg-controls button:focus,
+.external-export-btn:focus,
+button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px; }
+
+/* ========================
+   Responsive adjustments
+   ======================== */
+@media (max-width: 900px) {
+  #jxgbox { width: 100%; height: 360px; }
+  .controls input[type="text"] { width: 100%; max-width: 600px; }
+  .layout { flex-direction: column; gap: 18px; }
+  .sidebar { width: 100%; }
+}
+
+/* ========================
+   Final overrides (kept at very end)
+   ======================== */
+/* ensure stroke/fill consistency for SVG icons */
 .jxg-controls button svg path,
 .jxg-controls button svg line,
-.jxg-controls button svg circle { stroke: black !important; fill: none !important; }
+.jxg-controls button svg circle {
+  stroke: currentColor !important;
+  fill: none !important;
+}
+
+/* override forcé pour icônes de contrôle */
+.jxg-controls button.zoom-btn svg {
+  width: 10px !important;
+  height: 10px !important;
+  stroke-width: 0.9 !important;
+  display: block;
+}
+.jxg-controls button.rotate-btn svg {
+  width: 24px !important;
+  height: 24px !important;
+  stroke-width: 1.8 !important;
+  display: block;
+}
+/* si les flèches sont textuelles (↶/↷) */
+.jxg-controls button.rotate-btn {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}

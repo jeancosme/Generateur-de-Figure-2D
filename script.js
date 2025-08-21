@@ -121,6 +121,9 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let customLabels = [];
     let angleMarkers = [];
     let lengthHandles = []; // <-- NEW: handles for draggable length labels
+    let labelHandles = []; // handles for draggable point-label anchors (O, A, ...)
+    let labelTexts = [];   // text objects for those labels
+
 
 
 
@@ -1325,45 +1328,149 @@ function updateLengthLabels() {
 
 
 function drawCircle(radius) {
-  if (centerPoint) board.removeObject(centerPoint);
-  if (circlePoint) board.removeObject(circlePoint);
-  if (circleObject) board.removeObject(circleObject);
+  // cleanup if déjà présents
+  if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
+  if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
+  if (circleObject) try { board.removeObject(circleObject); } catch (e) {}
+  // remove previous label handles/texts if any
+  if (labelHandles && labelHandles.length) {
+    labelHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+    labelHandles = [];
+  }
+  if (labelTexts && labelTexts.length) {
+    labelTexts.forEach(t => { try { board.removeObject(t); } catch (e) {} });
+    labelTexts = [];
+  }
 
+  // créer le centre (sans label natif)
   centerPoint = board.create('point', [0, 0], {
-    name: 'O',
+    name: '',               // on gère le label séparément pour le rendre déplaçable
     showInfobox: false,
-    fixed: false, 
+    fixed: false,
     size: 4,
     face: 'x',
     strokeColor: 'black',
     fillColor: 'black'
   });
 
-  // Créer un cercle de rayon fixe
+  // cercle
   circleObject = board.create('circle', [centerPoint, radius], {
     strokeWidth: 2,
     strokeColor: 'black'
-    
   });
 
-  // Créer un point A mobile sur le cercle
+  // point A sur le cercle (glider) sans label natif
   circlePoint = board.create('glider', [radius, 0, circleObject], {
-    name: 'A',
+    name: '',
     showInfobox: false,
-    size: 0,
-    strokeOpacity: 0,
-    fillOpacity: 0,
-    label: {
-      offset: [10, 10],
-      anchorX: 'middle',
-      anchorY: 'top'
-    }
+    size: 4,
+    strokeColor: 'black',
+    fillColor: 'black'
   });
 
   points = [circlePoint];
-  texts = [];
-  document.getElementById("toggleRadius").addEventListener("change", updateCircleExtras);
+  // --- Créer handles et textes déplaçables pour O et A ---
+
+  // handle et label pour O (initial proche du centre)
+  const startOX = centerPoint.X()-0.05;
+  const startOY = centerPoint.Y()+0.15;
+  const handleO = board.create('point', [startOX, startOY], {
+    size: 6,
+    strokeOpacity: 0,
+    fillOpacity: 0,
+    fixed: false,
+    name: '',
+    highlight: false,
+    showInfobox: false
+  });
+  const labelO = board.create('text', [
+    () => handleO.X(),
+    () => handleO.Y(),
+    'O'
+  ], {
+    anchorX: 'middle',
+    anchorY: 'bottom',
+    fontSize: 16,
+    fixed: false,
+    name: ''
+  });
+
+  // handle et label pour A (initial proche du point A)
+  const startAX = circlePoint.X() + 0.3;
+  const startAY = circlePoint.Y();
+  const handleA = board.create('point', [startAX, startAY], {
+    size: 6,
+    strokeOpacity: 0,
+    fillOpacity: 0,
+    fixed: false,
+    name: '',
+    highlight: false,
+    showInfobox: false
+  });
+  const labelA = board.create('text', [
+    () => handleA.X(),
+    () => handleA.Y(),
+    'A'
+  ], {
+    anchorX: 'middle',
+    anchorY: 'bottom',
+    fontSize: 16,
+    fixed: false,
+    name: ''
+  });
+
+  // stocker pour nettoyage éventuel
+  labelHandles.push(handleO, handleA);
+  labelTexts.push(labelO, labelA);
+
+  // after creating text objects, force a render so rendNode exists
+  board.update();
+
+  // rendre les labels "draggables" : relayer mousedown -> déplacer le handle
+  function makeLabelDraggable(textObj, handle) {
+    try {
+      if (!textObj.rendNode) return;
+      textObj.rendNode.style.cursor = 'move';
+      // use pointer events to support touch+mouse
+      textObj.rendNode.addEventListener('pointerdown', function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        const start = board.getUsrCoordsOfMouse(ev);
+        function onMove(e) {
+          const pos = board.getUsrCoordsOfMouse(e);
+          const dxm = pos[0] - start[0];
+          const dym = pos[1] - start[1];
+          // moveTo expects user coords
+          try { handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0); } catch (err) {
+            // fallback: setCoords if available
+            try { handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dxm, handle.Y() + dym]); } catch (e) {}
+          }
+          start[0] = pos[0]; start[1] = pos[1];
+          board.update();
+        }
+        function onUp() {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      }, { passive: false });
+    } catch (e) { /* ignore */ }
+  }
+
+  makeLabelDraggable(labelO, handleO);
+  makeLabelDraggable(labelA, handleA);
+
+  // ensure radius option listener exists safely
+  try {
+    const el = document.getElementById("toggleRadius");
+    if (el) el.addEventListener("change", updateCircleExtras);
+  } catch (e) {}
+
+  // MAJ initiale des extras si nécessaire
+  updateCircleExtras();
 }
+
 
 
 function drawRightTriangle(base, height) {
