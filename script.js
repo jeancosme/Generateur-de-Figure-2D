@@ -368,27 +368,75 @@ function updateCircleExtras() {
 
 // Fonction Diagonales   
 function updateDiagonals() {
-  // Supprimer les anciennes diagonales
+  // Clear existing diagonals
   diagonals.forEach(d => board.removeObject(d));
   diagonals = [];
 
-  if (!document.getElementById("toggleDiagonals").checked) return;
-  if (points.length !== 4) return; // seulement pour quadrilatère
+  const show = document.getElementById('toggleDiagonals')?.checked;
+  if (!show || !polygon || !points) return;
 
-  const diag1 = board.create('segment', [points[0], points[2]], {
-    strokeColor: 'black',
-    strokeWidth: 1, 
-    fixed: true
-  });
+  const n = points.length;
 
-  const diag2 = board.create('segment', [points[1], points[3]], {
-    strokeColor: 'black',
-    strokeWidth: 1, 
-    fixed: true
-  });
-
-  diagonals.push(diag1, diag2);
+  if (n === 4) {
+    // Quadrilatères : 2 diagonales
+    const diagonal1 = board.create('segment', [points[0], points[3]], {
+      strokeColor: 'red',
+      strokeWidth: 2,
+      dash: 2
+    });
+    const diagonal2 = board.create('segment', [points[1], points[2]], {
+      strokeColor: 'red',
+      strokeWidth: 2,
+      dash: 2
+    });
+    diagonals.push(diagonal1, diagonal2);
+  } else if (n === 6) {
+    // CORRECTION : Hexagone - seulement les 3 grandes diagonales principales
+    // A-D (0-3), F-C (5-2), E-B (4-1)
+    const mainDiagonals = [
+      [0, 3], // A-D
+      [5, 2], // F-C  
+      [4, 1]  // E-B
+    ];
+    
+    mainDiagonals.forEach(([i, j]) => {
+      const diagonal = board.create('segment', [points[i], points[j]], {
+        strokeColor: 'black',  // noir comme les côtés
+        strokeWidth: 1,        // même épaisseur que les côtés
+        dash: 0                // trait plein (pas de tirets)
+      });
+      diagonals.push(diagonal);
+    });
+  } else if (n === 5) {
+    // Pentagone - toutes les diagonales
+    const pentagonPairs = [
+      [0, 2], [0, 3], [1, 3], [1, 4], [2, 4]
+    ];
+    pentagonPairs.forEach(([i, j]) => {
+      const diagonal = board.create('segment', [points[i], points[j]], {
+        strokeColor: 'purple',
+        strokeWidth: 2,
+        dash: 2
+      });
+      diagonals.push(diagonal);
+    });
+  } else if (n >= 7) {
+    // Polygones génériques (7+ côtés) : toutes les diagonales possibles
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 2; j < n; j++) {
+        if (!(i === 0 && j === n - 1)) {
+          const diagonal = board.create('segment', [points[i], points[j]], {
+            strokeColor: 'blue',
+            strokeWidth: 1,
+            dash: 4
+          });
+          diagonals.push(diagonal);
+        }
+      }
+    }
+  }
 }
+
 
 function drawCodingMark(pt1, pt2, index = 1) {
   const dx = pt2.X() - pt1.X();
@@ -1032,10 +1080,10 @@ function generateFigure() {
     const [base, height] = extractTwoNumbers(prompt, [4, 3]);
     drawParallelogram(base, height);
   } else if (prompt.includes("hexagone")) {
-    const side = extractNumber(prompt, 3);
+    const side = extractNumber(prompt, 4);
     drawRegularPolygon(6, side);
   } else if (prompt.includes("pentagone")) {
-    const side = extractNumber(prompt, 3);
+    const side = extractNumber(prompt, 4);
     drawRegularPolygon(5, side);
   }
 
@@ -1660,25 +1708,27 @@ function drawParallelogram(base, sideLength) {
 function drawRegularPolygon(n, side) {
   const center = [0, 0];
   const angle = (2 * Math.PI) / n;
+  // CORRECTION : formule simplifiée pour avoir la bonne taille
   const radius = side / (2 * Math.sin(Math.PI / n));
 
   points = [];
+  // CORRECTION : commencer à -π/2 pour avoir un sommet en haut
   for (let i = 0; i < n; i++) {
-    const x = center[0] + radius * Math.cos(i * angle);
-    const y = center[1] + radius * Math.sin(i * angle);
-    points.push(board.create('point', [x, y], {visible: false,fixed:true}));
+    const x = center[0] + radius * Math.cos(i * angle - Math.PI / 2);
+    const y = center[1] + radius * Math.sin(i * angle - Math.PI / 2);
+    points.push(board.create('point', [x, y], {visible: false, fixed: true}));
   }
 
   polygon = board.create('polygon', points, {
-    borders: {strokeColor: "black",fixed:true},
+    borders: {strokeColor: "black", fixed: true},
     fillColor: "white",
     fillOpacity: 1
   });
 
-  const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  // CORRECTION : utiliser getLabel() pour cohérence avec les autres figures
   for (let i = 0; i < points.length; i++) {
     const pt = points[i];
-    const label = board.create('text', [pt.X() + 0.2, pt.Y() + 0.2, labels[i]]);
+    const label = board.create('text', [pt.X() + 0.2, pt.Y() + 0.2, getLabel(i)]);
     texts.push(label);
   }
 
@@ -1839,8 +1889,8 @@ const suggestionsList = [
   "cercle de rayon 2",
   "losange de côté 5",
   "parallélogramme base 5 hauteur 3",
-  "hexagone de côté 3",
-  "pentagone de côté 3"
+  "hexagone de côté 4",
+  "pentagone de côté 4"
 ];
 
 // Affichage dynamique des suggestions
