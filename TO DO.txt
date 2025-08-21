@@ -1,13 +1,10 @@
 
 
 
-DL SVG : plusieurs pages s'ouvrent 
-+ tous les éléments
 
 Copier presse papier ?
 
 
-
-Hexagone trop gros
 check polynome degres n
-diago si possible
+
+découpe mon fichier script en plusieurs fichiers .js pour chaque fonction importante et grosse

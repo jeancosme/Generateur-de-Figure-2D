@@ -1970,25 +1970,117 @@ function highlightSuggestion(items) {
   });
 }
 
-// Masque case "unités" si case "longueur" n'est pas cochée
-document.addEventListener("DOMContentLoaded", function () {
-  const toggleLengths = document.getElementById("toggleLengths");
-  const unitGroup = document.getElementById("unitGroup");
-
-  function updateUnitVisibility() {
-    unitGroup.style.display = toggleLengths.checked ? "block" : "none";
-
-    // Optionnel : décocher automatiquement "Afficher les unités"
-    if (!toggleLengths.checked) {
-      document.getElementById("showUnitsCheckbox").checked = false;
-    }
+document.addEventListener('DOMContentLoaded', function () {
+  // 1. Export button
+  const panel = document.getElementById('optionsPanel');
+  if (panel && !document.getElementById('exportSvgBtn')) {
+    const btn = document.createElement('button');
+    btn.id = 'exportSvgBtn';
+    btn.textContent = 'Exporter SVG';
+    btn.style.cssText = 'margin-top: 10px; padding: 8px 16px; background: #6c5ce7; color: white; border: none; border-radius: 4px; cursor: pointer;';
+    panel.insertAdjacentElement('afterend', btn);
+    btn.addEventListener('click', () => exportBoardToSVG());
   }
 
-  toggleLengths.addEventListener("change", updateUnitVisibility);
+  // 2. Reset des checkboxes et inputs
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  
+  const promptEl = document.getElementById('promptInput');
+  const labelEl = document.getElementById('labelInput');
+  if (promptEl) promptEl.value = '';
+  if (labelEl) labelEl.value = '';
+  
+  const suggestionBox = document.getElementById('suggestionBox');
+  if (suggestionBox) {
+    suggestionBox.style.display = 'none';
+    suggestionBox.innerHTML = '';
+  }
+  
+  const search = document.getElementById('figureSearch');
+  const figuresList = document.getElementById('figuresList');
+  if (search) search.value = '';
+  if (figuresList) Array.from(figuresList.children).forEach(li => li.classList.remove('selected','highlighted'));
+  
+  if (typeof customLabels !== 'undefined') customLabels = [];
 
-  // Mise à jour initiale à l'ouverture
-  updateUnitVisibility();
+  // 3. LISTE DES FIGURES - event listener principal
+  if (figuresList && promptEl) {
+    figuresList.addEventListener('click', function (e) {
+      console.log('Clic détecté sur la liste'); // Debug
+      const li = e.target.closest('li');
+      if (!li) {
+        console.log('Pas de li trouvé'); // Debug
+        return;
+      }
+      
+      console.log('Li cliqué:', li.textContent); // Debug
+      
+      // Récupérer le prompt depuis data-prompt ou depuis le texte
+      let prompt = li.getAttribute('data-prompt');
+      if (!prompt) {
+        const text = li.textContent || li.innerText;
+        console.log('Texte du li:', text); // Debug
+        
+        if (text.includes('Carré')) prompt = 'carré de côté 4';
+        else if (text.includes('Rectangle')) prompt = 'rectangle de 5 sur 3';
+        else if (text.includes('Triangle équilatéral')) prompt = 'triangle équilatéral de côté 4';
+        else if (text.includes('Triangle rectangle')) prompt = 'triangle rectangle de base 3 et hauteur 4';
+        else if (text.includes('Triangle isocèle')) prompt = 'triangle isocèle de base 6 et hauteur 4';
+        else if (text.includes('Cercle')) prompt = 'cercle de rayon 2';
+        else if (text.includes('Losange')) prompt = 'losange de côté 5';
+        else if (text.includes('Parallélogramme')) prompt = 'parallélogramme base 5 hauteur 3';
+        else if (text.includes('hexagone')) prompt = 'hexagone de côté 4';
+        else if (text.includes('pentagone')) prompt = 'pentagone de côté 4';
+        else prompt = text.toLowerCase();
+      }
+      
+      console.log('Prompt généré:', prompt); // Debug
+      
+      // Mettre le prompt dans l'input ET générer
+      promptEl.value = prompt;
+      console.log('Appel de generateFigure()'); // Debug
+      generateFigure();
+    });
+  }
+
+  // 4. Recherche dans la liste
+  if (search && figuresList) {
+    search.addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      Array.from(figuresList.children).forEach(li => {
+        const txt = (li.textContent || '').toLowerCase();
+        li.style.display = txt.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // 5. Event listener pour Enter sur promptInput
+  if (promptEl) {
+    promptEl.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        generateFigure();
+      }
+    });
+  }
+
+  // 6. Event listeners pour les toggles
+  safeOn("toggleLengths", "change", updateLengthLabels);
+  safeOn("showUnitsCheckbox", "change", updateLengthLabels);
+  safeOn("unitSelector", "change", updateLengthLabels);
+  safeOn("toggleCodings", "change", updateCodings);
+  safeOn("toggleDiagonals", "change", updateDiagonals);
+  safeOn("toggleRadius", "change", updateCircleExtras);
+  safeOn("toggleDiameter", "change", updateCircleExtras);
+  safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
+  safeOn("toggleRightAngles", "change", function(e) { updateRightAngleMarkers(e.target.checked); });
+  
+  console.log('DOMContentLoaded terminé'); // Debug
 });
+
 
 
 
@@ -2153,65 +2245,8 @@ function safeOn(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
-// UN SEUL DOMContentLoaded avec TOUT dedans
-document.addEventListener('DOMContentLoaded', function () {
-  // Export button
-  const panel = document.getElementById('optionsPanel');
-  if (panel && !document.getElementById('exportSvgBtn')) {
-    const btn = document.createElement('button');
-    btn.id = 'exportSvgBtn';
-    btn.textContent = 'Exporter SVG';
-    btn.style.cssText = 'margin-top: 10px; padding: 8px 16px; background: #6c5ce7; color: white; border: none; border-radius: 4px; cursor: pointer;';
-    panel.insertAdjacentElement('afterend', btn);
-    btn.addEventListener('click', () => exportBoardToSVG());
-  }
 
-  // Reset checkboxes et inputs
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  
-  const promptEl = document.getElementById('promptInput');
-  const labelEl = document.getElementById('labelInput');
-  if (promptEl) promptEl.value = '';
-  if (labelEl) labelEl.value = '';
-  
-  const suggestionBox = document.getElementById('suggestionBox');
-  if (suggestionBox) {
-    suggestionBox.style.display = 'none';
-    suggestionBox.innerHTML = '';
-  }
-  
-  const search = document.getElementById('figureSearch');
-  const figuresList = document.getElementById('figuresList');
-  if (search) search.value = '';
-  if (figuresList) Array.from(figuresList.children).forEach(li => li.classList.remove('selected','highlighted'));
-  
-  if (typeof customLabels !== 'undefined') customLabels = [];
 
-  // Liste des figures
-  const list = document.getElementById('figuresList');
-  if (list) {
-    list.addEventListener('click', function (e) {
-      const li = e.target.closest('li');
-      if (!li) return;
-      const prompt = li.getAttribute('data-prompt') || li.textContent;
-      if (promptEl) promptEl.value = prompt;
-      if (typeof generateFigure === 'function') generateFigure();
-    });
-  }
-
-  if (search) {
-    search.addEventListener('input', function () {
-      const q = this.value.trim().toLowerCase();
-      Array.from(list.children).forEach(li => {
-        const txt = (li.textContent || '').toLowerCase();
-        li.style.display = txt.includes(q) ? '' : 'none';
-      });
-    });
-  }
-});
 
 // Tous les event listeners
 safeOn("toggleLengths", "change", updateLengthLabels);
@@ -2228,65 +2263,3 @@ safeOn("toggleCodings", "change", updateCircleExtras);
 safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
 
 
-document.addEventListener('DOMContentLoaded', function () {
-  const list = document.getElementById('figuresList');
-  const search = document.getElementById('figureSearch');
-  const promptInput = document.getElementById('promptInput');
-
-  if (list) {
-    list.addEventListener('click', function (e) {
-      const li = e.target.closest('li');
-      if (!li) return;
-      const prompt = li.getAttribute('data-prompt') || li.textContent;
-      if (promptInput) promptInput.value = prompt;
-      if (typeof generateFigure === 'function') generateFigure();
-    });
-  }
-
-  if (search) {
-    search.addEventListener('input', function () {
-      const q = this.value.trim().toLowerCase();
-      Array.from(list.children).forEach(li => {
-        const txt = (li.textContent || '').toLowerCase();
-        li.style.display = txt.includes(q) ? '' : 'none';
-      });
-    });
-  }
-});
-
-// Décocher toutes les checkboxes au chargement et propager 'change' pour que l'UI se mette à jour
-document.addEventListener('DOMContentLoaded', function () {
-  // décocher toutes les cases
-  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.checked = false;
-    cb.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-
-  // réinitialiser les champs texte (prompt + labels)
-  const promptEl = document.getElementById('promptInput');
-  const labelEl  = document.getElementById('labelInput');
-  if (promptEl) {
-    promptEl.value = '';
-    promptEl.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-  if (labelEl) {
-    labelEl.value = '';
-    labelEl.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  // vider / masquer la boîte de suggestions
-  const suggestionBox = document.getElementById('suggestionBox');
-  if (suggestionBox) {
-    suggestionBox.style.display = 'none';
-    suggestionBox.innerHTML = '';
-  }
-
-  // réinitialiser la recherche et l'état visuel de la liste des figures
-  const search = document.getElementById('figureSearch');
-  const figuresList = document.getElementById('figuresList');
-  if (search) { search.value = ''; search.dispatchEvent(new Event('input', { bubbles: true })); }
-  if (figuresList) Array.from(figuresList.children).forEach(li => li.classList.remove('selected','highlighted'));
-
-  // réinitialiser les labels personnalisés si utilisés
-  if (typeof customLabels !== 'undefined') customLabels = [];
-});

@@ -237,7 +237,6 @@ footer {
   width: var(--icon-default);
   height: var(--icon-default);
   display: block;
-  vertical-align: middle;
   stroke: currentColor;
   fill: none;
 }
@@ -280,7 +279,6 @@ footer {
   width: var(--zoom-icon) !important;
   height: var(--zoom-icon) !important;
   display: block;
-  vertical-align: middle;
 }
 .jxg-controls button.zoom-btn svg path,
 .jxg-controls button.zoom-btn svg line {
@@ -298,7 +296,6 @@ footer {
   width: var(--rotate-icon) !important;
   height: var(--rotate-icon) !important;
   display: block;
-  vertical-align: middle;
 }
 .jxg-controls button.rotate-btn {
   font-size: 20px !important;      /* pour les flèches textuelles (↶/↷) */
