@@ -368,74 +368,45 @@ function updateCircleExtras() {
 
 // Fonction Diagonales   
 function updateDiagonals() {
-  // Clear existing diagonals
+  // Supprimer les anciennes diagonales
   diagonals.forEach(d => board.removeObject(d));
   diagonals = [];
 
+  // Vérifier si on doit afficher les diagonales
   const show = document.getElementById('toggleDiagonals')?.checked;
-  if (!show || !polygon || !points) return;
+  if (!show) return;
+  
+  // Vérifier qu'on a un polygone avec des points
+  if (!points || points.length !== 4) return;
 
-  const n = points.length;
+  console.log('Création diagonales pour quadrilatère avec', points.length, 'points');
 
-  if (n === 4) {
-    // Quadrilatères : 2 diagonales
-    const diagonal1 = board.create('segment', [points[0], points[3]], {
-      strokeColor: 'red',
-      strokeWidth: 2,
-      dash: 2
-    });
-    const diagonal2 = board.create('segment', [points[1], points[2]], {
-      strokeColor: 'red',
-      strokeWidth: 2,
-      dash: 2
-    });
-    diagonals.push(diagonal1, diagonal2);
-  } else if (n === 6) {
-    // CORRECTION : Hexagone - seulement les 3 grandes diagonales principales
-    // A-D (0-3), F-C (5-2), E-B (4-1)
-    const mainDiagonals = [
-      [0, 3], // A-D
-      [5, 2], // F-C  
-      [4, 1]  // E-B
-    ];
-    
-    mainDiagonals.forEach(([i, j]) => {
-      const diagonal = board.create('segment', [points[i], points[j]], {
-        strokeColor: 'black',  // noir comme les côtés
-        strokeWidth: 1,        // même épaisseur que les côtés
-        dash: 0                // trait plein (pas de tirets)
-      });
-      diagonals.push(diagonal);
-    });
-  } else if (n === 5) {
-    // Pentagone - toutes les diagonales
-    const pentagonPairs = [
-      [0, 2], [0, 3], [1, 3], [1, 4], [2, 4]
-    ];
-    pentagonPairs.forEach(([i, j]) => {
-      const diagonal = board.create('segment', [points[i], points[j]], {
-        strokeColor: 'purple',
-        strokeWidth: 2,
-        dash: 2
-      });
-      diagonals.push(diagonal);
-    });
-  } else if (n >= 7) {
-    // Polygones génériques (7+ côtés) : toutes les diagonales possibles
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 2; j < n; j++) {
-        if (!(i === 0 && j === n - 1)) {
-          const diagonal = board.create('segment', [points[i], points[j]], {
-            strokeColor: 'blue',
-            strokeWidth: 1,
-            dash: 4
-          });
-          diagonals.push(diagonal);
-        }
-      }
-    }
-  }
+  // QUADRILATÈRE : 2 diagonales uniquement
+  // Diagonale 1 : point[0] vers point[2] 
+  const diag1 = board.create('segment', [points[0], points[2]], {
+    strokeColor: 'black',
+    strokeWidth: 1,
+    dash: 0,
+    fixed: true,
+    withLabel: false
+  });
+  
+  // Diagonale 2 : point[1] vers point[3]
+  const diag2 = board.create('segment', [points[1], points[3]], {
+    strokeColor: 'black', 
+    strokeWidth: 1,
+    dash: 0,
+    fixed: true,
+    withLabel: false
+  });
+
+  diagonals.push(diag1, diag2);
+  console.log('✅ 2 diagonales créées');
+  
+  board.update();
 }
+
+
 
 
 function drawCodingMark(pt1, pt2, index = 1) {
@@ -1214,18 +1185,21 @@ function drawLosange(side) {
   addDraggingToPolygon(polygon, points, texts);
 }
 
-  function drawRectangle(width, height) {
+function drawRectangle(width, height) {
+  // Points dans l'ordre : A (bas-gauche), B (bas-droite), C (haut-droite), D (haut-gauche)
   const A = board.create('point', [0, 0], { name: '', fixed: true, visible: false });
   const B = board.create('point', [width, 0], { name: '', fixed: true, visible: false });
   const C = board.create('point', [width, height], { name: '', fixed: true, visible: false });
   const D = board.create('point', [0, height], { name: '', fixed: true, visible: false });
 
-  points = [A, B, C, D];
+  points = [A, B, C, D]; // A=0, B=1, C=2, D=3
+  
+  console.log('Rectangle créé - Points dans l\'ordre:', 'A(0,0)', 'B(' + width + ',0)', 'C(' + width + ',' + height + ')', 'D(0,' + height + ')'); // Debug
 
   polygon = board.create('polygon', points, {
     borders: {
       strokeColor: "black",
-      fixed: true // 🔒 empêche de déplacer les côtés
+      fixed: true
     },
     fillColor: "white",
     fillOpacity: 1
@@ -1237,12 +1211,13 @@ function drawLosange(side) {
   let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
   texts.push(labelA, labelB, labelC, labelD);
 
-  updateDiagonals();
   addDraggingToPolygon(polygon, points, texts);
   updateCodings();
+  updateDiagonals();
   updateLengthLabels();
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
+
 
 function updateLengthLabels() {
   // Supprimer les longueurs précédentes et leurs handles
@@ -2081,9 +2056,6 @@ document.addEventListener('DOMContentLoaded', function () {
   console.log('DOMContentLoaded terminé'); // Debug
 });
 
-
-
-
 // Masquer les suggestions si on clique ailleurs
 document.addEventListener("click", (e) => {
   if (!suggestionsDiv.contains(e.target) && e.target !== input) {
@@ -2246,20 +2218,5 @@ function safeOn(id, event, handler) {
 }
 
 
-
-
-// Tous les event listeners
-safeOn("toggleLengths", "change", updateLengthLabels);
-safeOn("showUnitsCheckbox", "change", updateLengthLabels);
-safeOn("unitSelector", "change", updateLengthLabels);
-safeOn("toggleCodings", "change", updateCodings);
-safeOn("toggleDiagonals", "change", updateDiagonals);
-safeOn("toggleRadius", "change", updateCircleExtras);
-safeOn("toggleDiameter", "change", updateCircleExtras);
-safeOn("toggleLengths", "change", updateCircleExtras);
-safeOn("showUnitsCheckbox", "change", updateCircleExtras);
-safeOn("unitSelector", "change", updateCircleExtras);
-safeOn("toggleCodings", "change", updateCircleExtras);
-safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
 
 
