@@ -410,3 +410,11 @@ button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px;
   background: #f0f4ff;
   border-color: rgba(100,110,255,0.14);
 }
+
+/* figure list: only name in bold */
+.figures-list .figure-name { font-weight: 700; color: #222; }
+.figures-list .figure-desc { font-weight: 400; color: #666; margin-left: 6px; }
+
+/* ensure long names wrap nicely if needed */
+.figures-list li { display: flex; align-items: center; gap: 6px; }
+.figures-list .figure-name, .figures-list .figure-desc { white-space: normal; overflow: hidden; text-overflow: ellipsis; }

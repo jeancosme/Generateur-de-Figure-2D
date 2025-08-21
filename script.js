@@ -390,110 +390,6 @@ function updateDiagonals() {
   diagonals.push(diag1, diag2);
 }
 
-
-  const n = points.length;
-  let sidesToShow = [];
-
-  if (n === 4) {
-    const sideLens = [];
-    for (let i = 0; i < 4; i++) {
-      const pt1 = points[i];
-      const pt2 = points[(i + 1) % 4];
-      const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
-      sideLens.push(len);
-    }
-
-    const rounded = sideLens.map(len => Math.round(len * 100) / 100);
-    const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
-
-    if (unique.length === 1) {
-      sidesToShow = [0];
-    } else if (unique.length === 2) {
-      sidesToShow = [0, 1];
-    } else {
-      sidesToShow = [0, 1, 2, 3];
-    }
-  } else {
-    sidesToShow = [...Array(n).keys()];
-  }
-
-  for (let i of sidesToShow) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % n];
-    const dx = pt2.X() - pt1.X();
-    const dy = pt2.Y() - pt1.Y();
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const offset = 0.3;
-
-    // Position initiale du label (au milieu du segment, décalé)
-    const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
-    const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
-
-    // Créer un handle (point invisible mais cliquable) que l'utilisateur peut déplacer
-    const handle = board.create('point', [
-      () => midX,
-      () => midY
-    ], {
-      size: 6,                // zone cliquable
-      strokeOpacity: 0,      // invisible visuellement
-      fillOpacity: 0,        // invisible visuellement
-      fixed: false,
-      name: '',
-      highlight: false,
-      showInfobox: false
-    });
-
-    // Forcer le curseur "move" sur le handle pour UX
-    try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
-
-    // Créer un label qui suit le handle
-    const label = board.create('text', [
-      () => handle.X(),
-      () => handle.Y(),
-      () => formatLength(Math.sqrt((pt2.X() - pt1.X())**2 + (pt2.Y() - pt1.Y())**2))
-    ], {
-      fontSize: 14,
-      fixed: false,            // non fixe => suit le handle dynamiquement
-      anchorX: 'middle',
-      anchorY: 'middle',
-      highlight: false,
-      name: ''
-    });
-
-    // Rendre la zone du texte également draggable : relayer les événements souris au handle
-    try {
-      if (label.rendNode) {
-        label.rendNode.style.cursor = 'move';
-        label.rendNode.addEventListener('mousedown', function (ev) {
-          ev.stopPropagation();
-          ev.preventDefault();
-          const start = board.getUsrCoordsOfMouse(ev);
-          function onMove(e) {
-            const pos = board.getUsrCoordsOfMouse(e);
-            const dxm = pos[0] - start[0];
-            const dym = pos[1] - start[1];
-            // déplacer handle (point.moveTo attend des coordonnées)
-            handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
-            // mettre à jour start
-            start[0] = pos[0]; start[1] = pos[1];
-            board.update();
-          }
-          function onUp() {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
-          }
-          document.addEventListener('mousemove', onMove);
-          document.addEventListener('mouseup', onUp);
-        }, { passive: false });
-      }
-    } catch (e) { /* ignore if DOM not accessible */ }
-
-    lengthHandles.push(handle);
-    lengthLabels.push(label);
-  }
-
-
-
 function drawCodingMark(pt1, pt2, index = 1) {
   const dx = pt2.X() - pt1.X();
   const dy = pt2.Y() - pt1.Y();
@@ -1000,12 +896,89 @@ function getRightAngleTriples() {
 }
 
 
-
-
-
 function drawAngleMark(vertex) {
   // Très simple : petit texte au-dessus du point
   return board.create('text', [vertex.X(), vertex.Y() + 0.5, '∠']);
+}
+
+
+function getBoardCenter() {
+  // boundingbox: [xmin, ymax, xmax, ymin]
+  const bb = board.getBoundingBox();
+  const xmin = bb[0], ymax = bb[1], xmax = bb[2], ymin = bb[3];
+  return [(xmin + xmax) / 2, (ymax + ymin) / 2];
+}
+
+function getFigureCenter() {
+  // Cercle : préférer centre explicite
+  if (typeof centerPoint !== 'undefined' && centerPoint) {
+    return [centerPoint.X(), centerPoint.Y()];
+  }
+  // Sinon moyenne simple des sommets/points
+  if (points && points.length > 0) {
+    let sx = 0, sy = 0, n = 0;
+    points.forEach(p => { sx += p.X(); sy += p.Y(); n++; });
+    return n ? [sx / n, sy / n] : [0, 0];
+  }
+  return [0, 0];
+}
+
+function centerFigure() {
+  const [figCx, figCy] = getFigureCenter();
+  const [boardCx, boardCy] = getBoardCenter();
+  const dx = boardCx - figCx;
+  const dy = boardCy - figCy;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return;
+
+  // déplacer les points (sommets, gliders, centre du cercle si nécessaire)
+  (points || []).forEach(p => {
+    try { p.moveTo([p.X() + dx, p.Y() + dy], 0); } catch (e) {
+      try { p.setPosition(JXG.COORDS_BY_USER, [p.X() + dx, p.Y() + dy]); } catch (ee) {}
+    }
+  });
+
+  if (typeof centerPoint !== 'undefined' && centerPoint && !points.includes(centerPoint)) {
+    try { centerPoint.moveTo([centerPoint.X() + dx, centerPoint.Y() + dy], 0); } catch (e) {
+      try { centerPoint.setPosition(JXG.COORDS_BY_USER, [centerPoint.X() + dx, centerPoint.Y() + dy]); } catch (ee) {}
+    }
+  }
+  if (typeof circlePoint !== 'undefined' && circlePoint && !points.includes(circlePoint)) {
+    try { circlePoint.moveTo([circlePoint.X() + dx, circlePoint.Y() + dy], 0); } catch (e) {
+      try { circlePoint.setPosition(JXG.COORDS_BY_USER, [circlePoint.X() + dx, circlePoint.Y() + dy]); } catch (ee) {}
+    }
+  }
+
+  // déplacer les handles invisibles (labels, length handles, etc.)
+  const moveObj = (o) => {
+    if (!o) return;
+    try { o.moveTo([o.X() + dx, o.Y() + dy], 0); } catch (e) {
+      try { o.setPosition(JXG.COORDS_BY_USER, [o.X() + dx, o.Y() + dy]); } catch (ee) {}
+    }
+  };
+
+  (labelHandles || []).forEach(moveObj);
+  (lengthHandles || []).forEach(moveObj);
+
+  // déplacer les textes si possible
+  const moveText = (t) => {
+    if (!t) return;
+    try {
+      if (typeof t.setPosition === 'function') {
+        t.setPosition(JXG.COORDS_BY_USER, [t.X() + dx, t.Y() + dy]);
+      }
+    } catch (e) {}
+  };
+  (labelTexts || []).forEach(moveText);
+  (texts || []).forEach(moveText);
+  (lengthLabels || []).forEach(moveText);
+
+  // Mise à jour finale
+  updateCodings();
+  updateDiagonals();
+  updateLengthLabels();
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
+  updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
+  board.update();
 }
 
 
@@ -1013,26 +986,25 @@ function generateFigure() {
   const prompt = document.getElementById("promptInput").value.toLowerCase();
 
   const labelInput = document.getElementById("labelInput").value.trim();
-    if (labelInput.includes(",")) {
-      // Cas 1 : séparés par des virgules
-      customLabels = labelInput.split(',').map(s => s.trim().toUpperCase());
-    } else if (labelInput.includes(" ")) {
-      // Cas 2 : séparés par des espaces
-      customLabels = labelInput.split(' ').map(s => s.trim().toUpperCase());
-    } else {
-      // Cas 3 : chaîne unique — on découpe chaque lettre
-      customLabels = labelInput.toUpperCase().split('');
-    }  
-
-  // Réinitialiser proprement le board
-  board.removeObject([...board.objectsList]); // <- ceci ne suffit pas toujours
-  while (board.objectsList.length > 0) {
-    board.removeObject(board.objectsList[0]);
+  if (labelInput.includes(",")) {
+    customLabels = labelInput.split(',').map(s => s.trim().toUpperCase());
+  } else if (labelInput.includes(" ")) {
+    customLabels = labelInput.split(' ').map(s => s.trim().toUpperCase());
+  } else {
+    customLabels = labelInput.toUpperCase().split('');
   }
 
+  // Réinitialiser proprement le board
+  board.removeObject([...board.objectsList]);
+  while (board.objectsList.length > 0) board.removeObject(board.objectsList[0]);
+
+  // reset locals
   points = [];
   texts = [];
   polygon = null;
+  centerPoint = null;
+  circlePoint = null;
+  circleObject = null;
 
   if (prompt.includes("carré")) {
     const size = extractNumber(prompt, 4);
@@ -1051,12 +1023,11 @@ function generateFigure() {
     const side = extractNumber(prompt, 4);
     drawEquilateralTriangle(side);
   } else if (prompt.includes("triangle isocèle")) {
-    // extraire base et hauteur : exemple "triangle isocèle de base 6 et hauteur 4"
     const [base, height] = extractTwoNumbers(prompt, [4, 3]);
     drawIsoscelesTriangle(base, height);
   } else if (prompt.includes("losange")) {
     const size = extractNumber(prompt, 4);
-    drawLosange(size);           
+    drawLosange(size);
   } else if (prompt.includes("parallélogramme")) {
     const [base, height] = extractTwoNumbers(prompt, [4, 3]);
     drawParallelogram(base, height);
@@ -1066,8 +1037,15 @@ function generateFigure() {
   } else if (prompt.includes("pentagone")) {
     const side = extractNumber(prompt, 3);
     drawRegularPolygon(5, side);
-  } 
+  }
+
+  // recentrer la figure générée au centre du panneau
+  try { centerFigure(); } catch (e) { console.warn('centerFigure failed', e); }
+
+  // mise à jour finale
+  board.update();
 }
+
     
 document.getElementById("promptInput").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
@@ -1263,10 +1241,18 @@ function updateLengthLabels() {
     const pt1 = points[i];
     const pt2 = points[(i + 1) % n];
 
-    // création d'un handle initialement placé au milieu du segment (calculé immédiatement)
-    const offset = 0.3;
-
     // calcul position par défaut (milieu + décalage orthogonal)
+    const defaultOffset = 0.3; // valeur par défaut (change si tu veux pour toutes les figures)
+    // offsets spécifiques pour quadrilatères / parallélogramme
+    const offsetsForParallelogram = [0.2, 0.5, 0.2, 0.5];
+    let offset = defaultOffset;
+    if (points.length === 4 && polygon) {
+      // si tu veux détecter le parallélogramme proprement, adapte detectCurrentFigure()
+      if (true) {
+        offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
+      }
+    }
+
     const dx = pt2.X() - pt1.X();
     const dy = pt2.Y() - pt1.Y();
     const len = Math.hypot(dx, dy) || 1;
@@ -1283,7 +1269,7 @@ function updateLengthLabels() {
       highlight: false,
       showInfobox: false
     });
-    handle._auto = true; // tant que l'utilisateur n'a pas bougé le handle, on le recalcule
+    handle._auto = true;
 
     try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
 
@@ -1301,7 +1287,7 @@ function updateLengthLabels() {
       name: ''
     });
 
-    // si l'utilisateur drag le label on bascule handle en mode manuel
+    // drag du label -> déplace handle
     try {
       if (label.rendNode) {
         label.rendNode.style.cursor = 'move';
@@ -1360,6 +1346,7 @@ function updateLengthLabels() {
     } catch (e) { /* ignore */ }
   }
 }
+
 
 
 function drawCircle(radius) {
@@ -1562,10 +1549,13 @@ function drawIsoscelesTriangle(base = 4, height = 3) {
 }
 
 
-function drawParallelogram(base, height) {
-  const offset = base / 3;
+function drawParallelogram(base, sideLength) {
+  // angle entre la base et le côté adjacent (ajuste si tu veux une inclinaison différente)
+  const theta = Math.PI / 3; // 60°
+  const offset = sideLength * Math.cos(theta); // projection horizontale du côté oblique
+  const height = sideLength * Math.sin(theta); // hauteur effective
 
-  // Création des 4 points (sommets), invisibles (on garde la gestion par polygon)
+  // sommets
   const A = board.create('point', [0, 0], { visible: false, fixed: true });
   const B = board.create('point', [base, 0], { visible: false, fixed: true });
   const C = board.create('point', [base - offset, height], { visible: false, fixed: true });
@@ -1573,20 +1563,19 @@ function drawParallelogram(base, height) {
 
   points = [A, B, C, D];
 
-  // Création du parallélogramme
   polygon = board.create('polygon', points, {
     borders: { strokeColor: "black" },
     fillColor: "white",
     fillOpacity: 1
   });
 
-  // rendre les sommets du polygone déplaçables (les points sous-jacents)
+  // rendre les sommets déplaçables (comme avant)
   polygon.borders.forEach(segment => {
     segment.point1.setAttribute({ fixed: false });
     segment.point2.setAttribute({ fixed: false });
   });
 
-  // -- Création de handles invisibles et de textes qui suivent les handles --
+  // handles invisibles et labels qui suivent les sommets
   const labelOffsetDefaults = [
     [-0.25, -0.25],
     [0.25, -0.25],
@@ -1613,7 +1602,6 @@ function drawParallelogram(base, height) {
       showInfobox: false
     });
 
-    // texte suit le handle (permet aussi de le rendre draggable via le handle)
     const txt = board.create('text', [
       () => h.X(),
       () => h.Y(),
@@ -1626,7 +1614,6 @@ function drawParallelogram(base, height) {
       name: ''
     });
 
-    // rendre le texte cliquable pour déplacer le handle (UX)
     try {
       if (txt.rendNode) {
         txt.rendNode.style.cursor = 'move';
@@ -1655,14 +1642,11 @@ function drawParallelogram(base, height) {
 
     localHandles.push(h);
     localTexts.push(txt);
-    // stocker globalement si besoin pour cleanup
     labelHandles.push(h);
     labelTexts.push(txt);
     texts.push(txt);
   }
 
-  // Appel addDraggingToPolygon en fournissant aussi les handles afin qu'ils
-  // suivent le déplacement global du polygone.
   addDraggingToPolygon(polygon, points, localTexts, localHandles);
 
   updateDiagonals();
@@ -2220,4 +2204,41 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   }
+});
+
+// Décocher toutes les checkboxes au chargement et propager 'change' pour que l'UI se mette à jour
+document.addEventListener('DOMContentLoaded', function () {
+  // décocher toutes les cases
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.checked = false;
+    cb.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  // réinitialiser les champs texte (prompt + labels)
+  const promptEl = document.getElementById('promptInput');
+  const labelEl  = document.getElementById('labelInput');
+  if (promptEl) {
+    promptEl.value = '';
+    promptEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (labelEl) {
+    labelEl.value = '';
+    labelEl.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  // vider / masquer la boîte de suggestions
+  const suggestionBox = document.getElementById('suggestionBox');
+  if (suggestionBox) {
+    suggestionBox.style.display = 'none';
+    suggestionBox.innerHTML = '';
+  }
+
+  // réinitialiser la recherche et l'état visuel de la liste des figures
+  const search = document.getElementById('figureSearch');
+  const figuresList = document.getElementById('figuresList');
+  if (search) { search.value = ''; search.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (figuresList) Array.from(figuresList.children).forEach(li => li.classList.remove('selected','highlighted'));
+
+  // réinitialiser les labels personnalisés si utilisés
+  if (typeof customLabels !== 'undefined') customLabels = [];
 });
