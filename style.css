@@ -347,3 +347,66 @@ button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px;
   font-weight: 700 !important;
   line-height: 1 !important;
 }
+/* panneau de droite : options + liste */
+.right-column {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+/* colonne contenant le panneau d'options */
+.options-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* panneau Liste des figures */
+.figures-panel {
+  min-width: 340px;        /* augmente si nécessaire (ex: 380px) */
+  max-width: 420px;        /* limite si on veut éviter qu'il déborde trop */
+  width: auto;
+  background: #fff;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  overflow: visible;
+}
+.figures-panel h3 { margin: 0 0 8px 0; font-size: 16px; }
+.figures-panel #figureSearch {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+/* liste scrollable */
+.figures-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 360px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.figures-list li {
+  white-space: nowrap;           /* tout sur une ligne */
+  overflow: hidden;
+  text-overflow: ellipsis;       /* tronque si ça dépasse la box */
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  background: #fbfbfb;
+  border: 1px solid transparent;
+}
+.figures-list li:hover {
+  background: #f0f4ff;
+  border-color: rgba(100,110,255,0.14);
+}

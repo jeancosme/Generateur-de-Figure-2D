@@ -123,6 +123,9 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let lengthHandles = []; // <-- NEW: handles for draggable length labels
     let labelHandles = []; // handles for draggable point-label anchors (O, A, ...)
     let labelTexts = [];   // text objects for those labels
+    let lengthHandleMeta = []; // meta pour synchroniser handles ↔ segments/points
+    let _lengthSyncAttached = false;
+
 
 
 
@@ -1084,8 +1087,8 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
     return matches.slice(0, 2).map(n => parseFloat(n.replace(',', '.')));
 }
 
-    function addDraggingToPolygon(polygon, points, texts) {
-    let startCoords = null;
+function addDraggingToPolygon(polygon, points, texts, handles = []) {
+  let startCoords = null;
 
   polygon.rendNode.addEventListener('mousedown', function (e) {
     startCoords = board.getUsrCoordsOfMouse(e);
@@ -1096,14 +1099,27 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
       const dy = newCoords[1] - startCoords[1];
       startCoords = newCoords;
 
-      points.forEach(pt => pt.moveTo([pt.X() + dx, pt.Y() + dy], 0));
-      texts.forEach(txt => {
-        txt.setPosition(JXG.COORDS_BY_USER, [
-          txt.X() + dx,
-          txt.Y() + dy
-        ]);
+      points.forEach(pt => {
+        try { pt.moveTo([pt.X() + dx, pt.Y() + dy], 0); }
+        catch (err) { try { pt.setPosition(JXG.COORDS_BY_USER, [pt.X() + dx, pt.Y() + dy]); } catch(e){} }
       });
-      updateCodings(); 
+
+      // déplacer aussi les handles (labels) si fournis
+      handles.forEach(h => {
+        try { h.moveTo([h.X() + dx, h.Y() + dy], 0); }
+        catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e){} }
+      });
+
+      texts.forEach(txt => {
+        try {
+          if (typeof txt.setPosition === 'function') {
+            txt.setPosition(JXG.COORDS_BY_USER, [txt.X() + dx, txt.Y() + dy]);
+          }
+        } catch (err) { /* ignore */ }
+      });
+
+      updateCodings();
+      board.update();
     }
 
     function onMouseUp() {
@@ -1208,19 +1224,18 @@ function updateLengthLabels() {
   lengthHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
   lengthLabels = [];
   lengthHandles = [];
+  lengthHandleMeta = [];
 
-  const showLengths = document.getElementById("toggleLengths").checked;
-  const showUnits = document.getElementById("showUnitsCheckbox").checked;
-  const unit = document.getElementById("unitSelector").value;
+  const showLengths = document.getElementById("toggleLengths")?.checked;
+  const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
+  const unit = document.getElementById("unitSelector")?.value || 'cm';
 
   if (!showLengths || points.length === 0) return;
 
-  // Fonction pour formater les longueurs
   function formatLength(len) {
     const rounded = Math.round(len * 10) / 10;
-    const space = '\u00A0'; // espace insécable
+    const space = '\u00A0';
     const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
-
     return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
   }
 
@@ -1232,20 +1247,14 @@ function updateLengthLabels() {
     for (let i = 0; i < 4; i++) {
       const pt1 = points[i];
       const pt2 = points[(i + 1) % 4];
-      const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
+      const len = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
       sideLens.push(len);
     }
-
     const rounded = sideLens.map(len => Math.round(len * 100) / 100);
     const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
-
-    if (unique.length === 1) {
-      sidesToShow = [0];
-    } else if (unique.length === 2) {
-      sidesToShow = [0, 1];
-    } else {
-      sidesToShow = [0, 1, 2, 3];
-    }
+    if (unique.length === 1) sidesToShow = [0];
+    else if (unique.length === 2) sidesToShow = [0, 1];
+    else sidesToShow = [0,1,2,3];
   } else {
     sidesToShow = [...Array(n).keys()];
   }
@@ -1253,76 +1262,102 @@ function updateLengthLabels() {
   for (let i of sidesToShow) {
     const pt1 = points[i];
     const pt2 = points[(i + 1) % n];
-    const dx = pt2.X() - pt1.X();
-    const dy = pt2.Y() - pt1.Y();
-    const len = Math.sqrt(dx * dx + dy * dy);
+
+    // création d'un handle initialement placé au milieu du segment (calculé immédiatement)
     const offset = 0.3;
 
-    // Position initiale du label (au milieu du segment, décalé)
+    // calcul position par défaut (milieu + décalage orthogonal)
+    const dx = pt2.X() - pt1.X();
+    const dy = pt2.Y() - pt1.Y();
+    const len = Math.hypot(dx, dy) || 1;
     const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
     const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
 
-    // Créer un handle (point invisible mais cliquable) que l'utilisateur peut déplacer
-    const handle = board.create('point', [
-      midX,
-      midY
-    ], {
-      size: 6,                // zone cliquable
-      strokeOpacity: 0,      // invisible visuellement
-      fillOpacity: 0,        // invisible visuellement
+    // Création du handle (coordonnées fixes pour commencer)
+    const handle = board.create('point', [ midX, midY ], {
+      size: 6,
+      strokeOpacity: 0,
+      fillOpacity: 0,
       fixed: false,
       name: '',
       highlight: false,
       showInfobox: false
     });
+    handle._auto = true; // tant que l'utilisateur n'a pas bougé le handle, on le recalcule
 
-    // Forcer le curseur "move" sur le handle pour UX
     try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
 
-    // Créer un label qui suit le handle
+    // label qui suit le handle
     const label = board.create('text', [
       () => handle.X(),
       () => handle.Y(),
-      () => formatLength(Math.sqrt((pt2.X() - pt1.X())**2 + (pt2.Y() - pt1.Y())**2))
+      () => formatLength(Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y()))
     ], {
       fontSize: 14,
-      fixed: false,            // non fixe => suit le handle dynamiquement
+      fixed: false,
       anchorX: 'middle',
       anchorY: 'middle',
       highlight: false,
       name: ''
     });
 
-    // Rendre la zone du texte également draggable : relayer les événements souris au handle
+    // si l'utilisateur drag le label on bascule handle en mode manuel
     try {
       if (label.rendNode) {
         label.rendNode.style.cursor = 'move';
-        label.rendNode.addEventListener('mousedown', function (ev) {
-          ev.stopPropagation();
-          ev.preventDefault();
+        label.rendNode.addEventListener('pointerdown', function (ev) {
+          ev.stopPropagation(); ev.preventDefault();
+          handle._auto = false;
           const start = board.getUsrCoordsOfMouse(ev);
           function onMove(e) {
             const pos = board.getUsrCoordsOfMouse(e);
             const dxm = pos[0] - start[0];
             const dym = pos[1] - start[1];
-            // déplacer handle (point.moveTo attend des coordonnées)
-            handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
-            // mettre à jour start
+            try { handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0); }
+            catch (err) { try { handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dxm, handle.Y() + dym]); } catch(e) {} }
             start[0] = pos[0]; start[1] = pos[1];
             board.update();
           }
           function onUp() {
-            document.removeEventListener('mousemove', onMove);
-            document.removeEventListener('mouseup', onUp);
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
           }
-          document.addEventListener('mousemove', onMove);
-          document.addEventListener('mouseup', onUp);
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp);
         }, { passive: false });
       }
-    } catch (e) { /* ignore if DOM not accessible */ }
+    } catch (e) { /* ignore */ }
 
     lengthHandles.push(handle);
     lengthLabels.push(label);
+    lengthHandleMeta.push({ handle, pt1, pt2, offset });
+  }
+
+  // Synchronisation automatique : repositionne handles non-modifiés (_auto === true)
+  function syncLengthHandles() {
+    for (const meta of lengthHandleMeta) {
+      const h = meta.handle;
+      if (!h || !h._auto) continue;
+      const p1 = meta.pt1, p2 = meta.pt2, off = meta.offset || 0.3;
+      const dx = p2.X() - p1.X(), dy = p2.Y() - p1.Y();
+      const len = Math.hypot(dx, dy) || 1;
+      const x = (p1.X() + p2.X()) / 2 + off * (dy / len);
+      const y = (p1.Y() + p2.Y()) / 2 - off * (dx / len);
+      try { h.moveTo([x, y], 0); } catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [x, y]); } catch(e) {} }
+    }
+    board.update();
+  }
+
+  if (!_lengthSyncAttached) {
+    try {
+      if (typeof board.on === 'function') {
+        board.on('update', syncLengthHandles);
+        _lengthSyncAttached = true;
+      } else {
+        setInterval(syncLengthHandles, 120);
+        _lengthSyncAttached = true;
+      }
+    } catch (e) { /* ignore */ }
   }
 }
 
@@ -1530,50 +1565,11 @@ function drawIsoscelesTriangle(base = 4, height = 3) {
 function drawParallelogram(base, height) {
   const offset = base / 3;
 
-  // Création des 4 points, invisibles, avec uniquement l'étiquette visible
-  const A = board.create('point', [0, 0], {
-    name: getLabel(0),
-    visible: false,
-    fixed: true,
-    label: {
-      visible: true,
-      offset: [-10, -15],
-      fontSize: 16
-    }
-  });
-
-  const B = board.create('point', [base, 0], {
-    name: getLabel(1),
-    visible: false,
-    fixed: true,
-    label: {
-      visible: true,
-      offset: [10, -15],
-      fontSize: 16
-    }
-  });
-
-  const C = board.create('point', [base - offset, height], {
-    name: getLabel(2),
-    visible: false,
-    fixed: true,
-    label: {
-      visible: true,
-      offset: [10, 10],
-      fontSize: 16
-    }
-  });
-
-  const D = board.create('point', [-offset, height], {
-    name: getLabel(3),
-    visible: false,
-    fixed: true,
-    label: {
-      visible: true,
-      offset: [-10, 10],
-      fontSize: 16
-    }
-  });
+  // Création des 4 points (sommets), invisibles (on garde la gestion par polygon)
+  const A = board.create('point', [0, 0], { visible: false, fixed: true });
+  const B = board.create('point', [base, 0], { visible: false, fixed: true });
+  const C = board.create('point', [base - offset, height], { visible: false, fixed: true });
+  const D = board.create('point', [-offset, height], { visible: false, fixed: true });
 
   points = [A, B, C, D];
 
@@ -1584,19 +1580,97 @@ function drawParallelogram(base, height) {
     fillOpacity: 1
   });
 
-  // On rend les sommets du polygone déplaçables (manuellement)
+  // rendre les sommets du polygone déplaçables (les points sous-jacents)
   polygon.borders.forEach(segment => {
     segment.point1.setAttribute({ fixed: false });
     segment.point2.setAttribute({ fixed: false });
   });
 
-  // Pas besoin de texts à part
-  addDraggingToPolygon(polygon, points, []);
+  // -- Création de handles invisibles et de textes qui suivent les handles --
+  const labelOffsetDefaults = [
+    [-0.25, -0.25],
+    [0.25, -0.25],
+    [0.25, 0.25],
+    [-0.25, 0.25]
+  ];
+
+  const localHandles = [];
+  const localTexts = [];
+
+  for (let i = 0; i < 4; i++) {
+    const pt = points[i];
+    const off = labelOffsetDefaults[i] || [0.25, 0.25];
+    const hx = pt.X() + off[0];
+    const hy = pt.Y() + off[1];
+
+    const h = board.create('point', [hx, hy], {
+      size: 6,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      fixed: false,
+      name: '',
+      highlight: false,
+      showInfobox: false
+    });
+
+    // texte suit le handle (permet aussi de le rendre draggable via le handle)
+    const txt = board.create('text', [
+      () => h.X(),
+      () => h.Y(),
+      getLabel(i)
+    ], {
+      anchorX: 'middle',
+      anchorY: 'bottom',
+      fontSize: 16,
+      fixed: false,
+      name: ''
+    });
+
+    // rendre le texte cliquable pour déplacer le handle (UX)
+    try {
+      if (txt.rendNode) {
+        txt.rendNode.style.cursor = 'move';
+        txt.rendNode.addEventListener('pointerdown', function (ev) {
+          ev.stopPropagation(); ev.preventDefault();
+          const start = board.getUsrCoordsOfMouse(ev);
+          function onMove(e) {
+            const pos = board.getUsrCoordsOfMouse(e);
+            const dx = pos[0] - start[0];
+            const dy = pos[1] - start[1];
+            try { h.moveTo([h.X() + dx, h.Y() + dy], 0); } catch (err) {
+              try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e) {}
+            }
+            start[0] = pos[0]; start[1] = pos[1];
+            board.update();
+          }
+          function onUp() {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+          }
+          document.addEventListener('pointermove', onMove);
+          document.addEventListener('pointerup', onUp);
+        }, { passive: false });
+      }
+    } catch (e) { /* ignore */ }
+
+    localHandles.push(h);
+    localTexts.push(txt);
+    // stocker globalement si besoin pour cleanup
+    labelHandles.push(h);
+    labelTexts.push(txt);
+    texts.push(txt);
+  }
+
+  // Appel addDraggingToPolygon en fournissant aussi les handles afin qu'ils
+  // suivent le déplacement global du polygone.
+  addDraggingToPolygon(polygon, points, localTexts, localHandles);
+
   updateDiagonals();
   updateCodings();
   updateLengthLabels();
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
+
 
 
 function drawRegularPolygon(n, side) {
@@ -2120,3 +2194,30 @@ safeOn("toggleCodings", "change", updateCircleExtras);
 
 // si le handler a besoin de l'événement (ex: vérifier checked)
 safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
+
+
+document.addEventListener('DOMContentLoaded', function () {
+  const list = document.getElementById('figuresList');
+  const search = document.getElementById('figureSearch');
+  const promptInput = document.getElementById('promptInput');
+
+  if (list) {
+    list.addEventListener('click', function (e) {
+      const li = e.target.closest('li');
+      if (!li) return;
+      const prompt = li.getAttribute('data-prompt') || li.textContent;
+      if (promptInput) promptInput.value = prompt;
+      if (typeof generateFigure === 'function') generateFigure();
+    });
+  }
+
+  if (search) {
+    search.addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      Array.from(list.children).forEach(li => {
+        const txt = (li.textContent || '').toLowerCase();
+        li.style.display = txt.includes(q) ? '' : 'none';
+      });
+    });
+  }
+});
