@@ -56,16 +56,18 @@
         <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
         <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
 
-        <label><input type="checkbox" id="toggleLengths"> Afficher les mesures</label>
+        <label>
+          <input type="checkbox" id="toggleLengths"> Afficher les mesures
+        </label>
 
-        <div id="unitGroup" style="display: none; margin-left: 20px;">
-          <label><input type="checkbox" id="showUnitsCheckbox"> Afficher les unités</label>
-          <select id="unitSelector">
-            <option value="mm">mm</option>
-            <option value="cm" selected>cm</option>
-            <option value="dm">dm</option>
+        <div id="unitGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="showUnitsCheckbox"> Afficher les unités
+          </label>
+          <select id="unitSelector" style="margin-left: 10px; font-size: 13px;">
+            <option value="cm">cm</option>
             <option value="m">m</option>
-            <option value="km">km</option>
+            <option value="mm">mm</option>
           </select>
         </div>
 

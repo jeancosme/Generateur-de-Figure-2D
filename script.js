@@ -1218,7 +1218,6 @@ function drawRectangle(width, height) {
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
 
-
 function updateLengthLabels() {
   // Supprimer les longueurs précédentes et leurs handles
   lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
@@ -1237,6 +1236,7 @@ function updateLengthLabels() {
     const rounded = Math.round(len * 10) / 10;
     const space = '\u00A0';
     const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
+    // CORRECTION : Toujours afficher les unités quand showLengths est coché
     return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
   }
 
@@ -1265,15 +1265,11 @@ function updateLengthLabels() {
     const pt2 = points[(i + 1) % n];
 
     // calcul position par défaut (milieu + décalage orthogonal)
-    const defaultOffset = 0.3; // valeur par défaut (change si tu veux pour toutes les figures)
-    // offsets spécifiques pour quadrilatères / parallélogramme
+    const defaultOffset = 0.3;
     const offsetsForParallelogram = [0.2, 0.5, 0.2, 0.5];
     let offset = defaultOffset;
     if (points.length === 4 && polygon) {
-      // si tu veux détecter le parallélogramme proprement, adapte detectCurrentFigure()
-      if (true) {
-        offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
-      }
+      offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
     }
 
     const dx = pt2.X() - pt1.X();
@@ -1282,7 +1278,7 @@ function updateLengthLabels() {
     const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
     const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
 
-    // Création du handle (coordonnées fixes pour commencer)
+    // Création du handle
     const handle = board.create('point', [ midX, midY ], {
       size: 6,
       strokeOpacity: 0,
@@ -1335,14 +1331,14 @@ function updateLengthLabels() {
           document.addEventListener('pointerup', onUp);
         }, { passive: false });
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
 
     lengthHandles.push(handle);
     lengthLabels.push(label);
     lengthHandleMeta.push({ handle, pt1, pt2, offset });
   }
 
-  // Synchronisation automatique : repositionne handles non-modifiés (_auto === true)
+  // Synchronisation automatique
   function syncLengthHandles() {
     for (const meta of lengthHandleMeta) {
       const h = meta.handle;
@@ -1366,7 +1362,7 @@ function updateLengthLabels() {
         setInterval(syncLengthHandles, 120);
         _lengthSyncAttached = true;
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
   }
 }
 
@@ -1946,147 +1942,251 @@ function highlightSuggestion(items) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  // 1. Export button
-  const panel = document.getElementById('optionsPanel');
-  if (panel && !document.getElementById('exportSvgBtn')) {
-    const btn = document.createElement('button');
-    btn.id = 'exportSvgBtn';
-    btn.textContent = 'Exporter SVG';
-    btn.style.cssText = 'margin-top: 10px; padding: 8px 16px; background: #6c5ce7; color: white; border: none; border-radius: 4px; cursor: pointer;';
-    panel.insertAdjacentElement('afterend', btn);
-    btn.addEventListener('click', () => exportBoardToSVG());
-  }
+  console.log('🚀 Initialisation du générateur...');
 
-  // 2. Reset des checkboxes et inputs
+  // ==========================================
+  // 1. RESET INITIAL DE L'INTERFACE
+  // ==========================================
+  
+  // Reset des checkboxes
   document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.checked = false;
-    cb.dispatchEvent(new Event('change', { bubbles: true }));
   });
   
+  // Reset des inputs
   const promptEl = document.getElementById('promptInput');
   const labelEl = document.getElementById('labelInput');
+  const search = document.getElementById('figureSearch');
+  
   if (promptEl) promptEl.value = '';
   if (labelEl) labelEl.value = '';
+  if (search) search.value = '';
   
+  // Reset suggestions
   const suggestionBox = document.getElementById('suggestionBox');
   if (suggestionBox) {
     suggestionBox.style.display = 'none';
     suggestionBox.innerHTML = '';
   }
   
-  const search = document.getElementById('figureSearch');
+  // Reset liste des figures
   const figuresList = document.getElementById('figuresList');
-  if (search) search.value = '';
-  if (figuresList) Array.from(figuresList.children).forEach(li => li.classList.remove('selected','highlighted'));
-  
-  if (typeof customLabels !== 'undefined') customLabels = [];
+  if (figuresList) {
+    Array.from(figuresList.children).forEach(li => {
+      li.classList.remove('selected', 'highlighted');
+    });
+  }
 
-  // 3. LISTE DES FIGURES - event listener principal
+  // ==========================================
+  // 2. GESTION CONDITIONNELLE DES UNITÉS
+  // ==========================================
+  
+  const toggleLengths = document.getElementById('toggleLengths');
+  const unitGroup = document.getElementById('unitGroup');
+  const showUnitsCheckbox = document.getElementById('showUnitsCheckbox');
+  const unitSelector = document.getElementById('unitSelector');
+
+  if (toggleLengths && unitGroup) {
+    // Fonction pour afficher/cacher le groupe unités
+    function updateUnitVisibility() {
+      if (toggleLengths.checked) {
+        unitGroup.style.display = 'block';
+      } else {
+        unitGroup.style.display = 'none';
+        // Optionnel : décocher automatiquement les unités
+        if (showUnitsCheckbox) showUnitsCheckbox.checked = false;
+      }
+      // Mettre à jour l'affichage des mesures
+      if (typeof updateLengthLabels === 'function') {
+        updateLengthLabels();
+      }
+    }
+    
+    // Appliquer la règle au chargement (unitGroup doit être caché par défaut)
+    updateUnitVisibility();
+    
+    // Event listener pour "Afficher les mesures"
+    toggleLengths.addEventListener('change', updateUnitVisibility);
+    
+    // Event listeners pour les contrôles d'unités
+    if (showUnitsCheckbox) {
+      showUnitsCheckbox.addEventListener('change', function() {
+        if (typeof updateLengthLabels === 'function') updateLengthLabels();
+      });
+    }
+    
+    if (unitSelector) {
+      unitSelector.addEventListener('change', function() {
+        if (typeof updateLengthLabels === 'function') updateLengthLabels();
+      });
+    }
+    
+    console.log('✅ Gestion des unités configurée');
+  }
+
+  // ==========================================
+  // 3. LISTE DES FIGURES - Clic pour générer
+  // ==========================================
+  
   if (figuresList && promptEl) {
     figuresList.addEventListener('click', function (e) {
-      console.log('Clic détecté sur la liste'); // Debug
       const li = e.target.closest('li');
-      if (!li) {
-        console.log('Pas de li trouvé'); // Debug
-        return;
-      }
+      if (!li) return;
       
-      console.log('Li cliqué:', li.textContent); // Debug
-      
-      // Récupérer le prompt depuis data-prompt ou depuis le texte
+      // Récupérer le prompt depuis data-prompt ou générer depuis le texte
       let prompt = li.getAttribute('data-prompt');
+      
       if (!prompt) {
         const text = li.textContent || li.innerText;
-        console.log('Texte du li:', text); // Debug
         
-        if (text.includes('Carré')) prompt = 'carré de côté 4';
-        else if (text.includes('Rectangle')) prompt = 'rectangle de 5 sur 3';
-        else if (text.includes('Triangle équilatéral')) prompt = 'triangle équilatéral de côté 4';
-        else if (text.includes('Triangle rectangle')) prompt = 'triangle rectangle de base 3 et hauteur 4';
-        else if (text.includes('Triangle isocèle')) prompt = 'triangle isocèle de base 6 et hauteur 4';
-        else if (text.includes('Cercle')) prompt = 'cercle de rayon 2';
-        else if (text.includes('Losange')) prompt = 'losange de côté 5';
-        else if (text.includes('Parallélogramme')) prompt = 'parallélogramme base 5 hauteur 3';
-        else if (text.includes('hexagone')) prompt = 'hexagone de côté 4';
-        else if (text.includes('pentagone')) prompt = 'pentagone de côté 4';
-        else prompt = text.toLowerCase();
+        // Mapping texte → prompt
+        const textToPrompt = {
+          'Carré': 'carré de côté 4',
+          'Rectangle': 'rectangle de 5 sur 3', 
+          'Triangle équilatéral': 'triangle équilatéral de côté 4',
+          'Triangle rectangle': 'triangle rectangle de base 3 et hauteur 4',
+          'Triangle isocèle': 'triangle isocèle de base 6 et hauteur 4',
+          'Cercle': 'cercle de rayon 2',
+          'Losange': 'losange de côté 5',
+          'Parallélogramme': 'parallélogramme base 5 hauteur 3',
+          'hexagone': 'hexagone de côté 4',
+          'pentagone': 'pentagone de côté 4'
+        };
+        
+        // Chercher la correspondance
+        for (const [key, value] of Object.entries(textToPrompt)) {
+          if (text.includes(key)) {
+            prompt = value;
+            break;
+          }
+        }
+        
+        // Fallback
+        if (!prompt) prompt = text.toLowerCase();
       }
-      
-      console.log('Prompt généré:', prompt); // Debug
       
       // Mettre le prompt dans l'input ET générer
       promptEl.value = prompt;
-      console.log('Appel de generateFigure()'); // Debug
-      generateFigure();
+      if (typeof generateFigure === 'function') {
+        generateFigure();
+      }
     });
+    
+    console.log('✅ Liste des figures configurée');
   }
 
-  // 4. Recherche dans la liste
+  // ==========================================
+  // 4. RECHERCHE DANS LA LISTE
+  // ==========================================
+  
   if (search && figuresList) {
     search.addEventListener('input', function () {
-      const q = this.value.trim().toLowerCase();
+      const query = this.value.trim().toLowerCase();
+      
       Array.from(figuresList.children).forEach(li => {
-        const txt = (li.textContent || '').toLowerCase();
-        li.style.display = txt.includes(q) ? '' : 'none';
+        const text = (li.textContent || '').toLowerCase();
+        li.style.display = text.includes(query) ? '' : 'none';
       });
     });
+    
+    console.log('✅ Recherche configurée');
   }
 
-  // 5. Event listener pour Enter sur promptInput
+  // ==========================================
+  // 5. EVENT LISTENER POUR ENTRÉE CLAVIER
+  // ==========================================
+  
   if (promptEl) {
     promptEl.addEventListener('keydown', function(event) {
       if (event.key === 'Enter') {
         event.preventDefault();
-        generateFigure();
+        if (typeof generateFigure === 'function') {
+          generateFigure();
+        }
       }
     });
+    
+    console.log('✅ Touche Entrée configurée');
   }
 
-  // 6. Event listeners pour les toggles
-  safeOn("toggleLengths", "change", updateLengthLabels);
-  safeOn("showUnitsCheckbox", "change", updateLengthLabels);
-  safeOn("unitSelector", "change", updateLengthLabels);
-  safeOn("toggleCodings", "change", updateCodings);
-  safeOn("toggleDiagonals", "change", updateDiagonals);
-  safeOn("toggleRadius", "change", updateCircleExtras);
-  safeOn("toggleDiameter", "change", updateCircleExtras);
-  safeOn("toggleEqualAngles", "change", function(e) { updateEqualAngleMarkers(e.target.checked); });
-  safeOn("toggleRightAngles", "change", function(e) { updateRightAngleMarkers(e.target.checked); });
+  // ==========================================
+  // 6. EVENT LISTENERS POUR LES OPTIONS
+  // ==========================================
   
-  console.log('DOMContentLoaded terminé'); // Debug
+  // Fonction helper pour éviter les erreurs si l'élément n'existe pas
+  function safeAddEventListener(id, event, handler) {
+    const element = document.getElementById(id);
+    if (element && typeof handler === 'function') {
+      element.addEventListener(event, handler);
+      return true;
+    }
+    return false;
+  }
+  
+  // Event listeners pour les toggles (UNIQUEMENT ici, pas ailleurs)
+  const eventListeners = [
+    ['toggleCodings', 'change', () => { if (typeof updateCodings === 'function') updateCodings(); }],
+    ['toggleDiagonals', 'change', () => { if (typeof updateDiagonals === 'function') updateDiagonals(); }],
+    ['toggleRadius', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
+    ['toggleDiameter', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
+    ['toggleEqualAngles', 'change', (e) => { if (typeof updateEqualAngleMarkers === 'function') updateEqualAngleMarkers(e.target.checked); }],
+    ['toggleRightAngles', 'change', (e) => { if (typeof updateRightAngleMarkers === 'function') updateRightAngleMarkers(e.target.checked); }]
+  ];
+  
+  let listenersAdded = 0;
+  eventListeners.forEach(([id, event, handler]) => {
+    if (safeAddEventListener(id, event, handler)) {
+      listenersAdded++;
+    }
+  });
+  
+  console.log(`✅ ${listenersAdded} event listeners configurés`);
+
+  // ==========================================
+  // 7. BOUTON D'EXPORT SVG
+  // ==========================================
+  
+  const panel = document.getElementById('optionsPanel');
+  if (panel && !document.getElementById('exportSvgBtn')) {
+    const exportBtn = document.createElement('button');
+    exportBtn.id = 'exportSvgBtn';
+    exportBtn.textContent = 'Exporter SVG';
+    exportBtn.style.cssText = `
+      margin-top: 10px; 
+      padding: 8px 16px; 
+      background: #6c5ce7; 
+      color: white; 
+      border: none; 
+      border-radius: 4px; 
+      cursor: pointer;
+      font-family: inherit;
+    `;
+    
+    exportBtn.addEventListener('click', function() {
+      if (typeof exportBoardToSVG === 'function') {
+        exportBoardToSVG();
+      }
+    });
+    
+    panel.insertAdjacentElement('afterend', exportBtn);
+    console.log('✅ Bouton export créé');
+  }
+
+  // ==========================================
+  // 8. NETTOYAGE DES VARIABLES GLOBALES
+  // ==========================================
+  
+  if (typeof customLabels !== 'undefined') {
+    customLabels = [];
+  }
+
+  console.log('🎉 Initialisation terminée avec succès !');
 });
 
 // Masquer les suggestions si on clique ailleurs
 document.addEventListener("click", (e) => {
   if (!suggestionsDiv.contains(e.target) && e.target !== input) {
     suggestionsDiv.style.display = "none";
-  }
-});
-
-document.getElementById("toggleRightAngles").addEventListener("change", function (e) {
-  updateRightAngleMarkers(e.target.checked);
-});
-
-document.getElementById("toggleHelp").addEventListener("click", function () {
-  const box = document.getElementById("helpBox");
-  box.style.display = (box.style.display === "none" || box.style.display === "") ? "block" : "none";
-});
-
-document.getElementById("promptInput").addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    const suggestions = document.querySelectorAll("#suggestionBox .suggestion-item");
-    if (suggestions.length > 0) {
-      const firstSuggestion = suggestions[0].textContent;
-      this.value = firstSuggestion;
-
-      // On cache la suggestion après l'insertion
-      document.getElementById("suggestionBox").style.display = "none";
-
-      // Optionnel : tu peux lancer automatiquement le bouton "Générer"
-      // document.querySelector("button[onclick='generateFigure()']").click();
-
-      event.preventDefault(); // empêche le rechargement du formulaire si c’est le cas
-    }
   }
 });
 
