@@ -1137,7 +1137,7 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
       const C = board.create('point', [size, size], {name: '',fixed: true, visible: false});
       const D = board.create('point', [0, size], {name: '',fixed: true, visible: false});
 
-      points = [A, B, C, D];
+      points = [A, D, C, B];
       polygon = board.create('polygon', points, {
         withLabel: false,
         borders: {strokeColor: "black",fixed: true },
@@ -1150,6 +1150,8 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
         let labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
         let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
         texts.push(labelA, labelB, labelC, labelD);
+
+        points = [A, B, C, D];
 
         addDraggingToPolygon(polygon, points, texts);
         updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
@@ -1411,7 +1413,6 @@ function drawCircle(radius) {
 
   points = [circlePoint];
 
-  // --- CORRECTION : Labels dynamiques basés sur customLabels ---
   
   // Récupérer les labels du centre et du point sur le cercle
   let centerLabel = 'O';  // par défaut
