@@ -1588,85 +1588,18 @@ function drawParallelogram(base, sideLength) {
     fillOpacity: 1
   });
 
-  // rendre les sommets déplaçables (comme avant)
-  polygon.borders.forEach(segment => {
-    segment.point1.setAttribute({ fixed: false });
-    segment.point2.setAttribute({ fixed: false });
-  });
+  // CORRECTION : Créer des labels FIXES comme dans les autres figures
+  // Au lieu de handles mobiles, utilise des positions relatives automatiques
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() - 0.3, getLabel(0)], {fontSize: 14});
+  const labelB = board.create('text', [B.X() + 0.2, B.Y() - 0.2, getLabel(1)], {fontSize: 14});
+  const labelC = board.create('text', [C.X() + 0.2, C.Y() + 0.25, getLabel(2)], {fontSize: 14});
+  const labelD = board.create('text', [D.X() - 0.35, D.Y() + 0.2, getLabel(3)], {fontSize: 14});
+  
+  texts.push(labelA, labelB, labelC, labelD);
 
-  // handles invisibles et labels qui suivent les sommets
-  const labelOffsetDefaults = [
-    [-0.25, -0.25],
-    [0.25, -0.25],
-    [0.25, 0.25],
-    [-0.25, 0.25]
-  ];
-
-  const localHandles = [];
-  const localTexts = [];
-
-  for (let i = 0; i < 4; i++) {
-    const pt = points[i];
-    const off = labelOffsetDefaults[i] || [0.25, 0.25];
-    const hx = pt.X() + off[0];
-    const hy = pt.Y() + off[1];
-
-    const h = board.create('point', [hx, hy], {
-      size: 6,
-      strokeOpacity: 0,
-      fillOpacity: 0,
-      fixed: false,
-      name: '',
-      highlight: false,
-      showInfobox: false
-    });
-
-    const txt = board.create('text', [
-      () => h.X(),
-      () => h.Y(),
-      getLabel(i)
-    ], {
-      anchorX: 'middle',
-      anchorY: 'bottom',
-      fontSize: 16,
-      fixed: false,
-      name: ''
-    });
-
-    try {
-      if (txt.rendNode) {
-        txt.rendNode.style.cursor = 'move';
-        txt.rendNode.addEventListener('pointerdown', function (ev) {
-          ev.stopPropagation(); ev.preventDefault();
-          const start = board.getUsrCoordsOfMouse(ev);
-          function onMove(e) {
-            const pos = board.getUsrCoordsOfMouse(e);
-            const dx = pos[0] - start[0];
-            const dy = pos[1] - start[1];
-            try { h.moveTo([h.X() + dx, h.Y() + dy], 0); } catch (err) {
-              try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e) {}
-            }
-            start[0] = pos[0]; start[1] = pos[1];
-            board.update();
-          }
-          function onUp() {
-            document.removeEventListener('pointermove', onMove);
-            document.removeEventListener('pointerup', onUp);
-          }
-          document.addEventListener('pointermove', onMove);
-          document.addEventListener('pointerup', onUp);
-        }, { passive: false });
-      }
-    } catch (e) { /* ignore */ }
-
-    localHandles.push(h);
-    localTexts.push(txt);
-    labelHandles.push(h);
-    labelTexts.push(txt);
-    texts.push(txt);
-  }
-
-  addDraggingToPolygon(polygon, points, localTexts, localHandles);
+  // CORRECTION : Utiliser la fonction standard addDraggingToPolygon
+  // sans les handles personnalisés qui causent le problème
+  addDraggingToPolygon(polygon, points, texts);
 
   updateDiagonals();
   updateCodings();
