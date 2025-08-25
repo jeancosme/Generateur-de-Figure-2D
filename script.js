@@ -2311,5 +2311,25 @@ function safeOn(id, event, handler) {
 }
 
 
+function trackVisit() {
+  // Stocker dans localStorage
+  let visits = parseInt(localStorage.getItem('appVisits') || '0');
+  visits++;
+  localStorage.setItem('appVisits', visits.toString());
+  
+  // Afficher dans la console
+  console.log(`👥 Visite n°${visits} de cet utilisateur`);
+  
+  // Optionnel : envoyer à un service gratuit
+  fetch('https://api.countapi.xyz/hit/mon-generateur-figures/visits')
+    .then(response => response.json())
+    .then(data => {
+      console.log(`📊 Total visiteurs: ${data.value}`);
+    })
+    .catch(e => console.log('Count API indisponible'));
+}
+
+// Appeler au chargement
+document.addEventListener('DOMContentLoaded', trackVisit);
 
 
