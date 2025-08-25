@@ -9,15 +9,16 @@
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/x-icon" href="favicon_io\favicon.ico">
 
-  <!-- JSXGraph (une seule inclusion, avant le script principal) -->
+  <!-- JSXGraph -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css">
-  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
 
-  <!-- Font Awesome si utilisé ailleurs (optionnel) -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 
-  <!-- Lien vers ton script JS -->
+  <!-- SCRIPT UNIQUE -->
   <script defer src="script.js"></script>
+
 </head>
 
 <body>
@@ -26,7 +27,10 @@
   <div class="controls">
     <div class="control-group">
       <label for="promptInput" class="control-label">Nature de la figure</label>
-      <input type="text" id="promptInput" placeholder="Ex : carré de côté 4">
+      <div class="input-container">
+        <input type="text" id="promptInput" placeholder="Ex : carré de côté 4" autocomplete="off">
+        <div class="suggestions" id="suggestionBox" style="display: none;"></div>
+      </div>
     </div>
 
     <div class="control-group">
@@ -36,12 +40,8 @@
 
     <div class="control-actions">
       <button onclick="generateFigure()">Générer</button>
-      <!-- <button id="toggleHelp">❓ Aide</button> -->
     </div>
   </div>
-
-  
-  <div class="suggestions" id="suggestionBox" style="display: none;"></div>
 
 <div class="layout">
   <!-- zone de dessin (gauche) -->
@@ -103,7 +103,6 @@
   </div>
 </div>
 
-
   <!-- Pied de page -->
 <footer id="footer">
   <div class="footer-content">
@@ -135,7 +134,5 @@
   <p>👉 Clique sur <strong>"Générer"</strong> pour afficher la figure. Tu peux la faire tourner ou la réinitialiser avec les boutons au-dessus.</p>
 </div>
 
-</div>
 </body>
-
 </html>
