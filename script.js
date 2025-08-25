@@ -1132,12 +1132,12 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
     //  LISTE DES DRAWS
 
     function drawSquare(size) {
-      const A = board.create('point', [0, 0], {name: '',fixed: true, visible: false});
-      const B = board.create('point', [size, 0], {name: '',fixed: true, visible: false});
-      const C = board.create('point', [size, size], {name: '',fixed: true, visible: false});
-      const D = board.create('point', [0, size], {name: '',fixed: true, visible: false});
+      const A = board.create('point', [0, size], {name: '',fixed: true, visible: false});
+      const B = board.create('point', [size, size], {name: '',fixed: true, visible: false});
+      const C = board.create('point', [size, 0], {name: '',fixed: true, visible: false});
+      const D = board.create('point', [0, 0], {name: '',fixed: true, visible: false});
 
-      points = [A, D, C, B];
+      points = [A, B, C, D];
       polygon = board.create('polygon', points, {
         withLabel: false,
         borders: {strokeColor: "black",fixed: true },
@@ -1145,11 +1145,12 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
         fillOpacity: 1
       });
 
-        let labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
-        let labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
-        let labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
-        let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
+        let labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.2, getLabel(0)]); // HAUT-GAUCHE
+        let labelB = board.create('text', [B.X() + 0.15, B.Y() + 0.2, getLabel(1)]); // HAUT-DROITE
+        let labelC = board.create('text', [C.X() + 0.15, C.Y() - 0.2, getLabel(2)]); // BAS-DROITE
+        let labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.2, getLabel(3)]); // BAS-GAUCHE
         texts.push(labelA, labelB, labelC, labelD);
+
 
         points = [A, B, C, D];
 
@@ -1166,10 +1167,32 @@ function drawLosange(side) {
   const ox = side * Math.cos(theta);   // projection horizontale du côté oblique
   const oy = side * Math.sin(theta);   // hauteur
 
-  const A = board.create('point', [0, 0],          { visible: false, fixed: true });
-  const B = board.create('point', [side, 0],       { visible: false, fixed: true });
-  const C = board.create('point', [side - ox, oy], { visible: false, fixed: true });
-  const D = board.create('point', [-ox, oy],       { visible: false, fixed: true });
+  // AJOUT : Rotation de 30° vers la droite (π/6 radians)
+  const rotationAngle = Math.PI / 6;   // 30° en radians
+  
+  // Fonction helper pour appliquer la rotation
+  function rotate(x, y) {
+    const cos = Math.cos(rotationAngle);
+    const sin = Math.sin(rotationAngle);
+    return [x * cos - y * sin, x * sin + y * cos];
+  }
+
+  // Créer les points de base puis les faire tourner
+  const baseA = [-ox, oy];       // HAUT-GAUCHE original
+  const baseB = [side - ox, oy]; // HAUT-DROITE original
+  const baseC = [side, 0];       // BAS-DROITE original
+  const baseD = [0, 0];          // BAS-GAUCHE original
+
+  // Appliquer la rotation de 30°
+  const [rotA_x, rotA_y] = rotate(baseA[0], baseA[1]);
+  const [rotB_x, rotB_y] = rotate(baseB[0], baseB[1]);
+  const [rotC_x, rotC_y] = rotate(baseC[0], baseC[1]);
+  const [rotD_x, rotD_y] = rotate(baseD[0], baseD[1]);
+
+  const A = board.create('point', [rotA_x, rotA_y], { visible: false, fixed: true }); // HAUT-GAUCHE tourné
+  const B = board.create('point', [rotB_x, rotB_y], { visible: false, fixed: true }); // HAUT-DROITE tourné
+  const C = board.create('point', [rotC_x, rotC_y], { visible: false, fixed: true }); // BAS-DROITE tourné
+  const D = board.create('point', [rotD_x, rotD_y], { visible: false, fixed: true }); // BAS-GAUCHE tourné
 
   points = [A, B, C, D];
   polygon = board.create('polygon', points, {
@@ -1178,10 +1201,11 @@ function drawLosange(side) {
     fillOpacity: 1
   });
 
-  const LA = board.create('text', [A.X(), A.Y() - 0.3, 'A']);
-  const LB = board.create('text', [B.X(), B.Y() - 0.3, 'B']);
-  const LC = board.create('text', [C.X(), C.Y() + 0.3, 'C']);
-  const LD = board.create('text', [D.X(), D.Y() + 0.3, 'D']);
+  // Labels avec positions ajustées pour la rotation
+  const LA = board.create('text', [A.X() - 0.4, A.Y() , getLabel(0)]); // HAUT-GAUCHE
+  const LB = board.create('text', [B.X() - 0.1, B.Y() + 0.3, getLabel(1)]); // HAUT-DROITE
+  const LC = board.create('text', [C.X() + 0.25, C.Y(), getLabel(2)]); // BAS-DROITE
+  const LD = board.create('text', [D.X() - 0.1, D.Y() - 0.3, getLabel(3)]); // BAS-GAUCHE
   texts.push(LA, LB, LC, LD);
 
   addDraggingToPolygon(polygon, points, texts);
@@ -1524,18 +1548,18 @@ function drawIsoscelesTriangle(base = 4, height = 3) {
 
 
 function drawParallelogram(base, sideLength) {
-  // angle entre la base et le côté adjacent (ajuste si tu veux une inclinaison différente)
   const theta = Math.PI / 3; // 60°
   const offset = sideLength * Math.cos(theta); // projection horizontale du côté oblique
   const height = sideLength * Math.sin(theta); // hauteur effective
 
-  // sommets
-  const A = board.create('point', [0, 0], { visible: false, fixed: true });
-  const B = board.create('point', [base, 0], { visible: false, fixed: true });
-  const C = board.create('point', [base - offset, height], { visible: false, fixed: true });
-  const D = board.create('point', [-offset, height], { visible: false, fixed: true });
+  // CORRECTION : Créer les points dans l'ordre horaire correct
+  // A = haut-gauche, B = haut-droite, C = bas-droite, D = bas-gauche
+  const A = board.create('point', [-offset, height], { visible: false, fixed: true }); // HAUT-GAUCHE
+  const B = board.create('point', [base - offset, height], { visible: false, fixed: true }); // HAUT-DROITE
+  const C = board.create('point', [base, 0], { visible: false, fixed: true }); // BAS-DROITE
+  const D = board.create('point', [0, 0], { visible: false, fixed: true }); // BAS-GAUCHE
 
-  points = [A, B, C, D];
+  points = [A, B, C, D]; // Ordre horaire : A→B→C→D
 
   polygon = board.create('polygon', points, {
     borders: { strokeColor: "black" },
@@ -1543,17 +1567,14 @@ function drawParallelogram(base, sideLength) {
     fillOpacity: 1
   });
 
-  // CORRECTION : Créer des labels FIXES comme dans les autres figures
-  // Au lieu de handles mobiles, utilise des positions relatives automatiques
-  const labelA = board.create('text', [A.X() - 0.3, A.Y() - 0.3, getLabel(0)], {fontSize: 14});
-  const labelB = board.create('text', [B.X() + 0.2, B.Y() - 0.2, getLabel(1)], {fontSize: 14});
-  const labelC = board.create('text', [C.X() + 0.2, C.Y() + 0.25, getLabel(2)], {fontSize: 14});
-  const labelD = board.create('text', [D.X() - 0.35, D.Y() + 0.2, getLabel(3)], {fontSize: 14});
+  // CORRECTION : Labels positionnés selon leur position réelle
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: 14}); // HAUT-GAUCHE
+  const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: 14}); // HAUT-DROITE
+  const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: 14}); // BAS-DROITE
+  const labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.3, getLabel(3)], {fontSize: 14}); // BAS-GAUCHE
   
   texts.push(labelA, labelB, labelC, labelD);
 
-  // CORRECTION : Utiliser la fonction standard addDraggingToPolygon
-  // sans les handles personnalisés qui causent le problème
   addDraggingToPolygon(polygon, points, texts);
 
   updateDiagonals();
@@ -1561,7 +1582,6 @@ function drawParallelogram(base, sideLength) {
   updateLengthLabels();
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
-
 
 
 function drawRegularPolygon(n, side) {
