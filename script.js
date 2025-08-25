@@ -1385,7 +1385,7 @@ function drawCircle(radius) {
 
   // créer le centre (sans label natif)
   centerPoint = board.create('point', [0, 0], {
-    name: '',               // on gère le label séparément pour le rendre déplaçable
+    name: '',
     showInfobox: false,
     fixed: false,
     size: 4,
@@ -1404,114 +1404,68 @@ function drawCircle(radius) {
   circlePoint = board.create('glider', [radius, 0, circleObject], {
     name: '',
     showInfobox: false,
-    size: 4,
+    size: 3,
     strokeColor: 'black',
     fillColor: 'black'
   });
 
   points = [circlePoint];
-  // --- Créer handles et textes déplaçables pour O et A ---
 
-  // handle et label pour O (initial proche du centre)
-  const startOX = centerPoint.X()-0.05;
-  const startOY = centerPoint.Y()+0.15;
-  const handleO = board.create('point', [startOX, startOY], {
-    size: 6,
-    strokeOpacity: 0,
-    fillOpacity: 0,
-    fixed: false,
-    name: '',
-    highlight: false,
-    showInfobox: false
-  });
-  const labelO = board.create('text', [
-    () => handleO.X(),
-    () => handleO.Y(),
-    'O'
-  ], {
-    anchorX: 'middle',
-    anchorY: 'bottom',
-    fontSize: 16,
-    fixed: false,
-    name: ''
-  });
-
-  // handle et label pour A (initial proche du point A)
-  const startAX = circlePoint.X() + 0.3;
-  const startAY = circlePoint.Y();
-  const handleA = board.create('point', [startAX, startAY], {
-    size: 6,
-    strokeOpacity: 0,
-    fillOpacity: 0,
-    fixed: false,
-    name: '',
-    highlight: false,
-    showInfobox: false
-  });
-  const labelA = board.create('text', [
-    () => handleA.X(),
-    () => handleA.Y(),
-    'A'
-  ], {
-    anchorX: 'middle',
-    anchorY: 'bottom',
-    fontSize: 16,
-    fixed: false,
-    name: ''
-  });
-
-  // stocker pour nettoyage éventuel
-  labelHandles.push(handleO, handleA);
-  labelTexts.push(labelO, labelA);
-
-  // after creating text objects, force a render so rendNode exists
-  board.update();
-
-  // rendre les labels "draggables" : relayer mousedown -> déplacer le handle
-  function makeLabelDraggable(textObj, handle) {
-    try {
-      if (!textObj.rendNode) return;
-      textObj.rendNode.style.cursor = 'move';
-      // use pointer events to support touch+mouse
-      textObj.rendNode.addEventListener('pointerdown', function (ev) {
-        ev.stopPropagation();
-        ev.preventDefault();
-        const start = board.getUsrCoordsOfMouse(ev);
-        function onMove(e) {
-          const pos = board.getUsrCoordsOfMouse(e);
-          const dxm = pos[0] - start[0];
-          const dym = pos[1] - start[1];
-          // moveTo expects user coords
-          try { handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0); } catch (err) {
-            // fallback: setCoords if available
-            try { handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dxm, handle.Y() + dym]); } catch (e) {}
-          }
-          start[0] = pos[0]; start[1] = pos[1];
-          board.update();
-        }
-        function onUp() {
-          document.removeEventListener('pointermove', onMove);
-          document.removeEventListener('pointerup', onUp);
-        }
-        document.addEventListener('pointermove', onMove);
-        document.addEventListener('pointerup', onUp);
-      }, { passive: false });
-    } catch (e) { /* ignore */ }
+  // --- CORRECTION : Labels dynamiques basés sur customLabels ---
+  
+  // Récupérer les labels du centre et du point sur le cercle
+  let centerLabel = 'O';  // par défaut
+  let pointLabel = 'A';   // par défaut
+  
+  if (customLabels && customLabels.length > 0) {
+    centerLabel = customLabels[0] || 'O';  // Premier label = centre
+    pointLabel = customLabels[1] || 'A';   // Deuxième label = point sur cercle
   }
+  
+  // Label du centre qui suit automatiquement centerPoint
+  const labelCenter = board.create('text', [
+    () => centerPoint.X() - 0.1,  // Position relative automatique
+    () => centerPoint.Y() + 0.2,
+    centerLabel  // ← Utilise le label personnalisé
+  ], {
+    anchorX: 'middle',
+    anchorY: 'bottom',
+    fontSize: 16,
+    fixed: true,  // Le texte suit automatiquement le point
+    name: ''
+  });
 
-  makeLabelDraggable(labelO, handleO);
-  makeLabelDraggable(labelA, handleA);
+  // Label du point sur cercle qui suit automatiquement circlePoint  
+  const labelPoint = board.create('text', [
+    () => circlePoint.X() + 0.3,   // Position relative automatique
+    () => circlePoint.Y(),
+    pointLabel  // ← Utilise le label personnalisé
+  ], {
+    anchorX: 'middle',
+    anchorY: 'bottom',
+    fontSize: 16,
+    fixed: true,  // Le texte suit automatiquement le point
+    name: ''
+  });
 
-  // ensure radius option listener exists safely
-  try {
-    const el = document.getElementById("toggleRadius");
-    if (el) el.addEventListener("change", updateCircleExtras);
-  } catch (e) {}
+  // AJOUT : Permettre le déplacement du cercle entier
+  // Ajouter un event listener sur le centerPoint pour déplacer tout le cercle
+  centerPoint.on('drag', function() {
+    // Le cercle se déplace automatiquement car il est lié au centerPoint
+    // Le circlePoint (glider) reste sur le cercle automatiquement
+    // Les labels suivent automatiquement grâce aux fonctions flèches
+    board.update();
+  });
+
+  // Stocker les labels (mais plus besoin de handles séparés)
+  labelTexts.push(labelCenter, labelPoint);
+  texts.push(labelCenter, labelPoint);
+
+  board.update();
 
   // MAJ initiale des extras si nécessaire
   updateCircleExtras();
 }
-
 
 
 function drawRightTriangle(base, height) {
@@ -1745,6 +1699,32 @@ function resetBoard() {
 
 createBoardControls();
 
+  // AJOUT : Décocher toutes les options d'affichage
+  const checkboxes = [
+    'toggleRightAngles',
+    'toggleEqualAngles', 
+    'toggleLengths',
+    'showUnitsCheckbox',
+    'toggleCodings',
+    'toggleDiagonals',
+    'toggleRadius',
+    'toggleDiameter'
+  ];
+  
+  checkboxes.forEach(id => {
+    const checkbox = document.getElementById(id);
+    if (checkbox) {
+      checkbox.checked = false;
+    }
+  });
+  
+  // Masquer le groupe des unités (puisque toggleLengths est décoché)
+  const unitGroup = document.getElementById('unitGroup');
+  if (unitGroup) {
+    unitGroup.style.display = 'none';
+  }
+
+
 
 
   // Remet à zéro tous les tableaux liés aux éléments
@@ -1853,16 +1833,75 @@ input.addEventListener("keydown", function (e) {
       selectedSuggestionIndex = (selectedSuggestionIndex - 1 + items.length) % items.length;
       highlightSuggestion(items);
     }
+  } else if (e.key === "Tab") {
+    // AJOUT : Autocomplétion avec Tab (sans générer)
+    if (suggestionsDiv.style.display === "block" && items.length > 0) {
+      e.preventDefault(); // Empêcher le Tab normal temporairement
+      
+      let suggestionToUse = null;
+      
+      // Si une suggestion est sélectionnée (navigation avec flèches) -> l'utiliser
+      if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+        suggestionToUse = items[selectedSuggestionIndex].textContent;
+      } 
+      // Sinon, prendre automatiquement la PREMIÈRE suggestion visible
+      else {
+        suggestionToUse = items[0].textContent;
+      }
+      
+      // Appliquer la suggestion sélectionnée
+      if (suggestionToUse) {
+        input.value = suggestionToUse;
+        suggestionsDiv.style.display = "none";
+        selectedSuggestionIndex = -1; // Reset
+        
+        // Passer au champ suivant (labelInput) après un court délai
+        setTimeout(() => {
+          const labelInput = document.getElementById('labelInput');
+          if (labelInput) {
+            labelInput.focus();
+            labelInput.select(); // Sélectionner le texte s'il y en a
+          }
+        }, 50);
+        
+        return; // Important : sortir ici
+      }
+    }
+    
+    // Si pas de suggestions visibles, laisser le Tab normal fonctionner
+    // (pas de e.preventDefault(), donc Tab normal vers le champ suivant)
+    
   } else if (e.key === "Enter") {
-    if (suggestionsDiv.style.display === "block" && selectedSuggestionIndex >= 0) {
-      input.value = items[selectedSuggestionIndex].textContent;
-      suggestionsDiv.style.display = "none";
-      generateFigure(); // ✅ ici c'est OK de le lancer car l'entrée est bien définie
-      e.preventDefault(); // ⛔ Empêche la soumission par défaut ou d’autres effets
-    } else if (suggestionsDiv.style.display !== "block") {
-      generateFigure(); // ✅ On lance uniquement si pas de suggestion visible
-    } else {
-      e.preventDefault(); // ⛔ Ne rien faire si suggestions visibles mais rien de sélectionné
+    e.preventDefault(); // Toujours empêcher le comportement par défaut
+    
+    // AJOUT : Logique de sélection intelligente des suggestions
+    if (suggestionsDiv.style.display === "block" && items.length > 0) {
+      let suggestionToUse = null;
+      
+      // Si une suggestion est sélectionnée (navigation avec flèches) -> l'utiliser
+      if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < items.length) {
+        suggestionToUse = items[selectedSuggestionIndex].textContent;
+      } 
+      // Sinon, prendre automatiquement la PREMIÈRE suggestion visible
+      else {
+        suggestionToUse = items[0].textContent;
+      }
+      
+      // Appliquer la suggestion sélectionnée
+      if (suggestionToUse) {
+        input.value = suggestionToUse;
+        suggestionsDiv.style.display = "none";
+        selectedSuggestionIndex = -1; // Reset
+        
+        // Générer automatiquement la figure (comme Google)
+        generateFigure();
+        return; // Important : sortir ici pour éviter la double génération
+      }
+    }
+    
+    // Si pas de suggestions visibles, générer avec le texte actuel
+    if (suggestionsDiv.style.display !== "block" && input.value.trim()) {
+      generateFigure();
     }
   }
 });
