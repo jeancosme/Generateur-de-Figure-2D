@@ -182,7 +182,6 @@ function updateCircleExtras() {
   }
 
   // === Rayon ===
-// ...existing code...
     if (showRadius) {
       circlePoint.setAttribute({
         fixed: false,
@@ -1686,6 +1685,7 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
       points = [A, B, C, D];
       polygon = board.create('polygon', points, {
         withLabel: false,
+       
         borders: {strokeColor: "black",fixed: true },
         fillColor: "white",
         fillOpacity: 1
@@ -1750,7 +1750,7 @@ function drawLosange(side) {
   // Labels avec positions ajustées pour la rotation
   const LA = board.create('text', [A.X() - 0.4, A.Y() , getLabel(0)]); // HAUT-GAUCHE
   const LB = board.create('text', [B.X() - 0.1, B.Y() + 0.3, getLabel(1)]); // HAUT-DROITE
-  const LC = board.create('text', [C.X() + 0.25, C.Y(), getLabel(2)]); // BAS-DROITE
+  const LC = board.create('text', [C.X() + 0.25, C.Y() , getLabel(2)]); // BAS-DROITE
   const LD = board.create('text', [D.X() - 0.1, D.Y() - 0.3, getLabel(3)]); // BAS-GAUCHE
   texts.push(LA, LB, LC, LD);
 
@@ -1878,8 +1878,7 @@ lengthHandleMeta.forEach(meta => {
       }
       
       const rounded = sideLens.map(len => Math.round(len * 100) / 100);
-      const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
-      
+      const unique = [...new Set(rounded.map(v => v.toFixed(2)))];
       if (unique.length === 1) {
         // Carré : 1 seul côté
         sidesToShow = [0];
@@ -2718,34 +2717,39 @@ function highlightSuggestion(items) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('🚀 Initialisation du générateur...');
+  console.log('🚀 Initialisation du générateur de figures 2D...');
 
   // ==========================================
-  // 1. RESET INITIAL DE L'INTERFACE
+  // 1. TRACKING DES VISITES
+  // ==========================================
+  trackVisit();
+
+  // ==========================================
+  // 2. RESET INITIAL DE L'INTERFACE
   // ==========================================
   
-  // Reset des checkboxes
+  // Reset de tous les checkboxes
   document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.checked = false;
   });
   
-  // Reset des inputs
-  const promptEl = document.getElementById('promptInput');
-  const labelEl = document.getElementById('labelInput');
-  const search = document.getElementById('figureSearch');
+  // Reset des champs de saisie
+  const promptInput = document.getElementById('promptInput');
+  const labelInput = document.getElementById('labelInput');
+  const figureSearch = document.getElementById('figureSearch');
   
-  if (promptEl) promptEl.value = '';
-  if (labelEl) labelEl.value = '';
-  if (search) search.value = '';
+  if (promptInput) promptInput.value = '';
+  if (labelInput) labelInput.value = '';
+  if (figureSearch) figureSearch.value = '';
   
-  // Reset suggestions
+  // Reset des suggestions
   const suggestionBox = document.getElementById('suggestionBox');
   if (suggestionBox) {
     suggestionBox.style.display = 'none';
     suggestionBox.innerHTML = '';
   }
   
-  // Reset liste des figures
+  // Reset de la liste des figures
   const figuresList = document.getElementById('figuresList');
   if (figuresList) {
     Array.from(figuresList.children).forEach(li => {
@@ -2754,7 +2758,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ==========================================
-  // 2. GESTION CONDITIONNELLE DES UNITÉS
+  // 3. GESTION DES UNITÉS ET MESURES
   // ==========================================
   
   const toggleLengths = document.getElementById('toggleLengths');
@@ -2763,124 +2767,184 @@ document.addEventListener('DOMContentLoaded', function () {
   const unitSelector = document.getElementById('unitSelector');
 
   if (toggleLengths && unitGroup) {
-    // Fonction pour afficher/cacher le groupe unités
+    // Fonction pour afficher/masquer le groupe unités
     function updateUnitVisibility() {
       if (toggleLengths.checked) {
         unitGroup.style.display = 'block';
       } else {
         unitGroup.style.display = 'none';
-        // Optionnel : décocher automatiquement les unités
         if (showUnitsCheckbox) showUnitsCheckbox.checked = false;
       }
-      // Mettre à jour l'affichage des mesures
       if (typeof updateLengthLabels === 'function') {
         updateLengthLabels();
       }
     }
     
-    // Appliquer la règle au chargement (unitGroup doit être caché par défaut)
-    updateUnitVisibility();
+    // État initial : unités cachées
+    unitGroup.style.display = 'none';
     
-    // Event listener pour "Afficher les mesures"
+    // Event listeners pour les mesures
     toggleLengths.addEventListener('change', updateUnitVisibility);
     
-    // Event listeners pour les contrôles d'unités
     if (showUnitsCheckbox) {
-      showUnitsCheckbox.addEventListener('change', function() {
+      showUnitsCheckbox.addEventListener('change', () => {
         if (typeof updateLengthLabels === 'function') updateLengthLabels();
       });
     }
     
     if (unitSelector) {
-      unitSelector.addEventListener('change', function() {
+      unitSelector.addEventListener('change', () => {
         if (typeof updateLengthLabels === 'function') updateLengthLabels();
       });
     }
-
-    const toggleHandDrawn = document.getElementById('toggleHandDrawn');
-    if (toggleHandDrawn) {
-      toggleHandDrawn.addEventListener('change', function() {
-        toggleHandDrawnEffect(this.checked);
-  });
-}
     
     console.log('✅ Gestion des unités configurée');
   }
 
   // ==========================================
-  // 3. LISTE DES FIGURES - Clic pour générer
+  // 4. EVENT LISTENERS POUR LES OPTIONS D'AFFICHAGE
   // ==========================================
   
-  if (figuresList && promptEl) {
+  // Fonction helper pour ajouter des event listeners en sécurité
+  function addSafeEventListener(elementId, event, handler, description) {
+    const element = document.getElementById(elementId);
+    if (element && typeof handler === 'function') {
+      element.addEventListener(event, handler);
+      console.log(`✅ ${description} configuré`);
+      return true;
+    } else {
+      console.warn(`⚠️ Élément '${elementId}' non trouvé ou handler invalide`);
+      return false;
+    }
+  }
+  
+  // Codages des côtés égaux
+  addSafeEventListener('toggleCodings', 'change', () => {
+    if (typeof updateCodings === 'function') updateCodings();
+  }, 'Codages des côtés');
+  
+  // Diagonales
+  addSafeEventListener('toggleDiagonals', 'change', () => {
+    if (typeof updateDiagonals === 'function') updateDiagonals();
+  }, 'Diagonales');
+  
+  // Angles égaux
+  addSafeEventListener('toggleEqualAngles', 'change', (e) => {
+    if (typeof updateEqualAngleMarkers === 'function') {
+      updateEqualAngleMarkers(e.target.checked);
+    }
+  }, 'Angles égaux');
+  
+  // Angles droits
+  addSafeEventListener('toggleRightAngles', 'change', (e) => {
+    if (typeof updateRightAngleMarkers === 'function') {
+      updateRightAngleMarkers(e.target.checked);
+    }
+  }, 'Angles droits');
+  
+  // Option "un seul angle droit"
+  addSafeEventListener('toggleSingleAngle', 'change', () => {
+    const toggleRightAngles = document.getElementById('toggleRightAngles');
+    if (toggleRightAngles && typeof updateRightAngleMarkers === 'function') {
+      updateRightAngleMarkers(toggleRightAngles.checked);
+    }
+  }, 'Un seul angle droit');
+  
+  // Option "cacher l'hypoténuse"
+  addSafeEventListener('toggleHideHypotenuse', 'change', () => {
+    if (typeof updateLengthLabels === 'function') updateLengthLabels();
+  }, 'Cacher hypoténuse');
+  
+  // Rayon du cercle
+  addSafeEventListener('toggleRadius', 'change', () => {
+    if (typeof updateCircleExtras === 'function') updateCircleExtras();
+  }, 'Rayon du cercle');
+  
+  // Diamètre du cercle
+  addSafeEventListener('toggleDiameter', 'change', () => {
+    if (typeof updateCircleExtras === 'function') updateCircleExtras();
+  }, 'Diamètre du cercle');
+  
+  // Effet main levée
+  addSafeEventListener('toggleHandDrawn', 'change', (e) => {
+    if (typeof toggleHandDrawnEffect === 'function') {
+      toggleHandDrawnEffect(e.target.checked);
+    }
+  }, 'Effet main levée');
+
+  // ==========================================
+  // 5. INTERACTION AVEC LA LISTE DES FIGURES
+  // ==========================================
+  
+  if (figuresList && promptInput) {
     figuresList.addEventListener('click', function (e) {
-      const li = e.target.closest('li');
-      if (!li) return;
+      const listItem = e.target.closest('li');
+      if (!listItem) return;
       
-      // Récupérer le prompt depuis data-prompt ou générer depuis le texte
-      let prompt = li.getAttribute('data-prompt');
+      // Récupérer le prompt depuis l'attribut data-prompt ou générer depuis le texte
+      let figurePrompt = listItem.getAttribute('data-prompt');
       
-      if (!prompt) {
-        const text = li.textContent || li.innerText;
+      if (!figurePrompt) {
+        const itemText = listItem.textContent || listItem.innerText;
         
-        // Mapping texte → prompt
-        const textToPrompt = {
+        // Mapping texte → prompt pour génération
+        const textToPromptMap = {
           'Carré': 'carré de côté 4',
-          'Rectangle': 'rectangle de 5 sur 3', 
+          'Rectangle': 'rectangle de 5 sur 3',
           'Triangle équilatéral': 'triangle équilatéral de côté 4',
           'Triangle rectangle': 'triangle rectangle de base 3 et hauteur 4',
           'Triangle isocèle': 'triangle isocèle de base 6 et hauteur 4',
           'Cercle': 'cercle de rayon 2',
           'Losange': 'losange de côté 5',
           'Parallélogramme': 'parallélogramme base 5 hauteur 3',
-          'hexagone': 'hexagone de côté 4',
-          'pentagone': 'pentagone de côté 4'
+          'Hexagone': 'hexagone de côté 4',
+          'Pentagone': 'pentagone de côté 4'
         };
         
         // Chercher la correspondance
-        for (const [key, value] of Object.entries(textToPrompt)) {
-          if (text.includes(key)) {
-            prompt = value;
-            break;
-          }
-        }
-        
-        // Fallback
-        if (!prompt) prompt = text.toLowerCase();
+        figurePrompt = Object.entries(textToPromptMap).find(([key]) => 
+          itemText.includes(key)
+        )?.[1] || itemText.toLowerCase();
       }
       
-      // Mettre le prompt dans l'input ET générer
-      promptEl.value = prompt;
+      // Appliquer le prompt et générer la figure
+      promptInput.value = figurePrompt;
       if (typeof generateFigure === 'function') {
         generateFigure();
       }
+      
+      // Marquer visuellement l'élément sélectionné
+      figuresList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+      listItem.classList.add('selected');
     });
     
-    console.log('✅ Liste des figures configurée');
+    console.log('✅ Liste des figures interactive configurée');
   }
 
   // ==========================================
-  // 4. RECHERCHE DANS LA LISTE
+  // 6. FONCTION DE RECHERCHE DANS LA LISTE
   // ==========================================
   
-  if (search && figuresList) {
-    search.addEventListener('input', function () {
-      const query = this.value.trim().toLowerCase();
+  if (figureSearch && figuresList) {
+    figureSearch.addEventListener('input', function () {
+      const searchQuery = this.value.trim().toLowerCase();
       
-      Array.from(figuresList.children).forEach(li => {
-        const text = (li.textContent || '').toLowerCase();
-        li.style.display = text.includes(query) ? '' : 'none';
+      Array.from(figuresList.children).forEach(listItem => {
+        const itemText = (listItem.textContent || '').toLowerCase();
+        const isVisible = itemText.includes(searchQuery);
+        listItem.style.display = isVisible ? '' : 'none';
       });
     });
     
-    console.log('✅ Recherche configurée');
+    console.log('✅ Recherche dans la liste configurée');
   }
 
   // ==========================================
-  // 5. EVENT LISTENER POUR ENTRÉE CLAVIER
+  // 7. INTERACTION CLAVIER POUR LA GÉNÉRATION
   // ==========================================
   
-  if (promptEl) {
-    promptEl.addEventListener('keydown', function(event) {
+  if (promptInput) {
+    promptInput.addEventListener('keydown', function(event) {
       if (event.key === 'Enter') {
         event.preventDefault();
         if (typeof generateFigure === 'function') {
@@ -2889,115 +2953,117 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
     
-    console.log('✅ Touche Entrée configurée');
+    console.log('✅ Génération par touche Entrée configurée');
   }
 
   // ==========================================
-  // 6. EVENT LISTENERS POUR LES OPTIONS
+  // 8. CRÉATION DU BOUTON D'EXPORT SVG
   // ==========================================
   
-  // Fonction helper pour éviter les erreurs si l'élément n'existe pas
-  function safeAddEventListener(id, event, handler) {
-    const element = document.getElementById(id);
-    if (element && typeof handler === 'function') {
-      element.addEventListener(event, handler);
-      return true;
-    }
-    return false;
-  }
-  
-  // Event listeners pour les toggles (UNIQUEMENT ici, pas ailleurs)
-  const eventListeners = [
-    ['toggleCodings', 'change', () => { if (typeof updateCodings === 'function') updateCodings(); }],
-    ['toggleDiagonals', 'change', () => { if (typeof updateDiagonals === 'function') updateDiagonals(); }],
-    ['toggleRadius', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
-    ['toggleDiameter', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
-    ['toggleEqualAngles', 'change', (e) => { if (typeof updateEqualAngleMarkers === 'function') updateEqualAngleMarkers(e.target.checked); }],
-    ['toggleRightAngles', 'change', (e) => { if (typeof updateRightAngleMarkers=== 'function') updateRightAngleMarkers(e.target.checked); }]
-  ];
-  
-  let listenersAdded = 0;
-  eventListeners.forEach(([id, event, handler]) => {
-    if (safeAddEventListener(id, event, handler)) {
-      listenersAdded++;
-    }
-  });
-
-  // Event listener pour "un seul angle"
-const toggleSingleAngle = document.getElementById("toggleSingleAngle");
-if (toggleSingleAngle) {
-  toggleSingleAngle.addEventListener('change', function() {
-    // Relancer updateRightAngleMarkers pour prendre en compte le changement
-    updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
-  });
-}
-
-// Modifier l'event listener existant des angles droits
-const toggleRightAngles = document.getElementById("toggleRightAngles");
-if (toggleRightAngles) {
-  toggleRightAngles.addEventListener('change', function() {
-    updateRightAngleMarkers(this.checked);
-  });
-}
-
-  //  Event listener pour l'effet main levée
-  const toggleHandDrawn = document.getElementById('toggleHandDrawn');
-  if (toggleHandDrawn) {
-    toggleHandDrawn.addEventListener('change', function() {
-      toggleHandDrawnEffect(this.checked);
-    });
-  }
-
-// Event listener pour "cacher l'hypoténuse"
-const toggleHideHypotenuse = document.getElementById("toggleHideHypotenuse");
-if (toggleHideHypotenuse) {
-  toggleHideHypotenuse.addEventListener('change', function() {
-    // Relancer updateLengthLabels pour prendre en compte le changement
-    updateLengthLabels();
-  });
-}
-  
-  console.log(`✅ ${listenersAdded} event listeners configurés`);
-
-  // ==========================================
-  // 7. BOUTON D'EXPORT SVG
-  // ==========================================
-  
-  const panel = document.getElementById('optionsPanel');
-  if (panel && !document.getElementById('exportSvgBtn')) {
-    const exportBtn = document.createElement('button');
-    exportBtn.id = 'exportSvgBtn';
-    exportBtn.textContent = 'Exporter SVG';
-    exportBtn.style.cssText = `
-      margin-top: 10px; 
-      padding: 8px 16px; 
-      background: #6c5ce7; 
+  const optionsPanel = document.getElementById('optionsPanel');
+  if (optionsPanel && !document.getElementById('exportSvgBtn')) {
+    const exportButton = document.createElement('button');
+    exportButton.id = 'exportSvgBtn';
+    exportButton.textContent = 'Exporter SVG';
+    exportButton.style.cssText = `
+      margin-top: 15px; 
+      padding: 10px 20px; 
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
       color: white; 
       border: none; 
-      border-radius: 4px; 
+      border-radius: 6px; 
       cursor: pointer;
       font-family: inherit;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     `;
     
-    exportBtn.addEventListener('click', function() {
+    exportButton.addEventListener('mouseenter', () => {
+      exportButton.style.transform = 'translateY(-1px)';
+      exportButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+    });
+    
+    exportButton.addEventListener('mouseleave', () => {
+      exportButton.style.transform = 'translateY(0)';
+      exportButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    });
+    
+    exportButton.addEventListener('click', function() {
       if (typeof exportBoardToSVG === 'function') {
         exportBoardToSVG();
+      } else {
+        console.error('❌ Fonction exportBoardToSVG non disponible');
+        alert('Fonction d\'export non disponible');
       }
     });
     
-    panel.insertAdjacentElement('afterend', exportBtn);
-    console.log('✅ Bouton export créé');
+    optionsPanel.insertAdjacentElement('afterend', exportButton);
+    console.log('✅ Bouton d\'export SVG créé');
   }
 
   // ==========================================
-  // 8. NETTOYAGE DES VARIABLES GLOBALES
+  // 9. INITIALISATION DES VARIABLES GLOBALES
   // ==========================================
   
+  // Reset des variables de customisation
   if (typeof customLabels !== 'undefined') {
     customLabels = [];
   }
+  
+  // Reset des variables d'effet main levée
+  if (typeof isHandDrawnMode !== 'undefined') {
+    isHandDrawnMode = false;
+  }
+  
+  if (typeof originalPolygon !== 'undefined') {
+    originalPolygon = null;
+  }
+  
+  if (typeof handDrawnElements !== 'undefined') {
+    handDrawnElements = [];
+  }
+  
+  // Reset du compteur de synchronisation des labels
+  if (typeof _lengthSyncAttached !== 'undefined') {
+    _lengthSyncAttached = false;
+  }
 
-  console.log('🎉 Initialisation terminée avec succès !');
+  // ==========================================
+  // 10. AFFICHAGE DES STATISTIQUES (DIFFÉRÉ)
+  // ==========================================
+  
+  // Afficher les statistiques après 2 secondes pour laisser le temps aux APIs
+  setTimeout(() => {
+    if (typeof showStats === 'function') {
+      showStats();
+    }
+    if (typeof getEngagementRatio === 'function') {
+      getEngagementRatio();
+    }
+  }, 2000);
+
+  // ==========================================
+  // 11. FINALISATION
+  // ==========================================
+  
+  // Masquer le loader si présent
+  const loader = document.getElementById('loader');
+  if (loader) {
+    loader.style.display = 'none';
+  }
+  
+  // Afficher le contenu principal
+  const mainContent = document.getElementById('mainContent') || document.body;
+  if (mainContent) {
+    mainContent.style.visibility = 'visible';
+    mainContent.style.opacity = '1';
+  }
+  
+  console.log('🎉 Initialisation du générateur terminée avec succès !');
+  console.log('📋 Tapez une figure dans le champ de saisie ou cliquez sur la liste');
+  console.log('🔧 Utilisez les options d\'affichage pour personnaliser votre figure');
+  console.log('📊 Tapez getStats() dans la console pour voir les statistiques de visite');
 });
 
 // Masquer les suggestions si on clique ailleurs
@@ -3135,403 +3201,243 @@ function safeOn(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
+// ==========================================
+// SYSTÈME DE COMPTAGE LOCAL (sans API externe)
+// ==========================================
 
+// Variables globales pour les compteurs
+let sessionId = null;
+let isNewSession = false;
+
+// Générer un ID de session unique
+function generateSessionId() {
+  return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Fonction de tracking des visites (version locale uniquement)
 function trackVisit() {
-  // Stocker dans localStorage
-  let visits = parseInt(localStorage.getItem('appVisits') || '0');
-  visits++;
-  localStorage.setItem('appVisits', visits.toString());
+  console.log('🚀 Initialisation du système de comptage local...');
   
-  // Afficher dans la console
-  console.log(`👥 Visite n°${visits} de cet utilisateur`);
+  // === COMPTEUR LOCAL (par utilisateur) ===
+  let userVisits = parseInt(localStorage.getItem('appVisits') || '0');
+  userVisits++;
+  localStorage.setItem('appVisits', userVisits.toString());
+  console.log(`👤 Visite n°${userVisits} de cet utilisateur`);
   
-  // Optionnel : envoyer à un service gratuit
-  fetch('https://api.countapi.xyz/hit/mon-generateur-figures/visits')
-    .then(response => response.json())
-    .then(data => {
-      console.log(`📊 Total visiteurs: ${data.value}`);
-    })
-    .catch(e => console.log('Count API indisponible'));
-}
-
-// Appeler au chargement
-document.addEventListener('DOMContentLoaded', trackVisit);
-
-
-function detectFigureType() {
-  if (centerPoint && circlePoint && circleObject) {
-    return 'circle';
-  } else if (points.length === 3) {
-    return 'triangle';
-  } else if (points.length === 4) {
-    const fig = detectCurrentFigure();
-    if (fig === 'square') return 'square';
-    if (fig === 'rectangle') return 'rectangle';
-    return 'quadrilateral'; // parallélogramme, losange...
-  } else if (points.length > 4) {
-    return 'polygon';
-  }
-  return 'unknown';
-}
-
-function exportCircleToTikZ() {
-  let code = '';
-  const cx = centerPoint.X();
-  const cy = centerPoint.Y();
-  const radius = Math.hypot(circlePoint.X() - cx, circlePoint.Y() - cy);
-  
-  // Centre
-  const centerLabel = texts[0] ? texts[0].plaintext || 'O' : 'O';
-  code += `  \\coordinate (${centerLabel}) at (${cx.toFixed(2)}, ${cy.toFixed(2)});\n`;
-  code += `  \\fill (${centerLabel}) circle (1.5pt);\n`;
-  code += `  \\node[below left] at (${centerLabel}) {$${centerLabel}$};\n\n`;
-  
-  // Point sur le cercle
-  const pointLabel = texts[1] ? texts[1].plaintext || 'A' : 'A';
-  const px = circlePoint.X();
-  const py = circlePoint.Y();
-  code += `  \\coordinate (${pointLabel}) at (${px.toFixed(2)}, ${py.toFixed(2)});\n`;
-  code += `  \\fill (${pointLabel}) circle (1.5pt);\n`;
-  code += `  \\node[above right] at (${pointLabel}) {$${pointLabel}$};\n\n`;
-  
-  // Cercle
-  code += `  \\draw (${centerLabel}) circle (${radius.toFixed(2)});\n\n`;
-  
-  // Options selon les checkboxes
-  if (document.getElementById('toggleRadius')?.checked) {
-    code += `  % Rayon\n`;
-    code += `  \\draw[dashed] (${centerLabel}) -- (${pointLabel});\n\n`;
-  }
-  
-  if (document.getElementById('toggleDiameter')?.checked && diameterPoints.length >= 2) {
-    code += `  % Diamètre\n`;
-    const dx1 = diameterPoints[0].X();
-    const dy1 = diameterPoints[0].Y();
-    const dx2 = diameterPoints[1].X();
-    const dy2 = diameterPoints[1].Y();
-    code += `  \\coordinate (B) at (${dx1.toFixed(2)}, ${dy1.toFixed(2)});\n`;
-    code += `  \\coordinate (C) at (${dx2.toFixed(2)}, ${dy2.toFixed(2)});\n`;
-    code += `  \\draw (B) -- (C);\n`;
-    code += `  \\fill (B) circle (1.5pt) node[above left] {$B$};\n`;
-    code += `  \\fill (C) circle (1.5pt) node[below right] {$C$};\n\n`;
-  }
-  
-  return code;
-}
-
-function exportPolygonToTikZ(figureType) {
-  let code = '';
-  const n = points.length;
-  
-  // Coordonnées des points
-  code += `  % Points du ${figureType}\n`;
-  for (let i = 0; i < n; i++) {
-    const label = getLabel(i);
-    const x = points[i].X();
-    const y = points[i].Y();
-    code += `  \\coordinate (${label}) at (${x.toFixed(2)}, ${y.toFixed(2)});\n`;
-  }
-  code += '\n';
-  
-  // Polygone
-  code += `  % ${figureType.charAt(0).toUpperCase() + figureType.slice(1)}\n`;
-  let drawCommand = '  \\draw';
-  
-  // Style selon le type
-  if (figureType === 'square' || figureType === 'rectangle') {
-    drawCommand += '[thick]';
-  }
-  
-  drawCommand += ' ';
-  for (let i = 0; i < n; i++) {
-    const label = getLabel(i);
-    drawCommand += `(${label})${i < n - 1 ? ' -- ' : ' -- cycle'}`;
-  }
-  drawCommand += ';\n\n';
-  code += drawCommand;
-  
-  // Labels des points
-  code += '  % Labels\n';
-  const labelPositions = getLabelPositions(figureType, n);
-  for (let i = 0; i < n; i++) {
-    const label = getLabel(i);
-    const position = labelPositions[i];
-    code += `  \\node[${position}] at (${label}) {$${label}$};\n`;
-  }
-  code += '\n';
-  
-  // Angles droits
-  if (document.getElementById('toggleRightAngles')?.checked) {
-    code += addRightAnglesToTikZ(figureType);
-  }
-  
-  // Codages
-  if (document.getElementById('toggleCodings')?.checked) {
-    code += addCodingsToTikZ(figureType);
-  }
-  
-  // Diagonales
-  if (document.getElementById('toggleDiagonals')?.checked && n === 4) {
-    code += '  % Diagonales\n';
-    code += `  \\draw[dashed] (${getLabel(0)}) -- (${getLabel(2)});\n`;
-    code += `  \\draw[dashed] (${getLabel(1)}) -- (${getLabel(3)});\n\n`;
-  }
-  
-  // Mesures
-  if (document.getElementById('toggleLengths')?.checked) {
-    code += addMeasuresToTikZ(figureType);
-  }
-  
-  return code;
-}
-
-function getLabelPositions(figureType, n) {
-  if (figureType === 'triangle') {
-    return ['below left', 'below right', 'above'];
-  } else if (n === 4) {
-    return ['below left', 'below right', 'above right', 'above left'];
+  // === GESTION DES SESSIONS ===
+  sessionId = sessionStorage.getItem('currentSessionId');
+  if (!sessionId) {
+    // Nouvelle session
+    sessionId = generateSessionId();
+    sessionStorage.setItem('currentSessionId', sessionId);
+    isNewSession = true;
+    console.log(`🆕 Nouvelle session créée: ${sessionId}`);
+    
+    // Incrémenter les compteurs globaux locaux
+    incrementLocalCounters();
   } else {
-    // Polygone général : alterner autour
-    const positions = [];
-    for (let i = 0; i < n; i++) {
-      const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
-      if (angle >= -Math.PI/4 && angle < Math.PI/4) positions.push('right');
-      else if (angle >= Math.PI/4 && angle < 3*Math.PI/4) positions.push('above');
-      else if (angle >= 3*Math.PI/4 || angle < -3*Math.PI/4) positions.push('left');
-      else positions.push('below');
+    isNewSession = false;
+    console.log(`🔄 Session existante: ${sessionId}`);
+  }
+  
+  // Incrémenter les visites totales à chaque rechargement
+  incrementLocalVisits();
+}
+
+// Incrémenter le compteur local de visites totales
+function incrementLocalVisits() {
+  const totalVisits = parseInt(localStorage.getItem('local_total_visits') || '0') + 1;
+  localStorage.setItem('local_total_visits', totalVisits.toString());
+  console.log(`📊 Total visites locales: ${totalVisits}`);
+}
+
+// Incrémenter les compteurs pour les nouvelles sessions uniquement
+function incrementLocalCounters() {
+  // Visiteurs uniques
+  const uniqueVisitors = parseInt(localStorage.getItem('local_unique_visitors') || '0') + 1;
+  localStorage.setItem('local_unique_visitors', uniqueVisitors.toString());
+  console.log(`👥 Visiteurs uniques locaux: ${uniqueVisitors}`);
+  
+  // Enregistrer la date de première visite
+  if (!localStorage.getItem('first_visit_date')) {
+    localStorage.setItem('first_visit_date', new Date().toISOString());
+  }
+  
+  // Enregistrer la date de dernière visite
+  localStorage.setItem('last_visit_date', new Date().toISOString());
+}
+
+// Fonction pour récupérer les statistiques locales
+async function getVisitorStats() {
+  const stats = {
+    totalVisits: parseInt(localStorage.getItem('local_total_visits') || '0'),
+    uniqueVisitors: parseInt(localStorage.getItem('local_unique_visitors') || '0'),
+    userVisits: parseInt(localStorage.getItem('appVisits') || '0'),
+    sessionId: sessionId,
+    firstVisit: localStorage.getItem('first_visit_date'),
+    lastVisit: localStorage.getItem('last_visit_date')
+  };
+  
+  return stats;
+}
+
+// Fonction pour afficher les statistiques dans la console
+function showStats() {
+  getVisitorStats().then(stats => {
+    console.log('📈 === STATISTIQUES DE VISITE (LOCAL) ===');
+    console.log(`🌐 Visites totales: ${stats.totalVisits}`);
+    console.log(`👥 Visiteurs uniques: ${stats.uniqueVisitors}`);
+    console.log(`👤 Vos visites personnelles: ${stats.userVisits}`);
+    console.log(`🆔 ID de session actuel: ${stats.sessionId}`);
+    console.log(`🔄 Nouvelle session: ${isNewSession ? 'Oui' : 'Non'}`);
+    
+    if (stats.firstVisit) {
+      const firstDate = new Date(stats.firstVisit).toLocaleString('fr-FR');
+      console.log(`📅 Première visite: ${firstDate}`);
     }
-    return positions;
+    
+    if (stats.lastVisit) {
+      const lastDate = new Date(stats.lastVisit).toLocaleString('fr-FR');
+      console.log(`🕒 Dernière visite: ${lastDate}`);
+    }
+    
+    console.log('💡 Note: Compteurs locaux uniquement (pas d\'API externe)');
+  });
+}
+
+// Fonction pour obtenir le ratio visiteurs/visites
+function getEngagementRatio() {
+  getVisitorStats().then(stats => {
+    if (stats.totalVisits > 0 && stats.uniqueVisitors > 0) {
+      const ratio = (stats.totalVisits / stats.uniqueVisitors).toFixed(1);
+      console.log(`📊 Ratio d'engagement: ${ratio} visites par visiteur`);
+      
+      // Analyse du comportement
+      if (ratio >= 3) {
+        console.log('🎯 Excellent engagement ! Les utilisateurs reviennent souvent.');
+      } else if (ratio >= 2) {
+        console.log('👍 Bon engagement, certains utilisateurs reviennent.');
+      } else {
+        console.log('🆕 La plupart des visites sont de nouveaux utilisateurs.');
+      }
+    }
+  });
+}
+
+// Mettre à jour l'affichage des compteurs (pour le mode debug)
+function updateVisitorDisplay(type, value) {
+  let element = document.getElementById(`${type}-counter`);
+  if (!element && window.location.search.includes('debug=1')) {
+    // Créer l'élément seulement en mode debug (?debug=1 dans l'URL)
+    element = document.createElement('div');
+    element.id = `${type}-counter`;
+    element.style.cssText = `
+      position: fixed; 
+      top: ${type === 'total' ? '10px' : '35px'}; 
+      right: 10px; 
+      background: rgba(0,0,0,0.8); 
+      color: white; 
+      padding: 8px 12px; 
+      border-radius: 5px; 
+      font-family: monospace; 
+      font-size: 12px; 
+      z-index: 1001;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    `;
+    document.body.appendChild(element);
+  }
+  
+  if (element) {
+    const label = type === 'total' ? '📊 Visites' : '👥 Visiteurs';
+    element.textContent = `${label}: ${value}`;
   }
 }
 
-function addRightAnglesToTikZ(figureType) {
-  let code = '  % Angles droits\n';
-  
-  if (figureType === 'square' || figureType === 'rectangle') {
-    // Tous les angles sont droits
-    for (let i = 0; i < 4; i++) {
-      const A = getLabel((i - 1 + 4) % 4);
-      const B = getLabel(i);
-      const C = getLabel((i + 1) % 4);
-      code += `  \\draw (${A}) ++(0.2,0) -- ++(0,0.2) -- ++(-0.2,0) -- cycle; % Angle droit en ${B}\n`;
-    }
-  } else if (figureType === 'triangle') {
-    // Détecter les angles droits (triangle rectangle)
-    const rightAngles = getRightAngleTriples();
-    rightAngles.forEach(([A, B, C], index) => {
-      const labelA = getLabel(points.indexOf(A));
-      const labelB = getLabel(points.indexOf(B));
-      const labelC = getLabel(points.indexOf(C));
-      code += `  \\draw (${labelB}) ++(0.15,0) -- ++(0,0.15) -- ++(-0.15,0); % Angle droit en ${labelB}\n`;
+// Afficher les compteurs en mode debug
+function showDebugCounters() {
+  if (window.location.search.includes('debug=1')) {
+    getVisitorStats().then(stats => {
+      updateVisitorDisplay('total', stats.totalVisits);
+      updateVisitorDisplay('unique', stats.uniqueVisitors);
     });
   }
-  
-  code += '\n';
-  return code;
 }
 
-function addCodingsToTikZ(figureType) {
-  let code = '  % Codages des côtés égaux\n';
+// Fonction pour réinitialiser les statistiques
+function resetLocalStats() {
+  const keys = [
+    'local_total_visits',
+    'local_unique_visitors', 
+    'appVisits',
+    'first_visit_date',
+    'last_visit_date'
+  ];
   
-  // Analyser les longueurs des côtés
-  const sideLengths = [];
-  const n = points.length;
+  keys.forEach(key => localStorage.removeItem(key));
+  sessionStorage.removeItem('currentSessionId');
   
-  for (let i = 0; i < n; i++) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % n];
-    const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
-    sideLengths.push({ index: i, length: Math.round(len * 100) / 100 });
-  }
-  
-  // Grouper les côtés égaux
-  const groups = {};
-  sideLengths.forEach(seg => {
-    const key = seg.length.toFixed(2);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(seg.index);
-  });
-  
-  let markCount = 1;
-  const marks = ['|', '||', '|||'];
-  
-  for (const key in groups) {
-    const indices = groups[key];
-    if (indices.length < 2) continue;
-    
-    const mark = marks[Math.min(markCount - 1, marks.length - 1)];
-    
-    for (const i of indices) {
-      const labelA = getLabel(i);
-      const labelB = getLabel((i + 1) % n);
-      code += `  \\draw (\\$(${labelA})!0.5!(${labelB})$) node {${mark}}; % Codage ${labelA}${labelB}\n`;
-    }
-    
-    markCount++;
-  }
-  
-  code += '\n';
-  return code;
+  console.log('✅ Toutes les statistiques locales réinitialisées');
+  return true;
 }
 
-function addMeasuresToTikZ(figureType) {
-  let code = '  % Mesures\n';
-  const unit = document.getElementById('unitSelector')?.value || 'cm';
-  const showUnits = document.getElementById('showUnitsCheckbox')?.checked;
-  const n = points.length;
-  
-  // Afficher seulement certains côtés selon le type
-  let sidesToShow = [];
-  if (figureType === 'square') {
-    sidesToShow = [0]; // Un seul côté
-  } else if (figureType === 'rectangle') {
-    sidesToShow = [0, 1]; // Longueur et largeur
-  } else {
-    sidesToShow = [...Array(n).keys()]; // Tous les côtés
-  }
-  
-  for (const i of sidesToShow) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % n];
-    const length = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
-    const labelA = getLabel(i);
-    const labelB = getLabel((i + 1) % n);
+// Fonction pour exporter les statistiques
+function exportStats() {
+  getVisitorStats().then(stats => {
+    const data = {
+      exported_at: new Date().toISOString(),
+      statistics: stats,
+      generator_info: {
+        name: 'Générateur de Figures 2D',
+        version: '2.0',
+        author: 'Jean-Cosme Garnier'
+      }
+    };
     
-    const value = Math.round(length * 10) / 10;
-    const text = showUnits ? `${value}\\,\\text{${unit}}` : `${value}`;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { 
+      type: 'application/json;charset=utf-8' 
+    });
     
-    code += `  \\draw (\\$(${labelA})!0.5!(${labelB})$) node[above, sloped] {${text}};\n`;
-  }
-  
-  code += '\n';
-  return code;
-}
-
-function showTikZDialog(tikzCode) {
-  // Créer la popup
-  const dialog = document.createElement('div');
-  dialog.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border: 2px solid #333;
-    border-radius: 8px;
-    padding: 20px;
-    z-index: 10000;
-    max-width: 80%;
-    max-height: 80%;
-    overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  `;
-  
-  dialog.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3 style="margin: 0;">Code TikZ généré</h3>
-      <button id="closeTikZDialog" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">×</button>
-    </div>
-    
-    <p style="margin-bottom: 15px; color: #666;">
-      Copiez ce code dans votre document LaTeX (ajoutez <code>\\usepackage{tikz}</code> et <code>\\usetikzlibrary{calc}</code> dans le préambule) :
-    </p>
-    
-    <textarea id="tikzCodeArea" style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; border: 1px solid #ddd; padding: 10px;" readonly>${tikzCode}</textarea>
-    
-    <div style="margin-top: 15px; text-align: center;">
-      <button id="copyTikZCode" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Copier le code</button>
-      <button id="downloadTikZCode" style="background: #3742fa; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Télécharger .tex</button>
-    </div>
-  `;
-  
-  // Overlay
-  const overlay = document.createElement('div');
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 9999;
-  `;
-  
-  document.body.appendChild(overlay);
-  document.body.appendChild(dialog);
-  
-  // Event listeners
-  document.getElementById('closeTikZDialog').addEventListener('click', () => {
-    document.body.removeChild(dialog);
-    document.body.removeChild(overlay);
-  });
-  
-  document.getElementById('copyTikZCode').addEventListener('click', async () => {
-    const textarea = document.getElementById('tikzCodeArea');
-    textarea.select();
-    try {
-      await navigator.clipboard.writeText(tikzCode);
-      alert('Code TikZ copié dans le presse-papier !');
-    } catch (err) {
-      alert('Code sélectionné, appuyez sur Ctrl+C pour copier');
-    }
-  });
-  
-  document.getElementById('downloadTikZCode').addEventListener('click', () => {
-    const fullDocument = `\\documentclass{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage{tikz}
-\\usetikzlibrary{calc}
-\\begin{document}
-
-${tikzCode}
-
-\\end{document}`;
-    
-    const blob = new Blob([fullDocument], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'figure.tex';
+    a.download = `generateur_stats_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    console.log('📁 Statistiques exportées avec succès');
   });
-  
-  // Fermer avec Escape
-  const escapeHandler = (e) => {
-    if (e.key === 'Escape') {
-      document.body.removeChild(dialog);
-      document.body.removeChild(overlay);
-      document.removeEventListener('keydown', escapeHandler);
-    }
-  };
-  document.addEventListener('keydown', escapeHandler);
 }
 
+// Fonctions globales pour la console du navigateur
+window.getStats = showStats;
+window.getEngagement = getEngagementRatio;
+window.resetStats = function() {
+  if (confirm('⚠️ Réinitialiser toutes les statistiques locales ?')) {
+    resetLocalStats();
+    location.reload();
+  }
+};
+window.exportStats = exportStats;
+window.showDebugCounters = showDebugCounters;
 
-function initThemeToggle() {
-  const toggle = document.createElement('button');
-  toggle.innerHTML = '🌙';
-  toggle.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: none;
-    background: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    font-size: 20px;
-    cursor: pointer;
-    z-index: 1000;
-    transition: all 0.3s ease;
-  `;
+// ==========================================
+// INITIALISATION AU CHARGEMENT
+// ==========================================
+
+// Fonction d'initialisation mise à jour
+function initVisitorTracking() {
+  trackVisit();
   
-  toggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode');
-    toggle.innerHTML = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
-  });
+  // Afficher les compteurs en mode debug après 1 seconde
+  setTimeout(showDebugCounters, 1000);
   
-  document.body.appendChild(toggle);
+  // Afficher les stats après 2 secondes
+  setTimeout(() => {
+    showStats();
+    getEngagementRatio();
+  }, 2000);
 }
+
+// Appeler l'initialisation
+document.addEventListener('DOMContentLoaded', initVisitorTracking);
 
