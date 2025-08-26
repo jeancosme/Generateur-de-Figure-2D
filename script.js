@@ -3201,6 +3201,7 @@ function safeOn(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
+6666666666// ==========================================
 // SYSTÈME DE COMPTAGE LOCAL (sans API externe)
 // ==========================================
 
