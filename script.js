@@ -1260,6 +1260,17 @@ function updateLengthLabels() {
   // Supprimer les longueurs précédentes et leurs handles
   lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
   lengthHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+  
+  // ✅ CORRECTION : Sauvegarder les positions actuelles avant de recréer
+  const savedPositions = [];
+  lengthHandles.forEach(handle => {
+    if (handle && !handle._auto) { // Si le handle a été déplacé manuellement
+      savedPositions.push({ x: handle.X(), y: handle.Y() });
+    } else {
+      savedPositions.push(null); // Position automatique
+    }
+  });
+
   lengthLabels = [];
   lengthHandles = [];
   lengthHandleMeta = [];
@@ -1302,22 +1313,29 @@ function updateLengthLabels() {
     const pt1 = points[i];
     const pt2 = points[(i + 1) % n];
 
-    // calcul position par défaut (milieu + décalage orthogonal)
-    const defaultOffset = 0.3;
-    const offsetsForParallelogram = [0.2, 0.5, 0.2, 0.5];
-    let offset = defaultOffset;
-    if (points.length === 4 && polygon) {
-      offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
+    // ✅ CORRECTION : Utiliser la position sauvegardée si elle existe
+    let startX, startY;
+    if (savedPositions[lengthHandles.length] && savedPositions[lengthHandles.length] !== null) {
+      startX = savedPositions[lengthHandles.length].x;
+      startY = savedPositions[lengthHandles.length].y;
+    } else {
+      // Position par défaut si pas de position sauvegardée
+      const defaultOffset = 0.3;
+      const offsetsForParallelogram = [0.2, 0.5, 0.2, 0.5];
+      let offset = defaultOffset;
+      if (points.length === 4 && polygon) {
+        offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
+      }
+
+      const dx = pt2.X() - pt1.X();
+      const dy = pt2.Y() - pt1.Y();
+      const len = Math.hypot(dx, dy) || 1;
+      startX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
+      startY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
     }
 
-    const dx = pt2.X() - pt1.X();
-    const dy = pt2.Y() - pt1.Y();
-    const len = Math.hypot(dx, dy) || 1;
-    const midX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
-    const midY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
-
-    // Création du handle
-    const handle = board.create('point', [ midX, midY ], {
+    // Création du handle avec la position correcte
+    const handle = board.create('point', [startX, startY], {
       size: 6,
       strokeOpacity: 0,
       fillOpacity: 0,
@@ -1326,7 +1344,13 @@ function updateLengthLabels() {
       highlight: false,
       showInfobox: false
     });
-    handle._auto = true;
+    
+    // ✅ Préserver l'état _auto si c'était un handle déplacé manuellement
+    if (savedPositions[lengthHandles.length] && savedPositions[lengthHandles.length] !== null) {
+      handle._auto = false; // Marquer comme déplacé manuellement
+    } else {
+      handle._auto = true; // Position automatique
+    }
 
     try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
 
@@ -2184,6 +2208,21 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('✅ Bouton export créé');
   }
 
+  const tikzBtn = document.createElement('button');
+tikzBtn.textContent = 'Exporter TikZ';
+tikzBtn.style.cssText = `
+  margin-top: 5px; 
+  padding: 8px 16px; 
+  background: #fd79a8; 
+  color: white; 
+  border: none; 
+  border-radius: 4px; 
+  cursor: pointer;
+  font-family: inherit;
+`;
+tikzBtn.addEventListener('click', exportToTikZ);
+document.getElementById('exportSvgBtn').insertAdjacentElement('afterend', tikzBtn);
+
   // ==========================================
   // 8. NETTOYAGE DES VARIABLES GLOBALES
   // ==========================================
@@ -2217,10 +2256,9 @@ function updateSuggestionHighlight(suggestions) {
 // Exporter le board JSXGraph en SVG (téléchargement)
 async function exportBoardToSVG(filename = null) {
   try {
-    // Forcer TOUTES les mises à jour selon les checkboxes cochées
-    if (document.getElementById('toggleLengths')?.checked) {
-      updateLengthLabels();
-    }
+    // ✅ CORRECTION : Ne pas forcer updateLengthLabels() qui repositionne les labels
+    // Mettre à jour seulement les éléments qui ne déplacent pas les labels personnalisés
+    
     if (document.getElementById('toggleDiagonals')?.checked) {
       updateDiagonals();
     }
@@ -2236,6 +2274,8 @@ async function exportBoardToSVG(filename = null) {
     if (document.getElementById('toggleRightAngles')?.checked) {
       updateRightAngleMarkers(true);
     }
+    
+    // ✅ Mise à jour simple du board sans repositionner les labels
     board.update();
   } catch (e) {}
 
@@ -2352,3 +2392,351 @@ function trackVisit() {
 document.addEventListener('DOMContentLoaded', trackVisit);
 
 
+function detectFigureType() {
+  if (centerPoint && circlePoint && circleObject) {
+    return 'circle';
+  } else if (points.length === 3) {
+    return 'triangle';
+  } else if (points.length === 4) {
+    const fig = detectCurrentFigure();
+    if (fig === 'square') return 'square';
+    if (fig === 'rectangle') return 'rectangle';
+    return 'quadrilateral'; // parallélogramme, losange...
+  } else if (points.length > 4) {
+    return 'polygon';
+  }
+  return 'unknown';
+}
+
+function exportCircleToTikZ() {
+  let code = '';
+  const cx = centerPoint.X();
+  const cy = centerPoint.Y();
+  const radius = Math.hypot(circlePoint.X() - cx, circlePoint.Y() - cy);
+  
+  // Centre
+  const centerLabel = texts[0] ? texts[0].plaintext || 'O' : 'O';
+  code += `  \\coordinate (${centerLabel}) at (${cx.toFixed(2)}, ${cy.toFixed(2)});\n`;
+  code += `  \\fill (${centerLabel}) circle (1.5pt);\n`;
+  code += `  \\node[below left] at (${centerLabel}) {$${centerLabel}$};\n\n`;
+  
+  // Point sur le cercle
+  const pointLabel = texts[1] ? texts[1].plaintext || 'A' : 'A';
+  const px = circlePoint.X();
+  const py = circlePoint.Y();
+  code += `  \\coordinate (${pointLabel}) at (${px.toFixed(2)}, ${py.toFixed(2)});\n`;
+  code += `  \\fill (${pointLabel}) circle (1.5pt);\n`;
+  code += `  \\node[above right] at (${pointLabel}) {$${pointLabel}$};\n\n`;
+  
+  // Cercle
+  code += `  \\draw (${centerLabel}) circle (${radius.toFixed(2)});\n\n`;
+  
+  // Options selon les checkboxes
+  if (document.getElementById('toggleRadius')?.checked) {
+    code += `  % Rayon\n`;
+    code += `  \\draw[dashed] (${centerLabel}) -- (${pointLabel});\n\n`;
+  }
+  
+  if (document.getElementById('toggleDiameter')?.checked && diameterPoints.length >= 2) {
+    code += `  % Diamètre\n`;
+    const dx1 = diameterPoints[0].X();
+    const dy1 = diameterPoints[0].Y();
+    const dx2 = diameterPoints[1].X();
+    const dy2 = diameterPoints[1].Y();
+    code += `  \\coordinate (B) at (${dx1.toFixed(2)}, ${dy1.toFixed(2)});\n`;
+    code += `  \\coordinate (C) at (${dx2.toFixed(2)}, ${dy2.toFixed(2)});\n`;
+    code += `  \\draw (B) -- (C);\n`;
+    code += `  \\fill (B) circle (1.5pt) node[above left] {$B$};\n`;
+    code += `  \\fill (C) circle (1.5pt) node[below right] {$C$};\n\n`;
+  }
+  
+  return code;
+}
+
+function exportPolygonToTikZ(figureType) {
+  let code = '';
+  const n = points.length;
+  
+  // Coordonnées des points
+  code += `  % Points du ${figureType}\n`;
+  for (let i = 0; i < n; i++) {
+    const label = getLabel(i);
+    const x = points[i].X();
+    const y = points[i].Y();
+    code += `  \\coordinate (${label}) at (${x.toFixed(2)}, ${y.toFixed(2)});\n`;
+  }
+  code += '\n';
+  
+  // Polygone
+  code += `  % ${figureType.charAt(0).toUpperCase() + figureType.slice(1)}\n`;
+  let drawCommand = '  \\draw';
+  
+  // Style selon le type
+  if (figureType === 'square' || figureType === 'rectangle') {
+    drawCommand += '[thick]';
+  }
+  
+  drawCommand += ' ';
+  for (let i = 0; i < n; i++) {
+    const label = getLabel(i);
+    drawCommand += `(${label})${i < n - 1 ? ' -- ' : ' -- cycle'}`;
+  }
+  drawCommand += ';\n\n';
+  code += drawCommand;
+  
+  // Labels des points
+  code += '  % Labels\n';
+  const labelPositions = getLabelPositions(figureType, n);
+  for (let i = 0; i < n; i++) {
+    const label = getLabel(i);
+    const position = labelPositions[i];
+    code += `  \\node[${position}] at (${label}) {$${label}$};\n`;
+  }
+  code += '\n';
+  
+  // Angles droits
+  if (document.getElementById('toggleRightAngles')?.checked) {
+    code += addRightAnglesToTikZ(figureType);
+  }
+  
+  // Codages
+  if (document.getElementById('toggleCodings')?.checked) {
+    code += addCodingsToTikZ(figureType);
+  }
+  
+  // Diagonales
+  if (document.getElementById('toggleDiagonals')?.checked && n === 4) {
+    code += '  % Diagonales\n';
+    code += `  \\draw[dashed] (${getLabel(0)}) -- (${getLabel(2)});\n`;
+    code += `  \\draw[dashed] (${getLabel(1)}) -- (${getLabel(3)});\n\n`;
+  }
+  
+  // Mesures
+  if (document.getElementById('toggleLengths')?.checked) {
+    code += addMeasuresToTikZ(figureType);
+  }
+  
+  return code;
+}
+
+function getLabelPositions(figureType, n) {
+  if (figureType === 'triangle') {
+    return ['below left', 'below right', 'above'];
+  } else if (n === 4) {
+    return ['below left', 'below right', 'above right', 'above left'];
+  } else {
+    // Polygone général : alterner autour
+    const positions = [];
+    for (let i = 0; i < n; i++) {
+      const angle = (i * 2 * Math.PI / n) - Math.PI / 2;
+      if (angle >= -Math.PI/4 && angle < Math.PI/4) positions.push('right');
+      else if (angle >= Math.PI/4 && angle < 3*Math.PI/4) positions.push('above');
+      else if (angle >= 3*Math.PI/4 || angle < -3*Math.PI/4) positions.push('left');
+      else positions.push('below');
+    }
+    return positions;
+  }
+}
+
+function addRightAnglesToTikZ(figureType) {
+  let code = '  % Angles droits\n';
+  
+  if (figureType === 'square' || figureType === 'rectangle') {
+    // Tous les angles sont droits
+    for (let i = 0; i < 4; i++) {
+      const A = getLabel((i - 1 + 4) % 4);
+      const B = getLabel(i);
+      const C = getLabel((i + 1) % 4);
+      code += `  \\draw (${A}) ++(0.2,0) -- ++(0,0.2) -- ++(-0.2,0) -- cycle; % Angle droit en ${B}\n`;
+    }
+  } else if (figureType === 'triangle') {
+    // Détecter les angles droits (triangle rectangle)
+    const rightAngles = getRightAngleTriples();
+    rightAngles.forEach(([A, B, C], index) => {
+      const labelA = getLabel(points.indexOf(A));
+      const labelB = getLabel(points.indexOf(B));
+      const labelC = getLabel(points.indexOf(C));
+      code += `  \\draw (${labelB}) ++(0.15,0) -- ++(0,0.15) -- ++(-0.15,0); % Angle droit en ${labelB}\n`;
+    });
+  }
+  
+  code += '\n';
+  return code;
+}
+
+function addCodingsToTikZ(figureType) {
+  let code = '  % Codages des côtés égaux\n';
+  
+  // Analyser les longueurs des côtés
+  const sideLengths = [];
+  const n = points.length;
+  
+  for (let i = 0; i < n; i++) {
+    const pt1 = points[i];
+    const pt2 = points[(i + 1) % n];
+    const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
+    sideLengths.push({ index: i, length: Math.round(len * 100) / 100 });
+  }
+  
+  // Grouper les côtés égaux
+  const groups = {};
+  sideLengths.forEach(seg => {
+    const key = seg.length.toFixed(2);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(seg.index);
+  });
+  
+  let markCount = 1;
+  const marks = ['|', '||', '|||'];
+  
+  for (const key in groups) {
+    const indices = groups[key];
+    if (indices.length < 2) continue;
+    
+    const mark = marks[Math.min(markCount - 1, marks.length - 1)];
+    
+    for (const i of indices) {
+      const labelA = getLabel(i);
+      const labelB = getLabel((i + 1) % n);
+      code += `  \\draw (\\$(${labelA})!0.5!(${labelB})$) node {${mark}}; % Codage ${labelA}${labelB}\n`;
+    }
+    
+    markCount++;
+  }
+  
+  code += '\n';
+  return code;
+}
+
+function addMeasuresToTikZ(figureType) {
+  let code = '  % Mesures\n';
+  const unit = document.getElementById('unitSelector')?.value || 'cm';
+  const showUnits = document.getElementById('showUnitsCheckbox')?.checked;
+  const n = points.length;
+  
+  // Afficher seulement certains côtés selon le type
+  let sidesToShow = [];
+  if (figureType === 'square') {
+    sidesToShow = [0]; // Un seul côté
+  } else if (figureType === 'rectangle') {
+    sidesToShow = [0, 1]; // Longueur et largeur
+  } else {
+    sidesToShow = [...Array(n).keys()]; // Tous les côtés
+  }
+  
+  for (const i of sidesToShow) {
+    const pt1 = points[i];
+    const pt2 = points[(i + 1) % n];
+    const length = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
+    const labelA = getLabel(i);
+    const labelB = getLabel((i + 1) % n);
+    
+    const value = Math.round(length * 10) / 10;
+    const text = showUnits ? `${value}\\,\\text{${unit}}` : `${value}`;
+    
+    code += `  \\draw (\\$(${labelA})!0.5!(${labelB})$) node[above, sloped] {${text}};\n`;
+  }
+  
+  code += '\n';
+  return code;
+}
+
+function showTikZDialog(tikzCode) {
+  // Créer la popup
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    z-index: 10000;
+    max-width: 80%;
+    max-height: 80%;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  `;
+  
+  dialog.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Code TikZ généré</h3>
+      <button id="closeTikZDialog" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">×</button>
+    </div>
+    
+    <p style="margin-bottom: 15px; color: #666;">
+      Copiez ce code dans votre document LaTeX (ajoutez <code>\\usepackage{tikz}</code> et <code>\\usetikzlibrary{calc}</code> dans le préambule) :
+    </p>
+    
+    <textarea id="tikzCodeArea" style="width: 100%; height: 300px; font-family: monospace; font-size: 12px; border: 1px solid #ddd; padding: 10px;" readonly>${tikzCode}</textarea>
+    
+    <div style="margin-top: 15px; text-align: center;">
+      <button id="copyTikZCode" style="background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-right: 10px;">Copier le code</button>
+      <button id="downloadTikZCode" style="background: #3742fa; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Télécharger .tex</button>
+    </div>
+  `;
+  
+  // Overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+  `;
+  
+  document.body.appendChild(overlay);
+  document.body.appendChild(dialog);
+  
+  // Event listeners
+  document.getElementById('closeTikZDialog').addEventListener('click', () => {
+    document.body.removeChild(dialog);
+    document.body.removeChild(overlay);
+  });
+  
+  document.getElementById('copyTikZCode').addEventListener('click', async () => {
+    const textarea = document.getElementById('tikzCodeArea');
+    textarea.select();
+    try {
+      await navigator.clipboard.writeText(tikzCode);
+      alert('Code TikZ copié dans le presse-papier !');
+    } catch (err) {
+      alert('Code sélectionné, appuyez sur Ctrl+C pour copier');
+    }
+  });
+  
+  document.getElementById('downloadTikZCode').addEventListener('click', () => {
+    const fullDocument = `\\documentclass{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage{tikz}
+\\usetikzlibrary{calc}
+\\begin{document}
+
+${tikzCode}
+
+\\end{document}`;
+    
+    const blob = new Blob([fullDocument], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'figure.tex';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  
+  // Fermer avec Escape
+  const escapeHandler = (e) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(dialog);
+      document.body.removeChild(overlay);
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  };
+  document.addEventListener('keydown', escapeHandler);
+}
