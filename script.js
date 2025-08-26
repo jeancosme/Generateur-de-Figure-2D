@@ -1791,27 +1791,74 @@ function drawRectangle(width, height) {
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
 
+// Fonction pour détecter le type de quadrilatère pour l'affichage des mesures
+function detectQuadrilateralType() {
+  if (!points || points.length !== 4) return 'unknown';
+  
+  const tolerance = 0.1; // Tolérance pour les comparaisons
+  
+  // Calculer les longueurs des 4 côtés
+  const sideLengths = [];
+  for (let i = 0; i < 4; i++) {
+    const pt1 = points[i];
+    const pt2 = points[(i + 1) % 4];
+    const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+    sideLengths.push(length);
+  }
+  
+  // Compter combien de côtés sont égaux
+  const roundedLengths = sideLengths.map(l => Math.round(l * 100) / 100);
+  const uniqueLengths = [...new Set(roundedLengths.map(l => l.toFixed(2)))];
+  
+  // Vérifier si c'est un quadrilatère rectangulaire (4 angles droits)
+  const hasRightAngles = isRectangularFigure();
+  
+  // LOGIQUE DE DÉTECTION
+  if (uniqueLengths.length === 1) {
+    // Tous les côtés égaux
+    if (hasRightAngles) {
+      return 'square'; // Carré
+    } else {
+      return 'rhombus'; // Losange
+    }
+  } else if (uniqueLengths.length === 2) {
+    // Deux paires de côtés égaux
+    if (hasRightAngles) {
+      return 'rectangle'; // Rectangle
+    } else {
+      // Vérifier si c'est un parallélogramme (côtés opposés égaux)
+      const isParallelogram = (
+        Math.abs(sideLengths[0] - sideLengths[2]) < tolerance &&
+        Math.abs(sideLengths[1] - sideLengths[3]) < tolerance
+      );
+      return isParallelogram ? 'parallelogram' : 'quadrilateral';
+    }
+  } else {
+    // Côtés de longueurs différentes
+    return 'quadrilateral';
+  }
+}
+
 function updateLengthLabels() {
   // ==========================================
-  // 1. NETTOYAGE ET SAUVEGARDE DES POSITIONS
+  // 1. NETTOYAGE DES ANCIENS ÉLÉMENTS
   // ==========================================
   
   // Sauvegarder les positions des handles déplacés manuellement
   const savedPositions = [];
-// Initialiser un tableau de la taille du polygone
-for (let i = 0; i < (points ? points.length : 0); i++) {
-  savedPositions[i] = null;
-}
-
-// Sauvegarder les positions des handles déplacés avec leurs vrais index
-lengthHandleMeta.forEach(meta => {
-  if (meta && meta.handle && !meta.handle._auto && meta.sideIndex !== undefined) {
-    savedPositions[meta.sideIndex] = { 
-      x: meta.handle.X(), 
-      y: meta.handle.Y() 
-    };
+  for (let i = 0; i < (points ? points.length : 0); i++) {
+    savedPositions[i] = null;
   }
-});
+
+  // Sauvegarder les positions des handles déplacés avec leurs vrais index
+  lengthHandleMeta.forEach(meta => {
+    if (meta && meta.handle && !meta.handle._auto && meta.sideIndex !== undefined) {
+      savedPositions[meta.sideIndex] = { 
+        x: meta.handle.X(), 
+        y: meta.handle.Y() 
+      };
+    }
+  });
 
   // Supprimer tous les anciens éléments
   lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
@@ -1827,10 +1874,15 @@ lengthHandleMeta.forEach(meta => {
   // ==========================================
   
   const showLengths = document.getElementById("toggleLengths")?.checked;
-  if (!showLengths || !points || points.length === 0) return;
+  if (!showLengths || !points || points.length === 0) {
+    console.log('❌ Mesures désactivées ou pas de points');
+    return;
+  }
+
+  console.log(`🔍 Affichage des mesures pour ${points.length} points`);
 
   // ==========================================
-  // 3. GESTION DES OPTIONS CONDITIONNELLES
+  // 3. GESTION DES OPTIONS
   // ==========================================
   
   const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
@@ -1852,55 +1904,52 @@ lengthHandleMeta.forEach(meta => {
   const hypotenuseIndex = hideHypotenuse ? getHypotenuseIndex() : -1;
 
   // ==========================================
-  // 4. DÉTERMINER QUELS CÔTÉS AFFICHER
+  // 4. DÉTERMINER QUELS CÔTÉS AFFICHER - VERSION SIMPLIFIÉE
   // ==========================================
   
-  function getSidesToShow() {
-    const n = points.length;
-    let sidesToShow = [];
+ function getSidesToShow() {
+  const n = points.length;
+  let sidesToShow = [];
+  
+  if (n === 3) {
+    // TRIANGLES : Tous les côtés par défaut
+    sidesToShow = [0, 1, 2];
     
-    if (n === 3) {
-      // TRIANGLES : Toujours tous les côtés par défaut
-      sidesToShow = [0, 1, 2];
-      
-      // Filtrer l'hypoténuse si demandé
-      if (hideHypotenuse && hypotenuseIndex !== -1) {
-        sidesToShow = sidesToShow.filter(i => i !== hypotenuseIndex);
-      }
-      
-    } else if (n === 4) {
-      // QUADRILATÈRES : Optimisation selon les longueurs égales
-      const sideLens = [];
-      for (let i = 0; i < 4; i++) {
-        const pt1 = points[i];
-        const pt2 = points[(i + 1) % 4];
-        const len = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
-        sideLens.push(len);
-      }
-      
-      const rounded = sideLens.map(len => Math.round(len * 100) / 100);
-      const unique = [...new Set(rounded.map(v => v.toFixed(2)))];
-      if (unique.length === 1) {
-        // Carré : 1 seul côté
-        sidesToShow = [0];
-      } else if (unique.length === 2) {
-        // Rectangle : 2 côtés (longueur + largeur)
-        sidesToShow = [0, 1];
-      } else {
-        // Autres quadrilatères : tous les côtés
-        sidesToShow = [0, 1, 2, 3];
-      }
-      
-    } else {
-      // AUTRES POLYGONES : Tous les côtés
-      sidesToShow = [...Array(n).keys()];
+    // Filtrer l'hypoténuse si demandé
+    if (hideHypotenuse && hypotenuseIndex !== -1) {
+      sidesToShow = sidesToShow.filter(i => i !== hypotenuseIndex);
     }
     
-    return sidesToShow;
+  } else if (n === 4) {
+    // ✅ DÉTECTION DU TYPE DE QUADRILATÈRE
+    const figureType = detectQuadrilateralType();
+    
+    if (figureType === 'square' || figureType === 'rhombus') {
+      // CARRÉ ET LOSANGE : Seulement le côté du bas (index 3: D→A)
+      sidesToShow = [2];
+      console.log(`🔍 ${figureType} détecté → affichage côté bas uniquement`);
+      
+    } else if (figureType === 'rectangle' || figureType === 'parallelogram') {
+      // RECTANGLE ET PARALLÉLOGRAMME : Deux côtés consécutifs (bas et droite)
+      sidesToShow = [1, 2]; // AB (bas) et DA (gauche)
+      console.log(`🔍 ${figureType} détecté → affichage de 2 côtés consécutifs`);
+      
+    } else {
+      // QUADRILATÈRE GÉNÉRAL : Tous les côtés
+      sidesToShow = [0, 1, 2, 3];
+      console.log(`🔍 Quadrilatère général → affichage de tous les côtés`);
+    }
+    
+  } else {
+    // AUTRES POLYGONES : Tous les côtés
+    sidesToShow = [...Array(n).keys()];
   }
+  
+  return sidesToShow;
+}
 
   // ==========================================
-  // 5. CRÉER LES LABELS DE LONGUEUR
+  // 5. FONCTIONS UTILITAIRES
   // ==========================================
   
   function formatLength(len) {
@@ -1910,42 +1959,35 @@ lengthHandleMeta.forEach(meta => {
     return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
   }
   
-  function getOffsetForSide(sideIndex, figureType) {
-    // Offsets personnalisés selon le type de figure
-    const offsets = {
-      'parallelogram': [0.2, 0.5, 0.2, 0.5], // Différents pour éviter les chevauchements
-      'default': 0.3
-    };
-    
-    if (figureType === 'parallelogram' && offsets.parallelogram[sideIndex] !== undefined) {
-      return offsets.parallelogram[sideIndex];
-    }
-    
-    return offsets.default;
-  }
-  
   function createLengthLabel(sideIndex) {
     const n = points.length;
     const pt1 = points[sideIndex];
     const pt2 = points[(sideIndex + 1) % n];
     
+    console.log(`🏷️ Création label pour côté ${sideIndex}: ${getLabel(sideIndex)}${getLabel((sideIndex + 1) % n)}`);
+    
     // Position du handle (sauvegardée ou par défaut)
     let startX, startY;
-    const savedIndex = lengthHandles.length;
+    const offset = -0.4; // Offset fixe pour simplifier
     
-    // ✅ CORRECTION : Utiliser sideIndex comme clé, pas lengthHandles.length
     if (savedPositions[sideIndex] && savedPositions[sideIndex] !== null) {
-      // Utiliser la position sauvegardée avec le bon index
+      // Utiliser la position sauvegardée
       startX = savedPositions[sideIndex].x;
       startY = savedPositions[sideIndex].y;
     } else {
       // Calculer la position par défaut
-      const figureType = detectFigureType() === 'quadrilateral' ? 'parallelogram' : 'default';
-      const offset = getOffsetForSide(sideIndex, figureType);
-      
       const dx = pt2.X() - pt1.X();
       const dy = pt2.Y() - pt1.Y();
       const len = Math.hypot(dx, dy) || 1;
+
+        // ✅ CORRECTION : Décaler vers le bas pour le côté horizontal du carré
+  let offsetX = offset * (dy / len);
+  let offsetY = -offset * (dx / len);
+  
+  // ✅ AJOUT : Décalage supplémentaire vers le bas pour le côté du bas
+  if (Math.abs(dy) < 0.1) { // Si c'est un segment horizontal (côté du bas/haut)
+    offsetY -= 0.2; // Décaler encore plus vers le bas
+  }
       
       // Position au milieu du côté + décalage perpendiculaire
       startX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
@@ -1994,9 +2036,11 @@ lengthHandleMeta.forEach(meta => {
       handle, 
       pt1, 
       pt2, 
-      offset: getOffsetForSide(sideIndex, 'default'),
+      offset,
       sideIndex 
     });
+    
+    console.log(`✅ Label créé pour côté ${sideIndex}`);
   }
   
   function makeLabelDraggable(label, handle) {
@@ -2046,61 +2090,16 @@ lengthHandleMeta.forEach(meta => {
   
   const sidesToShow = getSidesToShow();
   
-  // Debug
-  console.log(`🔍 Figure: ${points.length} points, côtés à afficher:`, sidesToShow);
-  if (hideHypotenuse && hypotenuseIndex !== -1) {
-    console.log(`🔍 Hypoténuse cachée: index ${hypotenuseIndex}`);
-  }
+  console.log(`🔍 Côtés à afficher pour figure de ${points.length} points:`, sidesToShow);
   
   sidesToShow.forEach(sideIndex => {
     createLengthLabel(sideIndex);
   });
 
-  // ==========================================
-  // 7. SYNCHRONISATION AUTOMATIQUE
-  // ==========================================
+  console.log(`✅ ${lengthLabels.length} labels de longueur créés au total`);
   
-  function syncLengthHandles() {
-    lengthHandleMeta.forEach(meta => {
-      const { handle, pt1, pt2, offset } = meta;
-      
-      // Ne synchroniser que les handles en position automatique
-      if (!handle || !handle._auto) return;
-      
-      // Recalculer la position automatique
-      const dx = pt2.X() - pt1.X();
-      const dy = pt2.Y() - pt1.Y();
-      const len = Math.hypot(dx, dy) || 1;
-      const x = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
-      const y = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
-      
-      try { 
-        handle.moveTo([x, y], 0); 
-      } catch (err) { 
-        try { 
-          handle.setPosition(JXG.COORDS_BY_USER, [x, y]); 
-        } catch(e) {} 
-      }
-    });
-    
-    board.update();
-  }
-
-  // Attacher la synchronisation (une seule fois)
-  if (!_lengthSyncAttached) {
-    try {
-      if (typeof board.on === 'function') {
-        board.on('update', syncLengthHandles);
-      } else {
-        setInterval(syncLengthHandles, 120);
-      }
-      _lengthSyncAttached = true;
-    } catch (e) {
-      console.warn('Synchronisation automatique non disponible');
-    }
-  }
-
-  console.log(`✅ ${lengthLabels.length} labels de longueur créés`);
+  // Mise à jour du board
+  board.update();
 }
 
 
@@ -3193,8 +3192,6 @@ async function exportBoardToSVG(filename = null) {
     });
   }
 }
-
-
 
 function safeOn(id, event, handler) {
   const el = document.getElementById(id);
