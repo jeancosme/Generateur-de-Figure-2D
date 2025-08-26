@@ -1686,6 +1686,7 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
       polygon = board.create('polygon', points, {
         withLabel: false,
        
+       
         borders: {strokeColor: "black",fixed: true },
         fillColor: "white",
         fillOpacity: 1
@@ -2333,7 +2334,7 @@ function drawParallelogram(base, sideLength) {
     fillOpacity: 1
   });
 
-  // CORRECTION : Labels positionnés selon leur position réelle
+  // CORRECTION : labels positionnés selon leur position réelle
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: 14}); // HAUT-GAUCHE
   const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: 14}); // HAUT-DROITE
   const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: 14}); // BAS-DROITE
@@ -3084,7 +3085,6 @@ function updateSuggestionHighlight(suggestions) {
   });
 }
 
-
 // Exporter le board JSXGraph en SVG (téléchargement)
 async function exportBoardToSVG(filename = null) {
   try {
@@ -3201,7 +3201,6 @@ function safeOn(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
-// ==========================================
 // SYSTÈME DE COMPTAGE LOCAL (sans API externe)
 // ==========================================
 
@@ -3440,4 +3439,3 @@ function initVisitorTracking() {
 
 // Appeler l'initialisation
 document.addEventListener('DOMContentLoaded', initVisitorTracking);
-
