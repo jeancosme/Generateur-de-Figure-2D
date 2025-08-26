@@ -642,17 +642,25 @@ function updateEqualAngleMarkers(visible) {
   if (typeof visible === 'object' && visible !== null && 'target' in visible) visible = !!visible.target.checked;
   else visible = !!visible;
 
-  // nettoyer anciens marqueurs/codages
+  // ⚠️ CORRECTION : Nettoyer SEULEMENT les angleMarkers, PAS les codingMarks
   angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
   angleMarkers = [];
-  codingMarks.forEach(m => { try { board.removeObject(m); } catch (e) {} });
-  codingMarks = [];
+  
+  // ❌ SUPPRIMER CES LIGNES QUI CAUSENT LE PROBLÈME :
+  // codingMarks.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  // codingMarks = [];
 
-  if (!visible || !points || points.length < 3) { board.update(); return; }
+  if (!visible || !points || points.length < 3) { 
+    board.update(); 
+    return; 
+  }
 
   // éviter pour carré/rectangle (optionnel)
   const fig = typeof detectCurrentFigure === 'function' ? detectCurrentFigure() : '';
-  if (fig === 'square' || fig === 'rectangle') { board.update(); return; }
+  if (fig === 'square' || fig === 'rectangle') { 
+    board.update(); 
+    return; 
+  }
 
   // helper : test point in polygon (ray-casting)
   function pointInPolygon(x, y, polyPts) {
@@ -698,9 +706,9 @@ function updateEqualAngleMarkers(visible) {
     const d12 = points[1].Dist(points[2]);
     const d20 = points[2].Dist(points[0]);
     const tol = Math.max(1e-6, 1e-3 * Math.max(d01, d12, d20));
-    if (Math.abs(d01 - d12) < tol) { isIsosceles = true; isoEqualIndices = [2, 0]; } // sides 01 ~ 12 -> angles at 2 & 0
-    else if (Math.abs(d12 - d20) < tol) { isIsosceles = true; isoEqualIndices = [0, 1]; } // sides 12 ~ 20 -> angles at 0 & 1
-    else if (Math.abs(d20 - d01) < tol) { isIsosceles = true; isoEqualIndices = [1, 2]; } // sides 20 ~ 01 -> angles at 1 & 2
+    if (Math.abs(d01 - d12) < tol) { isIsosceles = true; isoEqualIndices = [2, 0]; }
+    else if (Math.abs(d12 - d20) < tol) { isIsosceles = true; isoEqualIndices = [0, 1]; }
+    else if (Math.abs(d20 - d01) < tol) { isIsosceles = true; isoEqualIndices = [1, 2]; }
   }
 
   // grouper angles égaux (arrondi)
@@ -714,16 +722,17 @@ function updateEqualAngleMarkers(visible) {
 
   const baseRadius = 0.42;
 
+  // ✅ CRÉER UNE NOUVELLE VARIABLE SÉPARÉE POUR LES CODAGES D'ANGLES
+  let angleCodeMarks = []; // Variable séparée pour les codages d'angles
+
   // dessine un petit tiret perpendiculaire (radial) centré sur l'arc,
   // avec possibilité de décalage latéral le long de la tangente pour faire des "//" parallèles
   function createPerpTick(B, angleOnArc, radius, tickLen, lateralOffset = 0) {
     const seg = board.create('segment', [
       () => {
         const Bx = B.X(), By = B.Y();
-        // centre du tiret : point sur l'arc, puis décalé le long de la tangente (-sin, cos)
         const cx = Bx + Math.cos(angleOnArc) * radius - Math.sin(angleOnArc) * lateralOffset;
         const cy = By + Math.sin(angleOnArc) * radius + Math.cos(angleOnArc) * lateralOffset;
-        // vecteur radial (orientation du tiret)
         const rx = Math.cos(angleOnArc), ry = Math.sin(angleOnArc);
         return [cx - rx * (tickLen / 2), cy - ry * (tickLen / 2)];
       },
@@ -740,7 +749,7 @@ function updateEqualAngleMarkers(visible) {
       fixed: true,
       highlight: false
     });
-    codingMarks.push(seg);
+    angleCodeMarks.push(seg); // ✅ Ajouter aux codages d'angles, pas aux codages de côtés
   }
 
   // normaliser angle en [-PI,PI)
@@ -749,7 +758,7 @@ function updateEqualAngleMarkers(visible) {
   // parcourir groupes et dessiner arcs + codages
   for (const key in groups) {
     const indices = groups[key];
-    if (indices.length < 2) continue; // garder seulement angles répétés
+    if (indices.length < 2) continue;
 
     for (const idx of indices) {
       const B = points[idx];
@@ -769,7 +778,7 @@ function updateEqualAngleMarkers(visible) {
 
       const radius = Math.min(baseRadius, Math.min(l1, l2) * 0.22);
 
-      // s'assurer de dessiner l'arc à l'intérieur du polygone (prendre le petit arc intérieur)
+      // s'assurer de dessiner l'arc à l'intérieur du polygone
       const midSmall = a1 + delta / 2;
       const testX = B.X() + Math.cos(midSmall) * radius * 0.9;
       const testY = B.Y() + Math.sin(midSmall) * radius * 0.9;
@@ -781,6 +790,7 @@ function updateEqualAngleMarkers(visible) {
 
       const aStart = a1;
       const aDelta = delta;
+      
       // dessiner l'arc interne
       const curve = board.create('curve', [
         function(t) { return B.X() + Math.cos(aStart + t * aDelta) * radius; },
@@ -796,14 +806,13 @@ function updateEqualAngleMarkers(visible) {
       });
       angleMarkers.push(curve);
 
-      // codage : perpendiculaires au rayon ; priorité : triangle isocèle -> 1 trait sur angles égaux
+      // codage : perpendiculaires au rayon
       const bisect = normAng(aStart + aDelta / 2);
       if (isIsosceles && isoEqualIndices.includes(idx)) {
-        // triangle isocèle : un seul trait sur chaque angle égal
         const tickLen = Math.min(0.24, radius * 1.0);
         createPerpTick(B, bisect, radius, tickLen, 0);
       } else if (isParallelogram) {
-        const count = (idx % 2 === 0) ? 1 : 2; // règle choisie : sommets pairs -> 1, impairs -> 2
+        const count = (idx % 2 === 0) ? 1 : 2;
         const tickLen = Math.min(0.28, radius * 1.1);
         const lateralSpacing = Math.min(0.12, radius * 0.6);
         if (count === 1) {
@@ -813,12 +822,14 @@ function updateEqualAngleMarkers(visible) {
           createPerpTick(B, bisect, radius, tickLen, +lateralSpacing / 2);
         }
       } else {
-        // figure générale : 1 tiret centré sur la bissectrice
         const tickLen = Math.min(0.24, radius * 1.0);
         createPerpTick(B, normAng(a1 + delta / 2), radius, tickLen, 0);
       }
     }
   }
+
+  // ✅ Ajouter les codages d'angles aux angleMarkers pour le nettoyage
+  angleMarkers.push(...angleCodeMarks);
 
   board.update();
 }
@@ -1045,11 +1056,12 @@ function generateFigure() {
     const [base, height] = extractTwoNumbers(prompt, [4, 3]);
     drawIsoscelesTriangle(base, height);
   } else if (prompt.includes("losange")) {
-    const size = extractNumber(prompt, 4);
+    const size = extractNumber(prompt, 5);
     drawLosange(size);
   } else if (prompt.includes("parallélogramme")) {
-    const [base, height] = extractTwoNumbers(prompt, [4, 3]);
-    drawParallelogram(base, height);
+    // ✅ CORRECTION : Le 2e paramètre est la longueur du côté oblique BC, pas la hauteur
+    const [base, sideLength] = extractTwoNumbers(prompt, [5, 3]); // base=5, côté oblique=3
+    drawParallelogram(base, sideLength);
   } else if (prompt.includes("hexagone")) {
     const side = extractNumber(prompt, 4);
     drawRegularPolygon(6, side);
@@ -1550,7 +1562,7 @@ function drawIsoscelesTriangle(base = 4, height = 3) {
 function drawParallelogram(base, sideLength) {
   const theta = Math.PI / 3; // 60°
   const offset = sideLength * Math.cos(theta); // projection horizontale du côté oblique
-  const height = sideLength * Math.sin(theta); // hauteur effective
+  const height = sideLength * Math.sin(theta); // hauteur géométrique pour le calcul
 
   // CORRECTION : Créer les points dans l'ordre horaire correct
   // A = haut-gauche, B = haut-droite, C = bas-droite, D = bas-gauche
@@ -1581,8 +1593,13 @@ function drawParallelogram(base, sideLength) {
   updateCodings();
   updateLengthLabels();
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
-}
 
+  // ✅ AJOUT : Log pour vérifier les dimensions
+  console.log(`Parallélogramme créé:
+  - Base AD = ${base}
+  - Côté oblique AB/DC = ${sideLength} 
+  - Hauteur géométrique = ${height.toFixed(2)}`);
+}
 
 function drawRegularPolygon(n, side) {
   const center = [0, 0];
@@ -1629,10 +1646,12 @@ function drawEquilateralTriangle(side) {
     fillOpacity: 1
   });
 
-  const labelA = board.create('text', [A.X(), A.Y() - 0.3, "A"]);
-  const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
-  const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
+  // Utilise getLabel() pour les noms personnalisés
+  const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
+  const labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
+  const labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
   texts.push(labelA, labelB, labelC);
+
   updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
   addDraggingToPolygon(polygon, points, texts);
 }
@@ -1793,7 +1812,7 @@ const suggestionsList = [
   "triangle isocèle de base 6 et hauteur 4",
   "cercle de rayon 2",
   "losange de côté 5",
-  "parallélogramme base 5 hauteur 3",
+  "parallélogramme 5 x 3",
   "hexagone de côté 4",
   "pentagone de côté 4"
 ];
