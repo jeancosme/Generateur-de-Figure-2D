@@ -54,6 +54,14 @@
         <h3>🛠️ Options d'affichage</h3>
 
         <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
+
+        <!-- NOUVELLE CHECKBOX CONDITIONNELLE -->
+        <div id="singleAngleGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="toggleSingleAngle"> Afficher un seul angle
+          </label>
+        </div>
+
         <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
 
         <label>
@@ -71,10 +79,18 @@
           </select>
         </div>
 
+        <!-- NOUVELLE CHECKBOX CONDITIONNELLE POUR L'HYPOTÉNUSE -->
+        <div id="hypotenuseGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="toggleHideHypotenuse"> Cacher l'hypoténuse
+          </label>
+        </div>
+
         <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
         <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
         <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
         <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
+        <label><input type="checkbox" id="toggleHandDrawn"> Dessin à main levée</label>
       </div>
 
       <!-- bouton placé sous le panneau (HTML statique) -->

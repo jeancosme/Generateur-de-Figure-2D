@@ -125,6 +125,9 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let labelTexts = [];   // text objects for those labels
     let lengthHandleMeta = []; // meta pour synchroniser handles ↔ segments/points
     let _lengthSyncAttached = false;
+    let originalPolygon = null;
+    let handDrawnElements = [];
+    let isHandDrawnMode = false;
 
 
 
@@ -548,92 +551,254 @@ function updateCodings() {
 
 // Fonction pour ajouter les angles droits
 function updateRightAngleMarkers(visible) {
-  // accepter event ou bool
+  // Accepter event ou bool
   if (typeof visible === 'object' && visible !== null && 'target' in visible) {
     visible = !!visible.target.checked;
   } else {
     visible = !!visible;
   }
 
-  // Supprimer anciens marqueurs
-  rightAngleMarkers.forEach(marker => {
-    try { board.removeObject(marker); } catch (e) { /* ignore */ }
+  // Nettoyer les anciens marqueurs
+  rightAngleMarkers.forEach(m => { 
+    try { board.removeObject(m); } catch (e) {} 
   });
   rightAngleMarkers = [];
 
-  if (!visible || !points || points.length < 3) return;
-
-  const n = points.length;
-  const fig = typeof detectCurrentFigure === 'function' ? detectCurrentFigure() : '';
-
-  // Choix des triples à marquer :
-  // - pour carré/rectangle : on force tous les sommets
-  // - sinon : on détecte les angles droits (tolérance dans getRightAngleTriples)
-  let triples = [];
-  if (fig === 'square' || fig === 'rectangle') {
-    for (let i = 0; i < n; i++) {
-      const A = points[(i - 1 + n) % n];
-      const B = points[i];
-      const C = points[(i + 1) % n];
-      if (A && B && C) triples.push([A, B, C]);
-    }
+  // Gérer l'affichage du groupe "un seul angle"
+  const singleAngleGroup = document.getElementById('singleAngleGroup');
+  const singleAngleCheckbox = document.getElementById('toggleSingleAngle');
+  
+  // ✅ CORRECTION : Vérifier les figures avec angles droits (carrés, rectangles ET triangles rectangles)
+  const hasRightAngles = isRectangularFigure() || (points.length === 3 && isRightTriangle().isRight);
+  
+  if (visible && hasRightAngles) {
+    // Afficher l'option "un seul angle" pour toutes les figures avec angles droits
+    if (singleAngleGroup) singleAngleGroup.style.display = 'block';
   } else {
-    triples = getRightAngleTriples();
+    // Cacher l'option et décocher si nécessaire
+    if (singleAngleGroup) singleAngleGroup.style.display = 'none';
+    if (singleAngleCheckbox) singleAngleCheckbox.checked = false;
   }
 
-  // Créer un marqueur "petit carré" pour chaque triple
-  triples.forEach(([A, B, C]) => {
-    if (!A || !B || !C) return;
+  if (!visible || !points || points.length < 3) { 
+    board.update(); 
+    return; 
+  }
 
-    // taille relative (s'adapte à la taille locale)
-    const d1 = Math.hypot(A.X() - B.X(), A.Y() - B.Y());
-    const d2 = Math.hypot(C.X() - B.X(), C.Y() - B.Y());
-    const base = Math.min(d1, d2);
-    const radius = Math.min(0.35, Math.max(0.12, base * 0.18)); // bornes pour lisibilité
-
-    // Utiliser l'objet 'angle' avec type square (contour noir, fond blanc)
-    try {
-      const ang = board.create('angle', [A, B, C], {
-        type: 'square',
-        orthoType: 'square',
-        radius: radius,
-        withLabel: false,
-        name: '',
-        strokeColor: 'black',
-        strokeWidth: 1.2,
-        fillColor: 'white',
-        fillOpacity: 1,
-        fixed: true,
-        highlight: false
-      });
-      rightAngleMarkers.push(ang);
-    } catch (e) {
-      // fallback : petit polygone si 'angle' ne s'affiche pas pour une raison quelconque
-      const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
-      const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
-      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
-      if (len1 === 0 || len2 === 0) return;
-      const u1x = v1x / len1, u1y = v1y / len1;
-      const u2x = v2x / len2, u2y = v2y / len2;
-      const size = Math.min(radius, Math.min(len1, len2) * 0.35);
-      const p0 = [() => B.X(), () => B.Y()];
-      const p1 = [() => B.X() + u1x * size, () => B.Y() + u1y * size];
-      const p2 = [() => B.X() + (u1x + u2x) * size, () => B.Y() + (u1y + u2y) * size];
-      const p3 = [() => B.X() + u2x * size, () => B.Y() + u2y * size];
-      const sq = board.create('polygon', [p0, p1, p2, p3], {
-        fillColor: 'white',
-        fillOpacity: 1,
-        strokeColor: 'black',
-        strokeWidth: 1.2,
-        fixed: true,
-        highlight: false,
-        name: ''
-      });
-      rightAngleMarkers.push(sq);
-    }
-  });
-
+  // Vérifier si on doit afficher un seul angle
+  const showSingleAngle = singleAngleCheckbox && singleAngleCheckbox.checked;
+  
+  // Créer les marqueurs d'angles droits
+  createRightAngleMarkers(showSingleAngle);
+  
   board.update();
+}
+
+// Fonction helper pour détecter si c'est un carré/rectangle
+function isRectangularFigure() {
+  if (!points || points.length !== 4) return false;
+  
+  const tolerance = 0.15; // ✅ Tolérance plus stricte
+  let rightAngleCount = 0;
+  
+  // Vérifier chaque angle
+  for (let i = 0; i < 4; i++) {
+    const A = points[(i - 1 + 4) % 4];
+    const B = points[i];
+    const C = points[(i + 1) % 4];
+    
+    const v1x = A.X() - B.X();
+    const v1y = A.Y() - B.Y();
+    const v2x = C.X() - B.X();
+    const v2y = C.Y() - B.Y();
+    
+    const dotProduct = v1x * v2x + v1y * v2y;
+    const len1 = Math.hypot(v1x, v1y);
+    const len2 = Math.hypot(v2x, v2y);
+    
+    if (len1 > 0 && len2 > 0) {
+      const cosAngle = dotProduct / (len1 * len2);
+      const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+      const angleDegrees = angle * 180 / Math.PI;
+      
+      // ✅ DEBUG : Afficher les angles pour diagnostic
+      console.log(`🔍 Angle ${i}: ${angleDegrees.toFixed(1)}°`);
+      
+      // Compter les angles droits (proches de 90°)
+      if (Math.abs(angle - Math.PI/2) < tolerance) {
+        rightAngleCount++;
+      }
+    }
+  }
+  
+  // ✅ CORRECTION : Un quadrilatère rectangulaire doit avoir EXACTEMENT 4 angles droits
+  const isRectangular = (rightAngleCount === 4);
+  
+  console.log(`🔍 Quadrilatère: ${rightAngleCount}/4 angles droits → ${isRectangular ? 'RECTANGULAIRE' : 'PAS RECTANGULAIRE'}`);
+  
+  return isRectangular;
+}
+
+// Fonction pour créer les marqueurs d'angles droits
+function createRightAngleMarkers(singleAngle = false) {
+  if (!points || points.length < 3) return;
+  
+  if (points.length === 3) {
+    // TRIANGLE RECTANGLE
+    createTriangleRightAngleMarker(singleAngle);
+  } else if (points.length === 4) {
+    // QUADRILATÈRE (carré, rectangle)
+    createQuadrilateralRightAngleMarkers(singleAngle);
+  }
+}
+
+// Fonction pour créer le marqueur d'angle droit du triangle
+function createTriangleRightAngleMarker(singleAngle = false) {
+  const rightTriangleInfo = isRightTriangle();
+  if (!rightTriangleInfo || !rightTriangleInfo.isRight) return;
+  
+  const rightAngleIndex = rightTriangleInfo.rightAngleIndex;
+  const size = 0.3;
+  
+  // Créer le marqueur d'angle droit au bon sommet
+  createSingleTriangleRightAngleMarker(rightAngleIndex, size);
+}
+
+// Fonction pour créer les marqueurs d'angles droits du quadrilatère
+function createQuadrilateralRightAngleMarkers(singleAngle = false) {
+  const size = 0.3;
+  
+  if (singleAngle) {
+    // Afficher seulement l'angle en haut à droite (index 1)
+    createSingleRightAngleMarker(1, size);
+  } else {
+    // Afficher tous les angles droits
+    for (let i = 0; i < 4; i++) {
+      createSingleRightAngleMarker(i, size);
+    }
+  }
+}
+
+// Fonction pour créer un marqueur d'angle droit de triangle
+function createSingleTriangleRightAngleMarker(angleIndex, size) {
+  const vertex = points[angleIndex];
+  const prevPoint = points[(angleIndex - 1 + 3) % 3];
+  const nextPoint = points[(angleIndex + 1) % 3];
+  
+  if (!vertex || !prevPoint || !nextPoint) return;
+  
+  // Vecteurs depuis le sommet vers les points adjacents
+  const v1x = prevPoint.X() - vertex.X();
+  const v1y = prevPoint.Y() - vertex.Y();
+  const v2x = nextPoint.X() - vertex.X();
+  const v2y = nextPoint.Y() - vertex.Y();
+  
+  // Normaliser les vecteurs
+  const len1 = Math.hypot(v1x, v1y);
+  const len2 = Math.hypot(v2x, v2y);
+  
+  if (len1 === 0 || len2 === 0) return;
+  
+  const u1x = v1x / len1;
+  const u1y = v1y / len1;
+  const u2x = v2x / len2;
+  const u2y = v2y / len2;
+  
+  // Créer le petit carré d'angle droit
+  const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+  
+  // Points du petit carré
+  const p1x = vertex.X() + u1x * cornerSize;
+  const p1y = vertex.Y() + u1y * cornerSize;
+  
+  const p2x = vertex.X() + u2x * cornerSize;
+  const p2y = vertex.Y() + u2y * cornerSize;
+  
+  const p3x = p1x + u2x * cornerSize;
+  const p3y = p1y + u2y * cornerSize;
+  
+  // Créer les segments du petit carré
+  const seg1 = board.create('segment', [
+    [p1x, p1y], [p3x, p3y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  const seg2 = board.create('segment', [
+    [p3x, p3y], [p2x, p2y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  rightAngleMarkers.push(seg1, seg2);
+  
+  console.log(`✅ Angle droit créé au sommet ${angleIndex} du triangle rectangle`);
+}
+
+// Fonction pour créer un seul marqueur d'angle droit (quadrilatères)
+function createSingleRightAngleMarker(angleIndex, size) {
+  const vertex = points[angleIndex];
+  const prevPoint = points[(angleIndex - 1 + 4) % 4];
+  const nextPoint = points[(angleIndex + 1) % 4];
+  
+  if (!vertex || !prevPoint || !nextPoint) return;
+  
+  // Vecteurs depuis le sommet vers les points adjacents
+  const v1x = prevPoint.X() - vertex.X();
+  const v1y = prevPoint.Y() - vertex.Y();
+  const v2x = nextPoint.X() - vertex.X();
+  const v2y = nextPoint.Y() - vertex.Y();
+  
+  // Normaliser les vecteurs
+  const len1 = Math.hypot(v1x, v1y);
+  const len2 = Math.hypot(v2x, v2y);
+  
+  if (len1 === 0 || len2 === 0) return;
+  
+  const u1x = v1x / len1;
+  const u1y = v1y / len1;
+  const u2x = v2x / len2;
+  const u2y = v2y / len2;
+  
+  // Créer le petit carré d'angle droit
+  const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+  
+  // Points du petit carré
+  const p1x = vertex.X() + u1x * cornerSize;
+  const p1y = vertex.Y() + u1y * cornerSize;
+  
+  const p2x = vertex.X() + u2x * cornerSize;
+  const p2y = vertex.Y() + u2y * cornerSize;
+  
+  const p3x = p1x + u2x * cornerSize;
+  const p3y = p1y + u2y * cornerSize;
+  
+  // Créer les segments du petit carré
+  const seg1 = board.create('segment', [
+    [p1x, p1y], [p3x, p3y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  const seg2 = board.create('segment', [
+    [p3x, p3y], [p2x, p2y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  rightAngleMarkers.push(seg1, seg2);
 }
 
 // Fonction pour ajouter les marqueurs d'angles égaux
@@ -932,6 +1097,367 @@ function drawAngleMark(vertex) {
 }
 
 
+
+// Fonction principale pour activer/désactiver l'effet main levée
+function toggleHandDrawnEffect(enabled) {
+  if (typeof enabled === 'object' && enabled !== null && 'target' in enabled) {
+    enabled = !!enabled.target.checked;
+  } else {
+    enabled = !!enabled;
+  }
+  
+  isHandDrawnMode = enabled;
+  
+  if (enabled) {
+    applyHandDrawnEffect();
+  } else {
+    removeHandDrawnEffect();
+  }
+  
+  board.update();
+}
+
+// Appliquer l'effet main levée
+// Appliquer l'effet main levée
+function applyHandDrawnEffect() {
+  if (!points || points.length === 0) return;
+  
+  // Nettoyer les anciens éléments main levée
+  removeHandDrawnElements();
+  
+  // ✅ CORRECTION : Cacher TOUS les éléments de la figure originale
+  
+  // 1. Cacher le polygone s'il existe
+  if (polygon && !originalPolygon) {
+    originalPolygon = polygon;
+    polygon.setAttribute({ visible: false });
+  }
+  
+  // 2. Cacher le cercle s'il existe
+  if (centerPoint && circlePoint && circleObject) {
+    circleObject.setAttribute({ visible: false });
+    createHandDrawnCircle();
+    return; // Sortir ici pour les cercles
+  }
+  
+  // 3. ✅ NOUVEAU : Cacher tous les segments/bordures du polygone
+  if (polygon && polygon.borders) {
+    polygon.borders.forEach(border => {
+      if (border && typeof border.setAttribute === 'function') {
+        border.setAttribute({ visible: false });
+      }
+    });
+  }
+  
+  // 4. ✅ NOUVEAU : Cacher tous les éléments créés individuellement
+  // (pour les figures qui ne sont pas des polygones JSXGraph standard)
+  board.objectsList.forEach(obj => {
+    // Cacher tous les segments qui relient les points de la figure
+    if (obj.type === JXG.OBJECT_TYPE_LINE || obj.type === 'segment') {
+      // Vérifier si ce segment fait partie de notre figure
+      const isPartOfFigure = points.some(p1 => 
+        points.some(p2 => 
+          p1 !== p2 && 
+          obj.point1 === p1 && obj.point2 === p2
+        )
+      );
+      
+      if (isPartOfFigure) {
+        obj.setAttribute({ visible: false });
+      }
+    }
+  });
+  
+  // 5. Créer la version main levée
+  if (points.length >= 3) {
+    createHandDrawnPolygon();
+  }
+}
+
+// Supprimer l'effet main levée
+// Supprimer l'effet main levée
+function removeHandDrawnEffect() {
+  // Nettoyer les éléments main levée
+  removeHandDrawnElements();
+  
+  // ✅ CORRECTION : Restaurer TOUS les éléments originaux
+  
+  // 1. Restaurer le polygone original
+  if (originalPolygon) {
+    originalPolygon.setAttribute({ visible: true });
+    
+    // ✅ NOUVEAU : Restaurer aussi les bordures du polygone
+    if (originalPolygon.borders) {
+      originalPolygon.borders.forEach(border => {
+        if (border && typeof border.setAttribute === 'function') {
+          border.setAttribute({ visible: true });
+        }
+      });
+    }
+    
+    polygon = originalPolygon;
+    originalPolygon = null;
+  }
+  
+  // 2. Restaurer le cercle original
+  if (circleObject) {
+    circleObject.setAttribute({ visible: true });
+  }
+  
+  // 3. ✅ NOUVEAU : Restaurer tous les segments cachés
+  board.objectsList.forEach(obj => {
+    if (obj.type === JXG.OBJECT_TYPE_LINE || obj.type === 'segment') {
+      const isPartOfFigure = points.some(p1 => 
+        points.some(p2 => 
+          p1 !== p2 && 
+          obj.point1 === p1 && obj.point2 === p2
+        )
+      );
+      
+      if (isPartOfFigure) {
+        obj.setAttribute({ visible: true });
+      }
+    }
+  });
+}
+
+// Nettoyer les éléments main levée
+function removeHandDrawnElements() {
+  handDrawnElements.forEach(element => {
+    try { board.removeObject(element); } catch (e) {}
+  });
+  handDrawnElements = [];
+}
+
+// Créer un polygone à main levée
+function createHandDrawnPolygon() {
+  const n = points.length;
+  
+  // Créer des segments main levée entre chaque paire de points
+  for (let i = 0; i < n; i++) {
+    const startPoint = points[i];
+    const endPoint = points[(i + 1) % n];
+    
+    const handDrawnSegment = createHandDrawnSegment(startPoint, endPoint);
+    handDrawnElements.push(handDrawnSegment);
+  }
+}
+
+// Créer un segment à main levée plus prononcé
+function createHandDrawnSegment(startPoint, endPoint) {
+  const numPoints = 60; // Plus de points pour plus de détails
+  const baseIntensity = 0.06; // ✅ Intensité de base augmentée (x3)
+  
+  // Calculer la longueur pour adapter l'intensité
+  const segmentLength = Math.hypot(endPoint.X() - startPoint.X(), endPoint.Y() - startPoint.Y());
+  const lengthFactor = Math.min(1.5, segmentLength / 2.5); // ✅ Facteur de longueur plus généreux
+  
+  // Générer des points de contrôle pour créer des ondulations naturelles plus marquées
+  const controlPoints = [];
+  for (let i = 0; i <= 10; i++) { // ✅ Plus de points de contrôle
+    const t = i / 10;
+    // ✅ Ondulations plus marquées avec plusieurs fréquences
+    const wave1 = Math.sin(t * Math.PI * 3.2) * 0.035 * lengthFactor; // Vague principale plus forte
+    const wave2 = Math.sin(t * Math.PI * 6.5) * 0.020 * lengthFactor; // Vague secondaire
+    const wave3 = Math.sin(t * Math.PI * 12.8) * 0.010 * lengthFactor; // Micro-ondulations
+    const noise = (Math.random() - 0.5) * 0.025 * lengthFactor; // ✅ Bruit plus fort
+    controlPoints.push(wave1 + wave2 + wave3 + noise);
+  }
+  
+  const curve = board.create('curve', [
+    function(t) {
+      const x1 = startPoint.X();
+      const x2 = endPoint.X();
+      const baseX = x1 + (x2 - x1) * t;
+      
+      // Interpolation des points de contrôle
+      const controlIndex = t * (controlPoints.length - 1);
+      const index1 = Math.floor(controlIndex);
+      const index2 = Math.min(index1 + 1, controlPoints.length - 1);
+      const fraction = controlIndex - index1;
+      
+      const controlOffset = controlPoints[index1] * (1 - fraction) + controlPoints[index2] * fraction;
+      
+      // Direction perpendiculaire pour l'ondulation
+      const dx = x2 - x1;
+      const dy = endPoint.Y() - startPoint.Y();
+      const len = Math.hypot(dx, dy) || 1;
+      const perpX = -dy / len;
+      
+      // ✅ Tremblement plus intense avec variation continue
+      const edgeFactor = Math.sin(t * Math.PI); // 0 aux bords, 1 au centre
+      const continuousTremor = Math.sin(t * Math.PI * 8.5) * 0.015 * edgeFactor * lengthFactor;
+      const randomTremor = (Math.random() - 0.5) * baseIntensity * edgeFactor * lengthFactor;
+      
+      return baseX + controlOffset * perpX + continuousTremor + randomTremor * 0.3;
+    },
+    function(t) {
+      const y1 = startPoint.Y();
+      const y2 = endPoint.Y();
+      const baseY = y1 + (y2 - y1) * t;
+      
+      // Même logique pour Y avec légère variation de phase
+      const controlIndex = t * (controlPoints.length - 1);
+      const index1 = Math.floor(controlIndex);
+      const index2 = Math.min(index1 + 1, controlPoints.length - 1);
+      const fraction = controlIndex - index1;
+      
+      const controlOffset = controlPoints[index1] * (1 - fraction) + controlPoints[index2] * fraction;
+      
+      const dx = endPoint.X() - startPoint.X();
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const perpY = dx / len;
+      
+      const edgeFactor = Math.sin(t * Math.PI);
+      const continuousTremor = Math.cos(t * Math.PI * 7.8) * 0.018 * edgeFactor * lengthFactor; // ✅ Phase légèrement différente
+      const randomTremor = (Math.random() - 0.5) * baseIntensity * edgeFactor * lengthFactor;
+      
+      return baseY + controlOffset * perpY + continuousTremor + randomTremor * 0.3;
+    },
+    0, 1
+  ], {
+    strokeColor: '#2c2c2c', // ✅ Couleur légèrement plus foncée pour plus de contraste
+    strokeWidth: 1.6, // ✅ Légèrement plus épais
+    fixed: true,
+    highlight: false
+  });
+  
+  return curve;
+}
+
+// Créer un cercle à main levée plus prononcé
+function createHandDrawnCircle() {
+  if (!centerPoint || !circlePoint) return;
+  
+  // Cacher le cercle original
+  if (circleObject) {
+    circleObject.setAttribute({ visible: false });
+  }
+  
+  const centerX = centerPoint.X();
+  const centerY = centerPoint.Y();
+  const radius = Math.hypot(circlePoint.X() - centerX, circlePoint.Y() - centerY);
+  
+  // ✅ Plus de sections pour plus de variation
+  const numSections = 3; // Plus de sections
+  const radiusVariations = [];
+  
+  for (let i = 0; i < numSections; i++) {
+    // ✅ Variations plus marquées avec plusieurs harmoniques
+    const angle = (i * Math.PI * 2) / numSections;
+    const baseVariation1 = Math.sin(angle * 2.7) * 0.055; // Vague principale plus forte
+    const baseVariation2 = Math.sin(angle * 5.3) * 0.032; // Vague secondaire
+    const baseVariation3 = Math.sin(angle * 11.1) * 0.018; // Micro-variations
+    const noise = (Math.random() - 0.5) * 0.040; // ✅ Bruit plus fort
+    radiusVariations.push(1 + baseVariation1 + baseVariation2 + baseVariation3 + noise);
+  }
+  
+  const handDrawnCircle = board.create('curve', [
+    function(t) {
+      const angle = t * 2 * Math.PI;
+      
+      // Interpoler les variations de rayon avec plus de fluidité
+      const sectionIndex = (t * numSections) % numSections;
+      const index1 = Math.floor(sectionIndex);
+      const index2 = (index1 + 1) % numSections;
+      const fraction = sectionIndex - index1;
+      
+      // ✅ Interpolation cubique pour plus de fluidité
+      const t2 = fraction * fraction;
+      const t3 = t2 * fraction;
+      const radiusVar = radiusVariations[index1] * (1 - 3*t2 + 2*t3) + 
+                       radiusVariations[index2] * (3*t2 - 2*t3);
+      
+      const currentRadius = radius * radiusVar;
+      
+      // ✅ Tremblement additionnel plus marqué
+      const continuousTremor = Math.sin(angle * 13.7 + t * Math.PI * 8) * 0.025 * radius;
+      const randomTremor = (Math.random() - 0.5) * 0.030 * radius;
+      const angleTremor = (Math.random() - 0.5) * 0.05; // ✅ Plus de variation angulaire
+      
+      return centerX + (currentRadius + continuousTremor + randomTremor) * Math.cos(angle + angleTremor);
+    },
+    function(t) {
+      const angle = t * 2 * Math.PI;
+      
+      // Même logique pour Y avec légère variation de phase
+      const sectionIndex = (t * numSections) % numSections;
+      const index1 = Math.floor(sectionIndex);
+      const index2 = (index1 + 1) % numSections;
+      const fraction = sectionIndex - index1;
+      
+      const t2 = fraction * fraction;
+      const t3 = t2 * fraction;
+      const radiusVar = radiusVariations[index1] * (1 - 3*t2 + 2*t3) + 
+                       radiusVariations[index2] * (3*t2 - 2*t3);
+      
+      const currentRadius = radius * radiusVar;
+      
+      const continuousTremor = Math.cos(angle * 12.3 + t * Math.PI * 9) * 0.028 * radius; // ✅ Phase différente
+      const randomTremor = (Math.random() - 0.5) * 0.030 * radius;
+      const angleTremor = (Math.random() - 0.5) * 0.05;
+      
+      return centerY + (currentRadius + continuousTremor + randomTremor) * Math.sin(angle + angleTremor);
+    },
+    0, 1
+  ], {
+    strokeColor: '#2c2c2c',
+    strokeWidth: 1.2,
+    fixed: true,
+    highlight: false
+  });
+  
+  handDrawnElements.push(handDrawnCircle);
+}
+
+// Version encore plus réaliste avec plusieurs passes
+function createHandDrawnSegmentMultiLayer(startPoint, endPoint) {
+  const curves = [];
+  const numLayers = 2; // Deux passes pour simuler le reppassage naturel
+  
+  for (let layer = 0; layer < numLayers; layer++) {
+    const opacity = layer === 0 ? 1 : 0.3; // Première passe plus marquée
+    const offset = layer * 0.01; // Léger décalage entre les passes
+    
+    const curve = board.create('curve', [
+      function(t) {
+        const x1 = startPoint.X();
+        const x2 = endPoint.X();
+        const baseX = x1 + (x2 - x1) * t;
+        
+        // Ondulation principale
+        const wave = Math.sin(t * Math.PI * 3) * 0.02 * Math.sin(t * Math.PI);
+        
+        // Micro-tremblement
+        const microTremor = (Math.random() - 0.5) * 0.008;
+        
+        return baseX + wave + microTremor + offset;
+      },
+      function(t) {
+        const y1 = startPoint.Y();
+        const y2 = endPoint.Y();
+        const baseY = y1 + (y2 - y1) * t;
+        
+        const wave = Math.cos(t * Math.PI * 2.8) * 0.018 * Math.sin(t * Math.PI);
+        const microTremor = (Math.random() - 0.5) * 0.008;
+        
+        return baseY + wave + microTremor + offset;
+      },
+      0, 1
+    ], {
+      strokeColor: `rgba(51, 51, 51, ${opacity})`,
+      strokeWidth: layer === 0 ? 1.6 : 1.2,
+      fixed: true,
+      highlight: false
+    });
+    
+    curves.push(curve);
+  }
+  
+  return curves;
+}
+
 function getBoardCenter() {
   // boundingbox: [xmin, ymax, xmax, ymin]
   const bb = board.getBoundingBox();
@@ -1072,6 +1598,14 @@ function generateFigure() {
 
   // recentrer la figure générée au centre du panneau
   try { centerFigure(); } catch (e) { console.warn('centerFigure failed', e); }
+
+  // ✅ AJOUT : Appliquer l'effet main levée si la checkbox est cochée
+  const handDrawnCheckbox = document.getElementById('toggleHandDrawn');
+  if (handDrawnCheckbox && handDrawnCheckbox.checked) {
+    setTimeout(() => {
+      applyHandDrawnEffect();
+    }, 100); // Petit délai pour s'assurer que la figure est créée
+  }
 
   // mise à jour finale
   board.update();
@@ -1257,84 +1791,168 @@ function drawRectangle(width, height) {
 }
 
 function updateLengthLabels() {
-  // Supprimer les longueurs précédentes et leurs handles
-  lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
-  lengthHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+  // ==========================================
+  // 1. NETTOYAGE ET SAUVEGARDE DES POSITIONS
+  // ==========================================
   
-  // ✅ CORRECTION : Sauvegarder les positions actuelles avant de recréer
+  // Sauvegarder les positions des handles déplacés manuellement
   const savedPositions = [];
-  lengthHandles.forEach(handle => {
-    if (handle && !handle._auto) { // Si le handle a été déplacé manuellement
-      savedPositions.push({ x: handle.X(), y: handle.Y() });
-    } else {
-      savedPositions.push(null); // Position automatique
-    }
-  });
+// Initialiser un tableau de la taille du polygone
+for (let i = 0; i < (points ? points.length : 0); i++) {
+  savedPositions[i] = null;
+}
 
+// Sauvegarder les positions des handles déplacés avec leurs vrais index
+lengthHandleMeta.forEach(meta => {
+  if (meta && meta.handle && !meta.handle._auto && meta.sideIndex !== undefined) {
+    savedPositions[meta.sideIndex] = { 
+      x: meta.handle.X(), 
+      y: meta.handle.Y() 
+    };
+  }
+});
+
+  // Supprimer tous les anciens éléments
+  lengthLabels.forEach(label => { try { board.removeObject(label); } catch (e) {} });
+  lengthHandles.forEach(handle => { try { board.removeObject(handle); } catch (e) {} });
+  
+  // Reset des arrays
   lengthLabels = [];
   lengthHandles = [];
   lengthHandleMeta = [];
 
+  // ==========================================
+  // 2. VÉRIFICATIONS PRÉLIMINAIRES
+  // ==========================================
+  
   const showLengths = document.getElementById("toggleLengths")?.checked;
+  if (!showLengths || !points || points.length === 0) return;
+
+  // ==========================================
+  // 3. GESTION DES OPTIONS CONDITIONNELLES
+  // ==========================================
+  
   const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
   const unit = document.getElementById("unitSelector")?.value || 'cm';
+  
+  // OPTION HYPOTÉNUSE (triangles rectangles uniquement)
+  const rightTriangleInfo = isRightTriangle();
+  const hypotenuseGroup = document.getElementById('hypotenuseGroup');
+  const hideHypotenuseCheckbox = document.getElementById('toggleHideHypotenuse');
+  
+  if (rightTriangleInfo && rightTriangleInfo.isRight && points.length === 3) {
+    if (hypotenuseGroup) hypotenuseGroup.style.display = 'block';
+  } else {
+    if (hypotenuseGroup) hypotenuseGroup.style.display = 'none';
+    if (hideHypotenuseCheckbox) hideHypotenuseCheckbox.checked = false;
+  }
+  
+  const hideHypotenuse = hideHypotenuseCheckbox && hideHypotenuseCheckbox.checked;
+  const hypotenuseIndex = hideHypotenuse ? getHypotenuseIndex() : -1;
 
-  if (!showLengths || points.length === 0) return;
+  // ==========================================
+  // 4. DÉTERMINER QUELS CÔTÉS AFFICHER
+  // ==========================================
+  
+  function getSidesToShow() {
+    const n = points.length;
+    let sidesToShow = [];
+    
+    if (n === 3) {
+      // TRIANGLES : Toujours tous les côtés par défaut
+      sidesToShow = [0, 1, 2];
+      
+      // Filtrer l'hypoténuse si demandé
+      if (hideHypotenuse && hypotenuseIndex !== -1) {
+        sidesToShow = sidesToShow.filter(i => i !== hypotenuseIndex);
+      }
+      
+    } else if (n === 4) {
+      // QUADRILATÈRES : Optimisation selon les longueurs égales
+      const sideLens = [];
+      for (let i = 0; i < 4; i++) {
+        const pt1 = points[i];
+        const pt2 = points[(i + 1) % 4];
+        const len = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+        sideLens.push(len);
+      }
+      
+      const rounded = sideLens.map(len => Math.round(len * 100) / 100);
+      const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
+      
+      if (unique.length === 1) {
+        // Carré : 1 seul côté
+        sidesToShow = [0];
+      } else if (unique.length === 2) {
+        // Rectangle : 2 côtés (longueur + largeur)
+        sidesToShow = [0, 1];
+      } else {
+        // Autres quadrilatères : tous les côtés
+        sidesToShow = [0, 1, 2, 3];
+      }
+      
+    } else {
+      // AUTRES POLYGONES : Tous les côtés
+      sidesToShow = [...Array(n).keys()];
+    }
+    
+    return sidesToShow;
+  }
 
+  // ==========================================
+  // 5. CRÉER LES LABELS DE LONGUEUR
+  // ==========================================
+  
   function formatLength(len) {
     const rounded = Math.round(len * 10) / 10;
-    const space = '\u00A0';
+    const space = '\u00A0'; // Espace insécable
     const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
-    // CORRECTION : Toujours afficher les unités quand showLengths est coché
     return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
   }
-
-  const n = points.length;
-  let sidesToShow = [];
-
-  if (n === 4) {
-    const sideLens = [];
-    for (let i = 0; i < 4; i++) {
-      const pt1 = points[i];
-      const pt2 = points[(i + 1) % 4];
-      const len = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
-      sideLens.push(len);
+  
+  function getOffsetForSide(sideIndex, figureType) {
+    // Offsets personnalisés selon le type de figure
+    const offsets = {
+      'parallelogram': [0.2, 0.5, 0.2, 0.5], // Différents pour éviter les chevauchements
+      'default': 0.3
+    };
+    
+    if (figureType === 'parallelogram' && offsets.parallelogram[sideIndex] !== undefined) {
+      return offsets.parallelogram[sideIndex];
     }
-    const rounded = sideLens.map(len => Math.round(len * 100) / 100);
-    const unique = [...new Set(rounded.map(l => l.toFixed(2)))];
-    if (unique.length === 1) sidesToShow = [0];
-    else if (unique.length === 2) sidesToShow = [0, 1];
-    else sidesToShow = [0,1,2,3];
-  } else {
-    sidesToShow = [...Array(n).keys()];
+    
+    return offsets.default;
   }
-
-  for (let i of sidesToShow) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % n];
-
-    // ✅ CORRECTION : Utiliser la position sauvegardée si elle existe
+  
+  function createLengthLabel(sideIndex) {
+    const n = points.length;
+    const pt1 = points[sideIndex];
+    const pt2 = points[(sideIndex + 1) % n];
+    
+    // Position du handle (sauvegardée ou par défaut)
     let startX, startY;
-    if (savedPositions[lengthHandles.length] && savedPositions[lengthHandles.length] !== null) {
-      startX = savedPositions[lengthHandles.length].x;
-      startY = savedPositions[lengthHandles.length].y;
+    const savedIndex = lengthHandles.length;
+    
+    // ✅ CORRECTION : Utiliser sideIndex comme clé, pas lengthHandles.length
+    if (savedPositions[sideIndex] && savedPositions[sideIndex] !== null) {
+      // Utiliser la position sauvegardée avec le bon index
+      startX = savedPositions[sideIndex].x;
+      startY = savedPositions[sideIndex].y;
     } else {
-      // Position par défaut si pas de position sauvegardée
-      const defaultOffset = 0.3;
-      const offsetsForParallelogram = [0.2, 0.5, 0.2, 0.5];
-      let offset = defaultOffset;
-      if (points.length === 4 && polygon) {
-        offset = offsetsForParallelogram[i] !== undefined ? offsetsForParallelogram[i] : defaultOffset;
-      }
-
+      // Calculer la position par défaut
+      const figureType = detectFigureType() === 'quadrilateral' ? 'parallelogram' : 'default';
+      const offset = getOffsetForSide(sideIndex, figureType);
+      
       const dx = pt2.X() - pt1.X();
       const dy = pt2.Y() - pt1.Y();
       const len = Math.hypot(dx, dy) || 1;
+      
+      // Position au milieu du côté + décalage perpendiculaire
       startX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
       startY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
     }
 
-    // Création du handle avec la position correcte
+    // Créer le handle invisible déplaçable
     const handle = board.create('point', [startX, startY], {
       size: 6,
       strokeOpacity: 0,
@@ -1345,16 +1963,14 @@ function updateLengthLabels() {
       showInfobox: false
     });
     
-    // ✅ Préserver l'état _auto si c'était un handle déplacé manuellement
-    if (savedPositions[lengthHandles.length] && savedPositions[lengthHandles.length] !== null) {
-      handle._auto = false; // Marquer comme déplacé manuellement
-    } else {
-      handle._auto = true; // Position automatique
-    }
+    // Marquer si c'est une position automatique ou manuelle
+    handle._auto = (savedPositions[sideIndex] === null);
 
-    try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
+    try { 
+      if (handle.rendNode) handle.rendNode.style.cursor = 'move'; 
+    } catch (e) {}
 
-    // label qui suit le handle
+    // Créer le label qui suit le handle
     const label = board.create('text', [
       () => handle.X(),
       () => handle.Y(),
@@ -1368,64 +1984,123 @@ function updateLengthLabels() {
       name: ''
     });
 
-    // drag du label -> déplace handle
+    // Rendre le label déplaçable
+    makeLabelDraggable(label, handle);
+
+    // Stocker les éléments
+    lengthHandles.push(handle);
+    lengthLabels.push(label);
+    lengthHandleMeta.push({ 
+      handle, 
+      pt1, 
+      pt2, 
+      offset: getOffsetForSide(sideIndex, 'default'),
+      sideIndex 
+    });
+  }
+  
+  function makeLabelDraggable(label, handle) {
     try {
       if (label.rendNode) {
         label.rendNode.style.cursor = 'move';
         label.rendNode.addEventListener('pointerdown', function (ev) {
-          ev.stopPropagation(); ev.preventDefault();
-          handle._auto = false;
+          ev.stopPropagation(); 
+          ev.preventDefault();
+          
+          handle._auto = false; // Marquer comme déplacé manuellement
           const start = board.getUsrCoordsOfMouse(ev);
+          
           function onMove(e) {
             const pos = board.getUsrCoordsOfMouse(e);
             const dxm = pos[0] - start[0];
             const dym = pos[1] - start[1];
-            try { handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0); }
-            catch (err) { try { handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dxm, handle.Y() + dym]); } catch(e) {} }
-            start[0] = pos[0]; start[1] = pos[1];
+            
+            try { 
+              handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0); 
+            } catch (err) { 
+              try { 
+                handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dxm, handle.Y() + dym]); 
+              } catch(e) {} 
+            }
+            
+            start[0] = pos[0]; 
+            start[1] = pos[1];
             board.update();
           }
+          
           function onUp() {
             document.removeEventListener('pointermove', onMove);
             document.removeEventListener('pointerup', onUp);
           }
+          
           document.addEventListener('pointermove', onMove);
           document.addEventListener('pointerup', onUp);
         }, { passive: false });
       }
     } catch (e) {}
-
-    lengthHandles.push(handle);
-    lengthLabels.push(label);
-    lengthHandleMeta.push({ handle, pt1, pt2, offset });
   }
 
-  // Synchronisation automatique
+  // ==========================================
+  // 6. CRÉER TOUS LES LABELS
+  // ==========================================
+  
+  const sidesToShow = getSidesToShow();
+  
+  // Debug
+  console.log(`🔍 Figure: ${points.length} points, côtés à afficher:`, sidesToShow);
+  if (hideHypotenuse && hypotenuseIndex !== -1) {
+    console.log(`🔍 Hypoténuse cachée: index ${hypotenuseIndex}`);
+  }
+  
+  sidesToShow.forEach(sideIndex => {
+    createLengthLabel(sideIndex);
+  });
+
+  // ==========================================
+  // 7. SYNCHRONISATION AUTOMATIQUE
+  // ==========================================
+  
   function syncLengthHandles() {
-    for (const meta of lengthHandleMeta) {
-      const h = meta.handle;
-      if (!h || !h._auto) continue;
-      const p1 = meta.pt1, p2 = meta.pt2, off = meta.offset || 0.3;
-      const dx = p2.X() - p1.X(), dy = p2.Y() - p1.Y();
+    lengthHandleMeta.forEach(meta => {
+      const { handle, pt1, pt2, offset } = meta;
+      
+      // Ne synchroniser que les handles en position automatique
+      if (!handle || !handle._auto) return;
+      
+      // Recalculer la position automatique
+      const dx = pt2.X() - pt1.X();
+      const dy = pt2.Y() - pt1.Y();
       const len = Math.hypot(dx, dy) || 1;
-      const x = (p1.X() + p2.X()) / 2 + off * (dy / len);
-      const y = (p1.Y() + p2.Y()) / 2 - off * (dx / len);
-      try { h.moveTo([x, y], 0); } catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [x, y]); } catch(e) {} }
-    }
+      const x = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
+      const y = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
+      
+      try { 
+        handle.moveTo([x, y], 0); 
+      } catch (err) { 
+        try { 
+          handle.setPosition(JXG.COORDS_BY_USER, [x, y]); 
+        } catch(e) {} 
+      }
+    });
+    
     board.update();
   }
 
+  // Attacher la synchronisation (une seule fois)
   if (!_lengthSyncAttached) {
     try {
       if (typeof board.on === 'function') {
         board.on('update', syncLengthHandles);
-        _lengthSyncAttached = true;
       } else {
         setInterval(syncLengthHandles, 120);
-        _lengthSyncAttached = true;
       }
-    } catch (e) {}
+      _lengthSyncAttached = true;
+    } catch (e) {
+      console.warn('Synchronisation automatique non disponible');
+    }
   }
+
+  console.log(`✅ ${lengthLabels.length} labels de longueur créés`);
 }
 
 
@@ -1544,14 +2219,70 @@ const C = board.create('point', [offsetX, offsetY + height], {visible:false, fix
     fillOpacity: 1
   });
 
-  const labelA = board.create('text', [A.X(), A.Y() - 0.3, "A"]);
-  const labelB = board.create('text', [B.X(), B.Y() - 0.3, "B"]);
-  const labelC = board.create('text', [C.X(), C.Y() + 0.3, "C"]);
+  const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]); // ✅ Utilise getLabel()
+  const labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]); // ✅ Utilise getLabel()
+  const labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]); // ✅ Utilise getLabel()
   texts.push(labelA, labelB, labelC);
 
   addDraggingToPolygon(polygon, points, texts);
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
   console.log("→ Triangle rectangle généré avec base =", base, "et hauteur =", height);
+}
+
+// Fonction pour détecter si c'est un triangle rectangle
+function isRightTriangle() {
+  if (!points || points.length !== 3) return false;
+  
+  const tolerance = 0.1;
+  
+  // Vérifier chaque angle pour voir si l'un est proche de 90°
+  for (let i = 0; i < 3; i++) {
+    const A = points[(i - 1 + 3) % 3];
+    const B = points[i];
+    const C = points[(i + 1) % 3];
+    
+    const v1x = A.X() - B.X();
+    const v1y = A.Y() - B.Y();
+    const v2x = C.X() - B.X();
+    const v2y = C.Y() - B.Y();
+    
+    const dotProduct = v1x * v2x + v1y * v2y;
+    const len1 = Math.hypot(v1x, v1y);
+    const len2 = Math.hypot(v2x, v2y);
+    
+    if (len1 > 0 && len2 > 0) {
+      const cosAngle = dotProduct / (len1 * len2);
+      const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
+      
+      // Si l'angle est proche de 90° (π/2)
+      if (Math.abs(angle - Math.PI/2) < tolerance) {
+        return { isRight: true, rightAngleIndex: i };
+      }
+    }
+  }
+  
+  return { isRight: false, rightAngleIndex: -1 };
+}
+
+// Fonction pour identifier l'hypoténuse (le côté le plus long)
+function getHypotenuseIndex() {
+  if (!points || points.length !== 3) return -1;
+  
+  const sideLengths = [];
+  
+  for (let i = 0; i < 3; i++) {
+    const pt1 = points[i];
+    const pt2 = points[(i + 1) % 3];
+    const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+    sideLengths.push({ index: i, length });
+  }
+  
+  // Trouver le côté le plus long (hypoténuse)
+  const longestSide = sideLengths.reduce((max, side) => 
+    side.length > max.length ? side : max
+  );
+  
+  return longestSide.index;
 }
 
 function drawIsoscelesTriangle(base = 4, height = 3) {
@@ -1738,8 +2469,6 @@ function rotateFigureLeft(step = Math.PI / 18) {
   // appelle rotateFigure avec signe négatif pour tourner à gauche
   rotateFigure(-Math.abs(step));
 }
-
-
     function zoomIn() {
       board.zoomIn();
     }
@@ -1762,6 +2491,17 @@ function resetBoard() {
   });
 
 createBoardControls();
+
+  // ✅ AJOUT : Reset de l'effet main levée
+  isHandDrawnMode = false;
+  originalPolygon = null;
+  removeHandDrawnElements();
+  
+  // Décocher la checkbox main levée
+  const handDrawnCheckbox = document.getElementById('toggleHandDrawn');
+  if (handDrawnCheckbox) {
+    handDrawnCheckbox.checked = false;
+  }
 
   // AJOUT : Décocher toutes les options d'affichage
   const checkboxes = [
@@ -2056,6 +2796,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof updateLengthLabels === 'function') updateLengthLabels();
       });
     }
+
+    const toggleHandDrawn = document.getElementById('toggleHandDrawn');
+    if (toggleHandDrawn) {
+      toggleHandDrawn.addEventListener('change', function() {
+        toggleHandDrawnEffect(this.checked);
+  });
+}
     
     console.log('✅ Gestion des unités configurée');
   }
@@ -2166,7 +2913,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ['toggleRadius', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
     ['toggleDiameter', 'change', () => { if (typeof updateCircleExtras === 'function') updateCircleExtras(); }],
     ['toggleEqualAngles', 'change', (e) => { if (typeof updateEqualAngleMarkers === 'function') updateEqualAngleMarkers(e.target.checked); }],
-    ['toggleRightAngles', 'change', (e) => { if (typeof updateRightAngleMarkers === 'function') updateRightAngleMarkers(e.target.checked); }]
+    ['toggleRightAngles', 'change', (e) => { if (typeof updateRightAngleMarkers=== 'function') updateRightAngleMarkers(e.target.checked); }]
   ];
   
   let listenersAdded = 0;
@@ -2175,6 +2922,40 @@ document.addEventListener('DOMContentLoaded', function () {
       listenersAdded++;
     }
   });
+
+  // Event listener pour "un seul angle"
+const toggleSingleAngle = document.getElementById("toggleSingleAngle");
+if (toggleSingleAngle) {
+  toggleSingleAngle.addEventListener('change', function() {
+    // Relancer updateRightAngleMarkers pour prendre en compte le changement
+    updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
+  });
+}
+
+// Modifier l'event listener existant des angles droits
+const toggleRightAngles = document.getElementById("toggleRightAngles");
+if (toggleRightAngles) {
+  toggleRightAngles.addEventListener('change', function() {
+    updateRightAngleMarkers(this.checked);
+  });
+}
+
+  //  Event listener pour l'effet main levée
+  const toggleHandDrawn = document.getElementById('toggleHandDrawn');
+  if (toggleHandDrawn) {
+    toggleHandDrawn.addEventListener('change', function() {
+      toggleHandDrawnEffect(this.checked);
+    });
+  }
+
+// Event listener pour "cacher l'hypoténuse"
+const toggleHideHypotenuse = document.getElementById("toggleHideHypotenuse");
+if (toggleHideHypotenuse) {
+  toggleHideHypotenuse.addEventListener('change', function() {
+    // Relancer updateLengthLabels pour prendre en compte le changement
+    updateLengthLabels();
+  });
+}
   
   console.log(`✅ ${listenersAdded} event listeners configurés`);
 
@@ -2207,21 +2988,6 @@ document.addEventListener('DOMContentLoaded', function () {
     panel.insertAdjacentElement('afterend', exportBtn);
     console.log('✅ Bouton export créé');
   }
-
-  const tikzBtn = document.createElement('button');
-tikzBtn.textContent = 'Exporter TikZ';
-tikzBtn.style.cssText = `
-  margin-top: 5px; 
-  padding: 8px 16px; 
-  background: #fd79a8; 
-  color: white; 
-  border: none; 
-  border-radius: 4px; 
-  cursor: pointer;
-  font-family: inherit;
-`;
-tikzBtn.addEventListener('click', exportToTikZ);
-document.getElementById('exportSvgBtn').insertAdjacentElement('afterend', tikzBtn);
 
   // ==========================================
   // 8. NETTOYAGE DES VARIABLES GLOBALES
@@ -2740,3 +3506,32 @@ ${tikzCode}
   };
   document.addEventListener('keydown', escapeHandler);
 }
+
+
+function initThemeToggle() {
+  const toggle = document.createElement('button');
+  toggle.innerHTML = '🌙';
+  toggle.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.3s ease;
+  `;
+  
+  toggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    toggle.innerHTML = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+  });
+  
+  document.body.appendChild(toggle);
+}
+
