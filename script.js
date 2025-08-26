@@ -3485,7 +3485,7 @@ function calculateRealFigureDimensions() {
   };
 }
 
-// ✅ FONCTION POUR DÉCOUPER LE CANVAS AVEC DIMENSIONS RÉELLES
+// ✅ FONCTION POUR DÉCOUPER LE CANVAS AVEC DIMENSIONS RÉELLES (sans zone grise)
 function cropCanvasToFigureRealSize(sourceCanvas, figureBounds, jxgBox, realWorldScale) {
   // Convertir les coordonnées utilisateur en coordonnées pixel
   const boundingBox = board.getBoundingBox();
@@ -3521,11 +3521,15 @@ function cropCanvasToFigureRealSize(sourceCanvas, figureBounds, jxgBox, realWorl
   croppedCanvas.height = cropHeight;
   const ctx = croppedCanvas.getContext('2d');
   
-  // Fond blanc
-  ctx.fillStyle = '#ffffff';
+  // ✅ CORRECTION : Fond blanc pur et opaque
+  ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, cropWidth, cropHeight);
   
-  // Découper et copier
+  // ✅ CORRECTION : Améliorer le rendu pour éviter les artefacts
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  
+  // Découper et copier avec rendu amélioré
   ctx.drawImage(
     sourceCanvas,
     Math.round(pixelBounds.left),
@@ -3536,6 +3540,47 @@ function cropCanvasToFigureRealSize(sourceCanvas, figureBounds, jxgBox, realWorl
     cropWidth,
     cropHeight
   );
+  
+  // ✅ NOUVEAU : Nettoyer les pixels gris résiduels
+  const imageData = ctx.getImageData(0, 0, cropWidth, cropHeight);
+  const data = imageData.data;
+  
+  // Parcourir tous les pixels et remplacer les gris par du blanc
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const a = data[i + 3];
+    
+    // Détecter les pixels gris (valeurs RGB proches et dans la gamme grise)
+    const isGrayish = (
+      Math.abs(r - g) < 10 && 
+      Math.abs(g - b) < 10 && 
+      Math.abs(r - b) < 10 && 
+      r > 200 && r < 240 && // Gris clair
+      a > 200 // Pas transparent
+    );
+    
+    // Remplacer par du blanc pur
+    if (isGrayish) {
+      data[i] = 255;     // R = blanc
+      data[i + 1] = 255; // G = blanc
+      data[i + 2] = 255; // B = blanc
+      data[i + 3] = 255; // A = opaque
+    }
+    
+    // ✅ BONUS : S'assurer que le fond est bien blanc (pixels très clairs)
+    const isVeryLight = r > 250 && g > 250 && b > 250;
+    if (isVeryLight) {
+      data[i] = 255;     // R = blanc pur
+      data[i + 1] = 255; // G = blanc pur
+      data[i + 2] = 255; // B = blanc pur
+      data[i + 3] = 255; // A = opaque
+    }
+  }
+  
+  // Remettre les pixels nettoyés
+  ctx.putImageData(imageData, 0, 0);
   
   return croppedCanvas;
 }
