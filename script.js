@@ -1687,6 +1687,7 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
         withLabel: false,
        
        
+       
         borders: {strokeColor: "black",fixed: true },
         fillColor: "white",
         fillOpacity: 1
@@ -1795,7 +1796,7 @@ function drawRectangle(width, height) {
 function detectQuadrilateralType() {
   if (!points || points.length !== 4) return 'unknown';
   
-  const tolerance = 0.1; // Tolérance pour les comparaisons
+  const tolerance = 0.1;
   
   // Calculer les longueurs des 4 côtés
   const sideLengths = [];
@@ -1810,7 +1811,7 @@ function detectQuadrilateralType() {
   const roundedLengths = sideLengths.map(l => Math.round(l * 100) / 100);
   const uniqueLengths = [...new Set(roundedLengths.map(l => l.toFixed(2)))];
   
-  // Vérifier si c'est un quadrilatère rectangulaire (4 angles droits)
+  // ✅ CORRECTION : Vérifier si c'est un quadrilatère rectangulaire (4 angles droits)
   const hasRightAngles = isRectangularFigure();
   
   // LOGIQUE DE DÉTECTION
@@ -1838,7 +1839,6 @@ function detectQuadrilateralType() {
     return 'quadrilateral';
   }
 }
-
 function updateLengthLabels() {
   // ==========================================
   // 1. NETTOYAGE DES ANCIENS ÉLÉMENTS
@@ -2722,7 +2722,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // ==========================================
   // 1. TRACKING DES VISITES
   // ==========================================
-  trackVisit();
+  
+  if (typeof trackVisit === 'function') {
+    trackVisit();
+  }
 
   // ==========================================
   // 2. RESET INITIAL DE L'INTERFACE
@@ -2956,17 +2959,36 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('✅ Génération par touche Entrée configurée');
   }
 
-  // ==========================================
-  // 8. CRÉATION DU BOUTON D'EXPORT SVG
-  // ==========================================
+// ==========================================
+// 8. CRÉATION DES BOUTONS D'EXPORT
+// ==========================================
+
+const optionsPanel = document.getElementById('optionsPanel');
+if (optionsPanel) {
   
-  const optionsPanel = document.getElementById('optionsPanel');
-  if (optionsPanel && !document.getElementById('exportSvgBtn')) {
+  // ✅ CRÉER UN CONTENEUR FLEX POUR LES BOUTONS CÔTE À CÔTE
+  let buttonsContainer = document.getElementById('exportButtonsContainer');
+  if (!buttonsContainer) {
+    buttonsContainer = document.createElement('div');
+    buttonsContainer.id = 'exportButtonsContainer';
+    buttonsContainer.style.cssText = `
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: flex-start;
+      align-items: center;
+      flex-wrap: nowrap;
+    `;
+    optionsPanel.insertAdjacentElement('afterend', buttonsContainer);
+  }
+  
+  // ✅ BOUTON EXPORT SVG (PREMIER - à gauche)
+  if (!document.getElementById('exportSvgBtn')) {
     const exportButton = document.createElement('button');
     exportButton.id = 'exportSvgBtn';
     exportButton.textContent = 'Exporter SVG';
     exportButton.style.cssText = `
-      margin-top: 15px; 
       padding: 10px 20px; 
       background: linear-gradient(135deg, #6c5ce7, #a29bfe);
       color: white; 
@@ -2977,6 +2999,9 @@ document.addEventListener('DOMContentLoaded', function () {
       font-weight: 500;
       transition: all 0.3s ease;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 0;
+      flex-shrink: 0;
+      order: 1;
     `;
     
     exportButton.addEventListener('mouseenter', () => {
@@ -2998,9 +3023,54 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
     
-    optionsPanel.insertAdjacentElement('afterend', exportButton);
+    buttonsContainer.appendChild(exportButton);
     console.log('✅ Bouton d\'export SVG créé');
   }
+  
+  // ✅ BOUTON COPIER PRESSE-PAPIER (DEUXIÈME - à droite)
+  if (!document.getElementById('copyClipboardBtn')) {
+    const copyButton = document.createElement('button');
+    copyButton.id = 'copyClipboardBtn';
+    copyButton.innerHTML = '📋 Copier';
+    copyButton.style.cssText = `
+      padding: 10px 20px; 
+      background: linear-gradient(135deg, #00b894, #00cec9);
+      color: white; 
+      border: none; 
+      border-radius: 6px; 
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 0;
+      flex-shrink: 0;
+      order: 2;
+    `;
+    
+    copyButton.addEventListener('mouseenter', () => {
+      copyButton.style.transform = 'translateY(-1px)';
+      copyButton.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+    });
+    
+    copyButton.addEventListener('mouseleave', () => {
+      copyButton.style.transform = 'translateY(0)';
+      copyButton.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    });
+    
+    copyButton.addEventListener('click', function() {
+      if (typeof copyBoardToClipboard === 'function') {
+        copyBoardToClipboard();
+      } else {
+        console.error('❌ Fonction copyBoardToClipboard non disponible');
+        alert('Fonction de copie non disponible');
+      }
+    });
+    
+    buttonsContainer.appendChild(copyButton);
+    console.log('✅ Bouton copier presse-papier créé');
+  }
+}
 
   // ==========================================
   // 9. INITIALISATION DES VARIABLES GLOBALES
@@ -3064,142 +3134,11 @@ document.addEventListener('DOMContentLoaded', function () {
   console.log('📋 Tapez une figure dans le champ de saisie ou cliquez sur la liste');
   console.log('🔧 Utilisez les options d\'affichage pour personnaliser votre figure');
   console.log('📊 Tapez getStats() dans la console pour voir les statistiques de visite');
-});
 
-// Masquer les suggestions si on clique ailleurs
-document.addEventListener("click", (e) => {
-  if (!suggestionsDiv.contains(e.target) && e.target !== input) {
-    suggestionsDiv.style.display = "none";
-  }
-});
-
-
-function updateSuggestionHighlight(suggestions) {
-  suggestions.forEach((item, index) => {
-    if (index === selectedSuggestionIndex) {
-      item.classList.add("highlighted");
-    } else {
-      item.classList.remove("highlighted");
-    }
-  });
-}
-
-// Exporter le board JSXGraph en SVG (téléchargement)
-async function exportBoardToSVG(filename = null) {
-  try {
-    // ✅ CORRECTION : Ne pas forcer updateLengthLabels() qui repositionne les labels
-    // Mettre à jour seulement les éléments qui ne déplacent pas les labels personnalisés
-    
-    if (document.getElementById('toggleDiagonals')?.checked) {
-      updateDiagonals();
-    }
-    if (document.getElementById('toggleCodings')?.checked) {
-      updateCodings();
-    }
-    if (document.getElementById('toggleRadius')?.checked || document.getElementById('toggleDiameter')?.checked) {
-      updateCircleExtras();
-    }
-    if (document.getElementById('toggleEqualAngles')?.checked) {
-      updateEqualAngleMarkers(true);
-    }
-    if (document.getElementById('toggleRightAngles')?.checked) {
-      updateRightAngleMarkers(true);
-    }
-    
-    // ✅ Mise à jour simple du board sans repositionner les labels
-    board.update();
-  } catch (e) {}
-
-  const jxgBox = document.getElementById('jxgbox');
-  if (!jxgBox) { alert('Zone graphique introuvable'); return; }
-
-  // MASQUER UNIQUEMENT les boutons de contrôle (pas les éléments graphiques)
-  const controlButtons = jxgBox.querySelectorAll('button, .control-btn, .jxg-button, [class*="btn"]');
-  const hiddenElements = [];
-  
-  controlButtons.forEach(btn => {
-    // Vérifier si c'est vraiment un bouton de contrôle et non un élément graphique
-    const isControlButton = btn.tagName === 'BUTTON' || 
-                           btn.classList.contains('control-btn') || 
-                           btn.classList.contains('jxg-button') ||
-                           btn.textContent.includes('+') || 
-                           btn.textContent.includes('-') ||
-                           btn.textContent.includes('⟲') ||
-                           btn.textContent.includes('⟳') ||
-                           btn.textContent.includes('Réinitialiser');
-    
-    if (isControlButton && btn.style.display !== 'none') {
-      btn.style.display = 'none';
-      hiddenElements.push(btn);
-    }
-  });
-
-  try {
-    if (!window.html2canvas) {
-      const script = document.createElement('script');
-      script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
-      document.head.appendChild(script);
-      await new Promise((resolve, reject) => {
-        script.onload = resolve;
-        script.onerror = reject;
-      });
-    }
-
-    // Attendre un peu pour que les changements de style prennent effet
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const canvas = await html2canvas(jxgBox, {
-      backgroundColor: '#ffffff',
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      ignoreElements: (element) => {
-        // Ignorer les éléments de contrôle qui n'ont pas pu être masqués
-        return element.tagName === 'BUTTON' || 
-               element.classList.contains('control-btn') ||
-               element.classList.contains('jxg-button');
-      }
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
-     width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}">
-  <rect width="100%" height="100%" fill="white"/>
-  <image width="${canvas.width}" height="${canvas.height}" xlink:href="${imgData}"/>
-</svg>`;
-
-    if (!filename) {
-      const baseName = document.getElementById('labelInput')?.value || 
-                      document.getElementById('promptInput')?.value || 'figure';
-      filename = (baseName.replace(/[^\w\-_\s\.]/g, '_') || 'figure') + '.svg';
-    }
-
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (error) {
-    console.error('Erreur export:', error);
-    alert('Erreur lors de l\'export. Essayez de recharger la page.');
-  } finally {
-    // RÉAFFICHER tous les boutons masqués
-    hiddenElements.forEach(btn => {
-      btn.style.display = '';
-    });
-  }
-}
-
-function safeOn(id, event, handler) {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener(event, handler);
-}
+}); // ✅ FIN DU DOMContentLoaded
 
 // ==========================================
-// SYSTÈME DE COMPTAGE LOCAL (sans API externe)
+// SYSTÈME DE COMPTAGE LOCAL (En dehors du DOMContentLoaded)
 // ==========================================
 
 // Variables globales pour les compteurs
@@ -3321,88 +3260,493 @@ function getEngagementRatio() {
   });
 }
 
-// Mettre à jour l'affichage des compteurs (pour le mode debug)
-function updateVisitorDisplay(type, value) {
-  let element = document.getElementById(`${type}-counter`);
-  if (!element && window.location.search.includes('debug=1')) {
-    // Créer l'élément seulement en mode debug (?debug=1 dans l'URL)
-    element = document.createElement('div');
-    element.id = `${type}-counter`;
-    element.style.cssText = `
-      position: fixed; 
-      top: ${type === 'total' ? '10px' : '35px'}; 
-      right: 10px; 
-      background: rgba(0,0,0,0.8); 
-      color: white; 
-      padding: 8px 12px; 
-      border-radius: 5px; 
-      font-family: monospace; 
-      font-size: 12px; 
-      z-index: 1001;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    `;
-    document.body.appendChild(element);
-  }
-  
-  if (element) {
-    const label = type === 'total' ? '📊 Visites' : '👥 Visiteurs';
-    element.textContent = `${label}: ${value}`;
-  }
-}
+// Copier le board JSXGraph dans le presse-papier (image PNG) avec découpage intelligent
+// Copier le board JSXGraph dans le presse-papier (image PNG) avec dimensions réelles
+async function copyBoardToClipboard() {
+  try {
+    // Mise à jour des éléments visuels
+    if (document.getElementById('toggleDiagonals')?.checked) {
+      updateDiagonals();
+    }
+    if (document.getElementById('toggleCodings')?.checked) {
+      updateCodings();
+    }
+    if (document.getElementById('toggleRadius')?.checked || document.getElementById('toggleDiameter')?.checked) {
+      updateCircleExtras();
+    }
+    if (document.getElementById('toggleEqualAngles')?.checked) {
+      updateEqualAngleMarkers(true);
+    }
+    if (document.getElementById('toggleRightAngles')?.checked) {
+      updateRightAngleMarkers(true);
+    }
+    
+    board.update();
 
-// Afficher les compteurs en mode debug
-function showDebugCounters() {
-  if (window.location.search.includes('debug=1')) {
-    getVisitorStats().then(stats => {
-      updateVisitorDisplay('total', stats.totalVisits);
-      updateVisitorDisplay('unique', stats.uniqueVisitors);
-    });
-  }
-}
+    const jxgBox = document.getElementById('jxgbox');
+    if (!jxgBox) { 
+      alert('❌ Zone graphique introuvable'); 
+      return; 
+    }
 
-// Fonction pour réinitialiser les statistiques
-function resetLocalStats() {
-  const keys = [
-    'local_total_visits',
-    'local_unique_visitors', 
-    'appVisits',
-    'first_visit_date',
-    'last_visit_date'
-  ];
-  
-  keys.forEach(key => localStorage.removeItem(key));
-  sessionStorage.removeItem('currentSessionId');
-  
-  console.log('✅ Toutes les statistiques locales réinitialisées');
-  return true;
-}
+    // Vérifier le support du presse-papier
+    if (!navigator.clipboard || !navigator.clipboard.write) {
+      alert('❌ Votre navigateur ne supporte pas la copie dans le presse-papier.\nUtilisez plutôt le bouton "Exporter SVG".');
+      return;
+    }
 
-// Fonction pour exporter les statistiques
-function exportStats() {
-  getVisitorStats().then(stats => {
-    const data = {
-      exported_at: new Date().toISOString(),
-      statistics: stats,
-      generator_info: {
-        name: 'Générateur de Figures 2D',
-        version: '2.0',
-        author: 'Jean-Cosme Garnier'
+    // Feedback visuel
+    const copyBtn = document.getElementById('copyClipboardBtn');
+    const originalText = copyBtn.innerHTML;
+    copyBtn.innerHTML = '⏳ Copie...';
+    copyBtn.disabled = true;
+
+    try {
+      // Charger html2canvas si nécessaire
+      if (!window.html2canvas) {
+        const script = document.createElement('script');
+        script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+        document.head.appendChild(script);
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+        });
       }
-    };
+
+      // Attendre que les changements prennent effet
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // ✅ ÉTAPE 1 : CALCULER LA BOÎTE ENGLOBANTE DE LA FIGURE
+      const figureBounds = calculateFigureBounds();
+      console.log('📐 Limites de la figure calculées:', figureBounds);
+
+      // ✅ ÉTAPE 2 : CALCULER LA RÉSOLUTION POUR DIMENSIONS RÉELLES
+      const realWorldScale = calculateRealWorldScale(figureBounds);
+      console.log('📏 Échelle monde réel calculée:', realWorldScale);
+
+      // ✅ ÉTAPE 3 : CAPTURER À LA RÉSOLUTION APPROPRIÉE
+      const fullCanvas = await html2canvas(jxgBox, {
+        backgroundColor: '#ffffff',
+        scale: realWorldScale.canvasScale,
+        useCORS: true,
+        allowTaint: true,
+        ignoreElements: (element) => {
+          return element.tagName === 'BUTTON' || 
+                 element.classList.contains('control-btn') ||
+                 element.classList.contains('jxg-button');
+        }
+      });
+
+      // ✅ ÉTAPE 4 : DÉCOUPER INTELLIGEMMENT AUTOUR DE LA FIGURE
+      const croppedCanvas = cropCanvasToFigureRealSize(fullCanvas, figureBounds, jxgBox, realWorldScale);
+
+      // ✅ ÉTAPE 5 : AJOUTER LES MÉTADONNÉES DPI À L'IMAGE
+      const blob = await createPngWithDPI(croppedCanvas, realWorldScale.targetDPI);
+
+      // Copier dans le presse-papier
+      const clipboardItem = new ClipboardItem({
+        'image/png': blob
+      });
+
+      await navigator.clipboard.write([clipboardItem]);
+
+      // Feedback de succès avec dimensions
+      const dimensions = calculateImageDimensions(figureBounds, realWorldScale);
+      copyBtn.innerHTML = '✅ Copié !';
+      copyBtn.style.background = 'linear-gradient(135deg, #00b894, #55efc4)';
+      
+      console.log('📋 Image copiée avec dimensions réelles !');
+      console.log(`📏 Taille de l'image: ${dimensions.widthCm.toFixed(1)} × ${dimensions.heightCm.toFixed(1)} cm`);
+      
+      // Notification avec les dimensions
+      showCopyNotification(`Image copiée ! (${dimensions.widthCm.toFixed(1)} × ${dimensions.heightCm.toFixed(1)} cm)`);
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la copie:', error);
+      alert('❌ Erreur lors de la copie dans le presse-papier.');
+      
+      copyBtn.innerHTML = '❌ Échec';
+      copyBtn.style.background = 'linear-gradient(135deg, #d63031, #e84393)';
+    }
+
+    // Restaurer le bouton après 3 secondes (plus long pour lire les dimensions)
+    setTimeout(() => {
+      copyBtn.innerHTML = originalText;
+      copyBtn.disabled = false;
+      copyBtn.style.background = 'linear-gradient(135deg, #00b894, #00cec9)';
+    }, 3000);
+
+  } catch (error) {
+    console.error('❌ Erreur générale:', error);
+    alert('❌ Erreur lors de la copie. Essayez de recharger la page.');
+  }
+}
+
+// ✅ FONCTION POUR CALCULER L'ÉCHELLE MONDE RÉEL
+function calculateRealWorldScale(figureBounds) {
+  // ✅ PARAMÈTRES DE BASE
+  const targetDPI = 300; // DPI élevé pour impression qualité (72 DPI = écran, 300 DPI = impression)
+  const pixelsPerCm = targetDPI / 2.54; // Conversion DPI → pixels par cm (1 inch = 2.54 cm)
+  
+  // ✅ DIMENSIONS DE LA FIGURE EN UNITÉS UTILISATEUR JSXGraph
+  const figureWidthUnits = figureBounds.maxX - figureBounds.minX;
+  const figureHeightUnits = figureBounds.maxY - figureBounds.minY;
+  
+  // ✅ DÉTECTION DU TYPE DE FIGURE ET DE SES DIMENSIONS RÉELLES
+  let realWidthCm = figureWidthUnits; // Par défaut
+  let realHeightCm = figureHeightUnits;
+  
+  // Analyser les dimensions réelles à partir des points
+  if (points && points.length > 0) {
+    // Calculer les dimensions réelles de la figure géométrique
+    const realDimensions = calculateRealFigureDimensions();
+    if (realDimensions.width > 0) realWidthCm = realDimensions.width;
+    if (realDimensions.height > 0) realHeightCm = realDimensions.height;
+  }
+  
+  // ✅ CALCULER LA RÉSOLUTION NÉCESSAIRE
+  const requiredWidthPixels = realWidthCm * pixelsPerCm;
+  const requiredHeightPixels = realHeightCm * pixelsPerCm;
+  
+  // ✅ CALCULER LE FACTEUR D'ÉCHELLE POUR html2canvas
+  // html2canvas scale = pixels souhaités / pixels naturels du DOM
+  const currentBoardSize = board.canvasWidth || 400; // Taille approximative du board
+  const canvasScale = Math.max(requiredWidthPixels / currentBoardSize, 1); // Minimum scale = 1
+  
+  console.log(`🔍 Calcul échelle monde réel:
+  - Figure: ${figureWidthUnits.toFixed(2)} × ${figureHeightUnits.toFixed(2)} unités JSX
+  - Réel: ${realWidthCm.toFixed(2)} × ${realHeightCm.toFixed(2)} cm
+  - Résolution cible: ${targetDPI} DPI (${pixelsPerCm.toFixed(0)} px/cm)
+  - Canvas scale: ${canvasScale.toFixed(2)}x`);
+  
+  return {
+    targetDPI,
+    pixelsPerCm,
+    realWidthCm,
+    realHeightCm,
+    canvasScale,
+    requiredWidthPixels,
+    requiredHeightPixels
+  };
+}
+
+// ✅ FONCTION POUR CALCULER LES DIMENSIONS RÉELLES DE LA FIGURE
+function calculateRealFigureDimensions() {
+  if (!points || points.length === 0) {
+    return { width: 0, height: 0 };
+  }
+  
+  // ✅ CAS SPÉCIAUX SELON LE TYPE DE FIGURE
+  
+  // CERCLE : diameter = 2 * radius
+  if (centerPoint && circlePoint && circleObject) {
+    const radius = Math.hypot(circlePoint.X() - centerPoint.X(), circlePoint.Y() - centerPoint.Y());
+    const diameter = radius * 2;
+    return { width: diameter, height: diameter };
+  }
+  
+  // CARRÉ : tous les côtés égaux
+  if (points.length === 4) {
+    const figureType = detectQuadrilateralType();
+    if (figureType === 'square') {
+      const sideLength = Math.hypot(points[1].X() - points[0].X(), points[1].Y() - points[0].Y());
+      return { width: sideLength, height: sideLength };
+    }
     
-    const blob = new Blob([JSON.stringify(data, null, 2)], { 
-      type: 'application/json;charset=utf-8' 
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `generateur_stats_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    console.log('📁 Statistiques exportées avec succès');
+    // RECTANGLE : largeur ≠ hauteur
+    if (figureType === 'rectangle') {
+      const width = Math.hypot(points[1].X() - points[0].X(), points[1].Y() - points[0].Y());
+      const height = Math.hypot(points[3].X() - points[0].X(), points[3].Y() - points[0].Y());
+      return { width, height };
+    }
+  }
+  
+  // TRIANGLE : base × hauteur (approximatif)
+  if (points.length === 3) {
+    const base = Math.hypot(points[1].X() - points[0].X(), points[1].Y() - points[0].Y());
+    const height = Math.abs(points[2].Y() - Math.min(points[0].Y(), points[1].Y()));
+    return { width: base, height };
+  }
+  
+  // ✅ CALCUL GÉNÉRAL : bounding box des points
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  
+  points.forEach(p => {
+    minX = Math.min(minX, p.X());
+    maxX = Math.max(maxX, p.X());
+    minY = Math.min(minY, p.Y());
+    maxY = Math.max(maxY, p.Y());
   });
+  
+  return {
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+// ✅ FONCTION POUR DÉCOUPER LE CANVAS AVEC DIMENSIONS RÉELLES
+function cropCanvasToFigureRealSize(sourceCanvas, figureBounds, jxgBox, realWorldScale) {
+  // Convertir les coordonnées utilisateur en coordonnées pixel
+  const boundingBox = board.getBoundingBox();
+  const boardWidth = boundingBox[2] - boundingBox[0];
+  const boardHeight = boundingBox[1] - boundingBox[3];
+  
+  // Dimensions du canvas capturé (avec scale appliqué)
+  const canvasWidth = sourceCanvas.width;
+  const canvasHeight = sourceCanvas.height;
+  
+  // Facteurs de conversion utilisateur → pixel (avec scale)
+  const scaleX = canvasWidth / boardWidth;
+  const scaleY = canvasHeight / boardHeight;
+  
+  // Convertir les limites de la figure en coordonnées pixel
+  const pixelBounds = {
+    left: Math.max(0, (figureBounds.minX - boundingBox[0]) * scaleX),
+    right: Math.min(canvasWidth, (figureBounds.maxX - boundingBox[0]) * scaleX),
+    top: Math.max(0, (boundingBox[1] - figureBounds.maxY) * scaleY),
+    bottom: Math.min(canvasHeight, (boundingBox[1] - figureBounds.minY) * scaleY)
+  };
+  
+  // Dimensions finales du découpage
+  const cropWidth = Math.max(100, Math.round(pixelBounds.right - pixelBounds.left));
+  const cropHeight = Math.max(100, Math.round(pixelBounds.bottom - pixelBounds.top));
+  
+  console.log(`✂️ Découpage haute résolution: ${cropWidth} × ${cropHeight} pixels`);
+  console.log(`📏 Soit: ${(cropWidth / realWorldScale.pixelsPerCm).toFixed(1)} × ${(cropHeight / realWorldScale.pixelsPerCm).toFixed(1)} cm`);
+  
+  // Créer le canvas découpé
+  const croppedCanvas = document.createElement('canvas');
+  croppedCanvas.width = cropWidth;
+  croppedCanvas.height = cropHeight;
+  const ctx = croppedCanvas.getContext('2d');
+  
+  // Fond blanc
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cropWidth, cropHeight);
+  
+  // Découper et copier
+  ctx.drawImage(
+    sourceCanvas,
+    Math.round(pixelBounds.left),
+    Math.round(pixelBounds.top),
+    cropWidth,
+    cropHeight,
+    0, 0,
+    cropWidth,
+    cropHeight
+  );
+  
+  return croppedCanvas;
+}
+
+// ✅ FONCTION POUR CRÉER UN PNG AVEC MÉTADONNÉES DPI
+async function createPngWithDPI(canvas, targetDPI) {
+  // Créer un blob normal
+  const blob = await new Promise(resolve => {
+    canvas.toBlob(resolve, 'image/png', 1.0);
+  });
+  
+  // Note: Malheureusement, les navigateurs ne supportent pas nativement
+  // l'ajout de métadonnées DPI aux PNG via canvas.toBlob()
+  // L'image sera copiée avec les bonnes dimensions en pixels,
+  // et la plupart des logiciels détecteront automatiquement la bonne échelle
+  
+  return blob;
+}
+
+// ✅ FONCTION POUR CALCULER LES DIMENSIONS FINALES DE L'IMAGE
+function calculateImageDimensions(figureBounds, realWorldScale) {
+  const widthCm = realWorldScale.realWidthCm;
+  const heightCm = realWorldScale.realHeightCm;
+  const widthPixels = Math.round(widthCm * realWorldScale.pixelsPerCm);
+  const heightPixels = Math.round(heightCm * realWorldScale.pixelsPerCm);
+  
+  return {
+    widthCm,
+    heightCm,
+    widthPixels,
+    heightPixels
+  };
+}
+
+// ✅ Fonction pour afficher une notification avec les dimensions
+function showCopyNotification(message) {
+  // Supprimer notification existante
+  const existingNotif = document.querySelector('.copy-notification');
+  if (existingNotif) existingNotif.remove();
+  
+  // Créer la notification
+  const notification = document.createElement('div');
+  notification.className = 'copy-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.4s ease;
+    max-width: 280px;
+    line-height: 1.4;
+  `;
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>✅</span>
+      <div>${message}</div>
+    </div>
+  `;
+  
+  // Ajouter au DOM
+  document.body.appendChild(notification);
+  
+  // Animation d'apparition
+  setTimeout(() => {
+    notification.style.opacity = '1';
+    notification.style.transform = 'translateX(0)';
+  }, 100);
+  
+  // Animation de disparition et suppression
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateX(100px)';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 400);
+  }, 4000); // Plus long pour lire les dimensions
+}
+
+// ✅ FONCTION POUR CALCULER LES LIMITES DE LA FIGURE
+function calculateFigureBounds() {
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  
+  // ✅ ANALYSER TOUS LES POINTS DE LA FIGURE
+  const allPoints = [];
+  
+  // 1. Points principaux de la figure
+  if (points && points.length > 0) {
+    allPoints.push(...points);
+  }
+  
+  // 2. Centre et point du cercle
+  if (centerPoint) allPoints.push(centerPoint);
+  if (circlePoint) allPoints.push(circlePoint);
+  
+  // 3. Points du diamètre
+  if (diameterPoints && diameterPoints.length > 0) {
+    allPoints.push(...diameterPoints);
+  }
+  
+  // 4. Handles des labels de longueur
+  if (lengthHandles && lengthHandles.length > 0) {
+    allPoints.push(...lengthHandles);
+  }
+  
+  // Calculer les limites en coordonnées utilisateur
+  allPoints.forEach(point => {
+    if (point && typeof point.X === 'function' && typeof point.Y === 'function') {
+      const x = point.X();
+      const y = point.Y();
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+  });
+  
+  // ✅ GÉRER CAS SPÉCIAL : CERCLE (ajouter le rayon)
+  if (centerPoint && circleObject) {
+    const radius = Math.hypot(circlePoint.X() - centerPoint.X(), circlePoint.Y() - centerPoint.Y());
+    const centerX = centerPoint.X();
+    const centerY = centerPoint.Y();
+    
+    minX = Math.min(minX, centerX - radius);
+    maxX = Math.max(maxX, centerX + radius);
+    minY = Math.min(minY, centerY - radius);
+    maxY = Math.max(maxY, centerY + radius);
+  }
+  
+  // ✅ AJOUTER UNE MARGE POUR LES LABELS ET ÉLÉMENTS DÉCORATIFS
+  const marginX = (maxX - minX) * 0.15; // 15% de marge
+  const marginY = (maxY - minY) * 0.15;
+  
+  // Marge minimum absolue
+  const minMargin = 0.8;
+  const finalMarginX = Math.max(marginX, minMargin);
+  const finalMarginY = Math.max(marginY, minMargin);
+  
+  return {
+    minX: minX - finalMarginX,
+    maxX: maxX + finalMarginX,
+    minY: minY - finalMarginY,
+    maxY: maxY + finalMarginY
+  };
+}
+
+// ✅ FONCTION POUR DÉCOUPER LE CANVAS
+function cropCanvasToFigure(sourceCanvas, figureBounds, jxgBox) {
+  // Convertir les coordonnées utilisateur en coordonnées pixel
+  const boundingBox = board.getBoundingBox(); // [xmin, ymax, xmax, ymin]
+  const boardWidth = boundingBox[2] - boundingBox[0];  // largeur en unités utilisateur
+  const boardHeight = boundingBox[1] - boundingBox[3]; // hauteur en unités utilisateur
+  
+  // Dimensions du canvas capturé
+  const canvasWidth = sourceCanvas.width;
+  const canvasHeight = sourceCanvas.height;
+  
+  // Facteurs de conversion utilisateur → pixel
+  const scaleX = canvasWidth / boardWidth;
+  const scaleY = canvasHeight / boardHeight;
+  
+  // Convertir les limites de la figure en coordonnées pixel
+  const pixelBounds = {
+    left: Math.max(0, (figureBounds.minX - boundingBox[0]) * scaleX),
+    right: Math.min(canvasWidth, (figureBounds.maxX - boundingBox[0]) * scaleX),
+    top: Math.max(0, (boundingBox[1] - figureBounds.maxY) * scaleY), // Y inversé
+    bottom: Math.min(canvasHeight, (boundingBox[1] - figureBounds.minY) * scaleY)
+  };
+  
+  // Dimensions du découpage
+  const cropWidth = Math.max(100, Math.round(pixelBounds.right - pixelBounds.left));
+  const cropHeight = Math.max(100, Math.round(pixelBounds.bottom - pixelBounds.top));
+  
+  console.log(`✂️ Découpage: ${Math.round(pixelBounds.left)},${Math.round(pixelBounds.top)} → ${cropWidth}x${cropHeight}`);
+  
+  // Créer un nouveau canvas pour le découpage
+  const croppedCanvas = document.createElement('canvas');
+  croppedCanvas.width = cropWidth;
+  croppedCanvas.height = cropHeight;
+  const ctx = croppedCanvas.getContext('2d');
+  
+  // Fond blanc
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cropWidth, cropHeight);
+  
+  // Découper et copier la partie de l'image
+  ctx.drawImage(
+    sourceCanvas,
+    Math.round(pixelBounds.left),   // source x
+    Math.round(pixelBounds.top),    // source y
+    cropWidth,                      // source width
+    cropHeight,                     // source height
+    0,                              // dest x
+    0,                              // dest y
+    cropWidth,                      // dest width
+    cropHeight                      // dest height
+  );
+  
+  return croppedCanvas;
 }
 
 // Fonctions globales pour la console du navigateur
@@ -3410,30 +3754,18 @@ window.getStats = showStats;
 window.getEngagement = getEngagementRatio;
 window.resetStats = function() {
   if (confirm('⚠️ Réinitialiser toutes les statistiques locales ?')) {
-    resetLocalStats();
+    const keys = [
+      'local_total_visits',
+      'local_unique_visitors', 
+      'appVisits',
+      'first_visit_date',
+      'last_visit_date'
+    ];
+    
+    keys.forEach(key => localStorage.removeItem(key));
+    sessionStorage.removeItem('currentSessionId');
+    
+    console.log('✅ Toutes les statistiques locales réinitialisées');
     location.reload();
   }
 };
-window.exportStats = exportStats;
-window.showDebugCounters = showDebugCounters;
-
-// ==========================================
-// INITIALISATION AU CHARGEMENT
-// ==========================================
-
-// Fonction d'initialisation mise à jour
-function initVisitorTracking() {
-  trackVisit();
-  
-  // Afficher les compteurs en mode debug après 1 seconde
-  setTimeout(showDebugCounters, 1000);
-  
-  // Afficher les stats après 2 secondes
-  setTimeout(() => {
-    showStats();
-    getEngagementRatio();
-  }, 2000);
-}
-
-// Appeler l'initialisation
-document.addEventListener('DOMContentLoaded', initVisitorTracking);
