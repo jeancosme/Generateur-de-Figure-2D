@@ -6,8 +6,11 @@ let board = JXG.JSXGraph.initBoard('jxgbox', {
   keepaspectratio: true,
   zoom: {
     enabled: false
-  }
+  },
+  grid: false // On va créer notre propre grille
 });
+
+
 function createBoardControls() {
   const container = document.getElementById('jxgbox');
   if (!container) return;
