@@ -35,7 +35,7 @@
 
     <div class="control-group">
       <label for="labelInput" class="control-label">Nom de la figure</label>
-      <input type="text" id="labelInput" placeholder="Lettres des points (ex: A,B,C,D)">
+      <input type="text" id="labelInput" placeholder="Lettres des points (ex: ABCD ou A,B,C,D)">
     </div>
 
     <div class="control-actions">
@@ -88,6 +88,14 @@
 
         <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
         <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
+              <div id="intersectionGroup" class="sub-option" style="display: none; margin-left: 20px; margin-top: 8px;">
+                 <div class="checkbox-item" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="toggleIntersectionLabel">
+                  <label for="toggleIntersectionLabel" style="margin-right: 8px;">Nommer l'intersection</label>
+                  <input type="text" id="intersectionTextInput" placeholder="I" maxlength="3" 
+                        style="width: 40px; padding: 2px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
+                  </div>
+                </div>
         <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
         <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
         <label><input type="checkbox" id="toggleHandDrawn"> Dessin à main levée</label>

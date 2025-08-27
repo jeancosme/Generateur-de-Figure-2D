@@ -128,149 +128,1032 @@ document.getElementById('jxgbox').addEventListener('wheel', function (event) {
     let originalPolygon = null;
     let handDrawnElements = [];
     let isHandDrawnMode = false;
+    let intersectionLabel = null;
+    let intersectionPoint = null;
+
+// ==========================================
+// SYSTÈME DE DÉTECTION CENTRALISÉ DES FIGURES
+// ==========================================
+
+/**
+ * Détecteur centralisé pour identifier le type exact d'une figure géométrique
+ */
+class FigureDetector {
+  
+  /**
+   * Détecte le type de figure basé sur les points
+   * @param {Array} figurePoints - Array des points JSXGraph
+   * @param {Object} extraData - Données supplémentaires (centerPoint, circlePoint, etc.)
+   * @returns {Object} Information détaillée sur la figure
+   */
+  static detect(figurePoints, extraData = {}) {
+    console.log('🔍 Détection de figure pour', figurePoints?.length, 'points');
+    
+    // Validation de base
+    if (!figurePoints || figurePoints.length === 0) {
+      return { type: 'unknown', subtype: null, properties: {} };
+    }
+    
+    const n = figurePoints.length;
+    
+    // ✅ CERCLE
+    if (extraData.centerPoint && extraData.circlePoint && extraData.circleObject) {
+      return this._detectCircle(extraData.centerPoint, extraData.circlePoint);
+    }
+    
+    // ✅ TRIANGLE (3 points)
+    if (n === 3) {
+      return this._detectTriangle(figurePoints);
+    }
+    
+    // ✅ QUADRILATÈRE (4 points)
+    if (n === 4) {
+      return this._detectQuadrilateral(figurePoints);
+    }
+    
+    // ✅ POLYGONE RÉGULIER (5+ points)
+    if (n >= 5) {
+      return this._detectPolygon(figurePoints);
+    }
+    
+    return { type: 'unknown', subtype: null, properties: {} };
+  }
+  
+  // ==========================================
+  // MÉTHODES PRIVÉES DE DÉTECTION
+  // ==========================================
+  
+  /**
+   * Détecte le type de cercle
+   */
+  static _detectCircle(centerPoint, circlePoint) {
+    const radius = Math.hypot(
+      circlePoint.X() - centerPoint.X(),
+      circlePoint.Y() - centerPoint.Y()
+    );
+    
+    return {
+      type: 'circle',
+      subtype: 'standard',
+      properties: {
+        radius: radius,
+        center: { x: centerPoint.X(), y: centerPoint.Y() },
+        pointOnCircle: { x: circlePoint.X(), y: circlePoint.Y() }
+      }
+    };
+  }
+  
+  /**
+   * Détecte le type de triangle
+   */
+  static _detectTriangle(figurePoints) {
+    const tolerance = 0.1;
+    
+    // Calculer les longueurs des côtés
+    const sideLengths = this._calculateSideLengths(figurePoints);
+    const sortedLengths = [...sideLengths].sort((a, b) => a - b);
+    
+    // Vérifier si c'est un triangle rectangle (théorème de Pythagore)
+    const [a, b, c] = sortedLengths;
+    const isRightTriangle = Math.abs(a*a + b*b - c*c) < tolerance;
+    
+    // Compter les côtés égaux
+    const uniqueLengths = this._getUniqueLengths(sideLengths, tolerance);
+    
+    let subtype;
+    let properties = {
+      sideLengths: sideLengths,
+      isRight: isRightTriangle,
+      rightAngleIndex: -1
+    };
+    
+    // Détection du type
+    if (uniqueLengths.length === 1) {
+      subtype = 'equilateral'; // 3 côtés égaux
+    } else if (uniqueLengths.length === 2) {
+      subtype = 'isosceles'; // 2 côtés égaux
+    } else {
+      subtype = isRightTriangle ? 'right' : 'scalene';
+    }
+    
+    // Si c'est un triangle rectangle, trouver l'angle droit
+    if (isRightTriangle) {
+      properties.rightAngleIndex = this._findRightAngleVertex(figurePoints);
+    }
+    
+    console.log(`✅ Triangle détecté: ${subtype}, côtés: [${sideLengths.map(l => l.toFixed(1)).join(', ')}]`);
+    
+    return {
+      type: 'triangle',
+      subtype: subtype,
+      properties: properties
+    };
+  }
+  
+  /**
+   * Détecte le type de quadrilatère
+   */
+  static _detectQuadrilateral(figurePoints) {
+    const tolerance = 0.15;
+    
+    // Calculer les longueurs des côtés
+    const sideLengths = this._calculateSideLengths(figurePoints);
+    const uniqueLengths = this._getUniqueLengths(sideLengths, tolerance);
+    
+    // Vérifier les angles droits
+    const rightAngles = this._countRightAngles(figurePoints, tolerance);
+    
+    // Vérifier si les côtés opposés sont égaux (parallélogramme)
+    const hasParallelSides = this._hasParallelOppositeSides(sideLengths, tolerance);
+    
+    let subtype;
+    let properties = {
+      sideLengths: sideLengths,
+      rightAnglesCount: rightAngles,
+      hasParallelSides: hasParallelSides
+    };
+    
+    // ✅ LOGIQUE DE DÉTECTION HIÉRARCHIQUE
+    if (rightAngles === 4) {
+      // 4 angles droits = carré ou rectangle
+      if (uniqueLengths.length === 1) {
+        subtype = 'square'; // 4 côtés égaux + 4 angles droits
+      } else {
+        subtype = 'rectangle'; // côtés opposés égaux + 4 angles droits
+      }
+    } else if (uniqueLengths.length === 1) {
+      // 4 côtés égaux sans angles droits
+      subtype = 'rhombus';
+    } else if (hasParallelSides && uniqueLengths.length === 2) {
+      // Côtés opposés égaux (mais pas tous égaux)
+      subtype = 'parallelogram';
+    } else {
+      // Quadrilatère quelconque
+      subtype = 'irregular';
+    }
+    
+    console.log(`✅ Quadrilatère détecté: ${subtype}, côtés: [${sideLengths.map(l => l.toFixed(1)).join(', ')}], angles droits: ${rightAngles}`);
+    
+    return {
+      type: 'quadrilateral',
+      subtype: subtype,
+      properties: properties
+    };
+  }
+  
+  /**
+   * Détecte le type de polygone (5+ côtés)
+   */
+  static _detectPolygon(figurePoints) {
+    const n = figurePoints.length;
+    const sideLengths = this._calculateSideLengths(figurePoints);
+    const uniqueLengths = this._getUniqueLengths(sideLengths, 0.1);
+    
+    const isRegular = (uniqueLengths.length === 1);
+    
+    const polygonNames = {
+      5: 'pentagon',
+      6: 'hexagon',
+      7: 'heptagon',
+      8: 'octagon'
+    };
+    
+    const baseName = polygonNames[n] || `${n}-gon`;
+    const subtype = isRegular ? 'regular' : 'irregular';
+    
+    console.log(`✅ Polygone détecté: ${baseName} ${subtype}`);
+    
+    return {
+      type: 'polygon',
+      subtype: `${subtype}_${baseName}`,
+      properties: {
+        sides: n,
+        sideLengths: sideLengths,
+        isRegular: isRegular
+      }
+    };
+  }
+  
+  // ==========================================
+  // MÉTHODES UTILITAIRES
+  // ==========================================
+  
+  /**
+   * Calcule les longueurs de tous les côtés
+   */
+  static _calculateSideLengths(figurePoints) {
+    const lengths = [];
+    const n = figurePoints.length;
+    
+    for (let i = 0; i < n; i++) {
+      const pt1 = figurePoints[i];
+      const pt2 = figurePoints[(i + 1) % n];
+      const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+      lengths.push(length);
+    }
+    
+    return lengths;
+  }
+  
+  /**
+   * Trouve les longueurs uniques avec tolérance
+   */
+  static _getUniqueLengths(lengths, tolerance) {
+    const rounded = lengths.map(l => Math.round(l / tolerance) * tolerance);
+    return [...new Set(rounded.map(l => l.toFixed(2)))];
+  }
+  
+  /**
+   * Compte le nombre d'angles droits
+   */
+  static _countRightAngles(figurePoints, tolerance) {
+    const n = figurePoints.length;
+    let count = 0;
+    
+    for (let i = 0; i < n; i++) {
+      const A = figurePoints[(i - 1 + n) % n];
+      const B = figurePoints[i];
+      const C = figurePoints[(i + 1) % n];
+      
+      if (this._isRightAngle(A, B, C, tolerance)) {
+        count++;
+      }
+    }
+    
+    return count;
+  }
+  
+  /**
+   * Vérifie si un angle est droit
+   */
+  static _isRightAngle(A, B, C, tolerance = 0.15) {
+    const v1x = A.X() - B.X();
+    const v1y = A.Y() - B.Y();
+    const v2x = C.X() - B.X();
+    const v2y = C.Y() - B.Y();
+    
+    const len1 = Math.hypot(v1x, v1y);
+    const len2 = Math.hypot(v2x, v2y);
+    
+    if (len1 === 0 || len2 === 0) return false;
+    
+    const dotProduct = v1x * v2x + v1y * v2y;
+    const toleranceAbs = Math.max(1e-6, tolerance * len1 * len2);
+    
+    return Math.abs(dotProduct) < toleranceAbs;
+  }
+  
+  /**
+   * Trouve l'index du sommet avec l'angle droit (pour triangles)
+   */
+  static _findRightAngleVertex(figurePoints) {
+    const n = figurePoints.length;
+    
+    for (let i = 0; i < n; i++) {
+      const A = figurePoints[(i - 1 + n) % n];
+      const B = figurePoints[i];
+      const C = figurePoints[(i + 1) % n];
+      
+      if (this._isRightAngle(A, B, C)) {
+        return i;
+      }
+    }
+    
+    return -1;
+  }
+  
+  /**
+   * Vérifie si les côtés opposés sont parallèles (parallélogramme)
+   */
+  static _hasParallelOppositeSides(sideLengths, tolerance) {
+    if (sideLengths.length !== 4) return false;
+    
+    // Vérifier si les côtés opposés sont égaux
+    const [s1, s2, s3, s4] = sideLengths;
+    const opposite1Equal = Math.abs(s1 - s3) < tolerance;
+    const opposite2Equal = Math.abs(s2 - s4) < tolerance;
+    
+    return opposite1Equal && opposite2Equal;
+  }
+}
+
+// ==========================================
+// CACHE DE DÉTECTION DE FIGURE
+// ==========================================
+
+/**
+ * Cache global pour éviter de recalculer le type de figure
+ */
+let _figureCache = {
+  lastPoints: null,
+  lastExtraData: null,
+  result: null,
+  isValid: false
+};
+
+/**
+ * Obtient le type de figure avec mise en cache
+ */
+function getCurrentFigureType() {
+  // Préparer les données actuelles
+  const currentPoints = points ? [...points] : [];
+  const currentExtraData = {
+    centerPoint: centerPoint,
+    circlePoint: circlePoint,
+    circleObject: circleObject
+  };
+  
+  // Vérifier si le cache est encore valide
+  const cacheValid = (
+    _figureCache.isValid &&
+    _figureCache.lastPoints &&
+    _figureCache.lastPoints.length === currentPoints.length &&
+    _figureCache.lastExtraData?.centerPoint === currentExtraData.centerPoint
+  );
+  
+  if (!cacheValid) {
+    // Recalculer et mettre en cache
+    _figureCache.result = FigureDetector.detect(currentPoints, currentExtraData);
+    _figureCache.lastPoints = currentPoints;
+    _figureCache.lastExtraData = currentExtraData;
+    _figureCache.isValid = true;
+    
+    console.log('🔄 Cache de figure mis à jour:', _figureCache.result.type, _figureCache.result.subtype);
+  }
+  
+  return _figureCache.result;
+}
+
+/**
+ * Invalide le cache (à appeler après génération/modification d'une figure)
+ */
+/**
+ * Invalide le cache de manière intelligente
+ * @param {string} reason - Raison de l'invalidation (pour debug)
+ */
+function invalidateFigureCache(reason = 'manual') {
+  const wasValid = _figureCache.isValid;
+  _figureCache.isValid = false;
+  
+  if (wasValid) {
+    console.log(`🗑️ Cache invalidé: ${reason}`);
+  }
+  
+  // ✅ OPTIMISATION : Invalider aussi les caches dérivés
+  _lengthLabelsCache = null;
+  _codingsCache = null;
+  _rightAnglesCache = null;
+}
+
+/**
+ * Invalide automatiquement le cache quand la figure change
+ */
+function autoInvalidateCache() {
+  // Déclenché automatiquement lors des modifications de figure
+  invalidateFigureCache('figure modified');
+  
+  // ✅ OPTIMISATION : Mettre à jour seulement ce qui est visible
+  const activeOptions = getActiveDisplayOptions();
+  
+  if (activeOptions.lengths) updateLengthLabels();
+  if (activeOptions.codings) updateCodings();
+  if (activeOptions.rightAngles) updateRightAngleMarkers(true);
+  if (activeOptions.equalAngles) updateEqualAngleMarkers(true);
+  if (activeOptions.diagonals) updateDiagonals();
+  if (activeOptions.circleExtras) updateCircleExtras();
+}
+
+/**
+ * Récupère les options d'affichage actives
+ */
+function getActiveDisplayOptions() {
+  return {
+    lengths: document.getElementById('toggleLengths')?.checked || false,
+    codings: document.getElementById('toggleCodings')?.checked || false,
+    rightAngles: document.getElementById('toggleRightAngles')?.checked || false,
+    equalAngles: document.getElementById('toggleEqualAngles')?.checked || false,
+    diagonals: document.getElementById('toggleDiagonals')?.checked || false,
+    radius: document.getElementById('toggleRadius')?.checked || false,
+    diameter: document.getElementById('toggleDiameter')?.checked || false,
+    circleExtras: (document.getElementById('toggleRadius')?.checked || document.getElementById('toggleDiameter')?.checked) || false
+  };
+}
+
+// ✅ Variables de cache pour optimiser les performances
+let _lengthLabelsCache = null;
+let _codingsCache = null; 
+let _rightAnglesCache = null;
+
+// ==========================================
+// SYSTÈME DE HANDLERS SPÉCIALISÉS PAR FIGURE
+// ==========================================
+
+/**
+ * Classe de base pour tous les handlers de figures
+ */
+class BaseFigureHandler {
+  constructor(figurePoints, figureInfo) {
+    this.points = figurePoints;
+    this.figureInfo = figureInfo;
+  }
+  
+  // Méthodes par défaut (à override dans les classes filles)
+  getSidesToShow() { return []; }
+  getRightAngles() { return []; }
+  getCodings() { return { groups: [], type: 'none' }; }
+  shouldShowSingleRightAngle() { return false; }
+  shouldHideHypotenuse() { return false; }
+  getHypotenuseIndex() { return -1; }
+  
+  // Méthodes utilitaires communes
+  getSideLength(sideIndex) {
+    if (!this.points || sideIndex >= this.points.length) return 0;
+    const pt1 = this.points[sideIndex];
+    const pt2 = this.points[(sideIndex + 1) % this.points.length];
+    return Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+  }
+}
+
+/**
+ * Handler pour les carrés
+ */
+class SquareHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // CARRÉ : Afficher seulement le côté du bas (index 2: C→D)
+    return [2];
+  }
+  
+  getRightAngles() {
+    // CARRÉ : Les 4 angles sont droits
+    return [1, 0, 2, 3]; // 1 en premier = haut-droite sera affiché seul
+  }
+  
+  getCodings() {
+    // CARRÉ : Tous les côtés égaux (1 trait sur chaque)
+    return {
+      groups: [
+        { sides: [0, 1, 2, 3], markCount: 1 }
+      ],
+      type: 'all-equal'
+    };
+  }
+  
+  shouldShowSingleRightAngle() {
+    // Option disponible pour les carrés
+    return true;
+  }
+}
+
+/**
+ * Handler pour les rectangles
+ */
+class RectangleHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // RECTANGLE : Afficher 2 côtés consécutifs (largeur et hauteur)
+    return [1, 2]; // AB (bas) et BC (droite)
+  }
+  
+  getRightAngles() {
+    // RECTANGLE : Les 4 angles sont droits
+    return [1, 0, 2, 3]; // 2 en premier = haut-droite sera affiché seul
+  }
+  
+  getCodings() {
+    // RECTANGLE : Côtés opposés égaux
+    const sideLengths = this.figureInfo.properties?.sideLengths || [];
+    if (sideLengths.length !== 4) return { groups: [], type: 'none' };
+    
+    // Grouper les côtés opposés égaux
+    return {
+      groups: [
+        { sides: [0, 2], markCount: 1 }, // Côtés opposés AB et CD
+        { sides: [1, 3], markCount: 2 }  // Côtés opposés BC et DA
+      ],
+      type: 'opposite-pairs'
+    };
+  }
+  
+  shouldShowSingleRightAngle() {
+    // Option disponible pour les rectangles
+    return true;
+  }
+}
+
+/**
+ * Handler pour les losanges
+ */
+class RhombusHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // LOSANGE : Seulement un côté (tous égaux)
+    return [2]; // Côté du bas
+  }
+  
+  getRightAngles() {
+    // LOSANGE : Pas d'angles droits par défaut
+    return [];
+  }
+  
+  getCodings() {
+    // LOSANGE : Tous les côtés égaux
+    return {
+      groups: [
+        { sides: [0, 1, 2, 3], markCount: 1 }
+      ],
+      type: 'all-equal'
+    };
+  }
+}
+
+/**
+ * Handler pour les parallélogrammes
+ */
+class ParallelogramHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // PARALLÉLOGRAMME : 2 côtés consécutifs
+    return [1, 2]; // Base et côté oblique
+  }
+  
+  getRightAngles() {
+    // PARALLÉLOGRAMME : Pas d'angles droits
+    return [];
+  }
+  
+  getCodings() {
+    // PARALLÉLOGRAMME : Côtés opposés égaux
+    return {
+      groups: [
+        { sides: [0, 2], markCount: 1 }, // Côtés opposés
+        { sides: [1, 3], markCount: 2 }  // Côtés opposés
+      ],
+      type: 'opposite-pairs'
+    };
+  }
+}
+
+/**
+ * Handler pour les triangles équilatéraux
+ */
+class EquilateralTriangleHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // TRIANGLE ÉQUILATÉRAL : Un seul côté (tous égaux)
+    return [0]; // Côté de base
+  }
+  
+  getRightAngles() {
+    // TRIANGLE ÉQUILATÉRAL : Pas d'angles droits
+    return [];
+  }
+  
+  getCodings() {
+    // TRIANGLE ÉQUILATÉRAL : Tous les côtés égaux
+    return {
+      groups: [
+        { sides: [0, 1, 2], markCount: 1 }
+      ],
+      type: 'all-equal'
+    };
+  }
+}
+
+/**
+ * Handler pour les triangles rectangles
+ */
+class RightTriangleHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // ✅ CORRECTION : Afficher TOUS les côtés par défaut, pas seulement les côtés de l'angle droit
+    return [0, 1, 2]; // Afficher tous les côtés (AB, BC, CA)
+  }
+  
+  getRightAngles() {
+    // TRIANGLE RECTANGLE : Un seul angle droit
+    const rightAngleIndex = this.figureInfo.properties?.rightAngleIndex ?? -1;
+    return rightAngleIndex !== -1 ? [rightAngleIndex] : [];
+  }
+  
+  getCodings() {
+    // TRIANGLE RECTANGLE : Généralement pas de côtés égaux (sauf cas particulier)
+    return { groups: [], type: 'none' };
+  }
+  
+  shouldHideHypotenuse() {
+    // Option disponible pour les triangles rectangles
+    return true;
+  }
+  
+  getHypotenuseIndex() {
+    // Trouver le côté le plus long (hypoténuse)
+    if (!this.points || this.points.length !== 3) return -1;
+    
+    const sideLengths = [];
+    for (let i = 0; i < 3; i++) {
+      sideLengths.push({
+        index: i,
+        length: this.getSideLength(i)
+      });
+    }
+    
+    const longestSide = sideLengths.reduce((max, side) => 
+      side.length > max.length ? side : max
+    );
+    
+    return longestSide.index;
+  }
+}
+
+/**
+ * Handler pour les triangles isocèles
+ */
+class IsoscelesTriangleHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // TRIANGLE ISOCÈLE : Afficher tous les côtés (2 égaux + 1 différent)
+    return [0, 1, 2];
+  }
+  
+  getRightAngles() {
+    // Vérifier si c'est aussi un triangle rectangle
+    const rightAngleIndex = this.figureInfo.properties?.rightAngleIndex ?? -1;
+    return rightAngleIndex !== -1 ? [rightAngleIndex] : [];
+  }
+  
+  getCodings() {
+    // TRIANGLE ISOCÈLE : 2 côtés égaux
+    const sideLengths = this.figureInfo.properties?.sideLengths || [];
+    if (sideLengths.length !== 3) return { groups: [], type: 'none' };
+    
+    // Identifier les côtés égaux
+    const tolerance = 0.1;
+    const groups = [];
+    
+    for (let i = 0; i < 3; i++) {
+      for (let j = i + 1; j < 3; j++) {
+        if (Math.abs(sideLengths[i] - sideLengths[j]) < tolerance) {
+          // Côtés égaux trouvés
+          groups.push({ sides: [i, j], markCount: 1 });
+          break;
+        }
+      }
+    }
+    
+    return {
+      groups: groups,
+      type: 'partial-equal'
+    };
+  }
+}
+
+/**
+ * Handler pour les triangles quelconques
+ */
+class ScaleneTriangleHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // TRIANGLE QUELCONQUE : Afficher tous les côtés
+    return [0, 1, 2];
+  }
+  
+  getRightAngles() {
+    return []; // Pas d'angles droits
+  }
+  
+  getCodings() {
+    return { groups: [], type: 'none' }; // Pas de côtés égaux
+  }
+}
+
+/**
+ * Handler pour les cercles
+ */
+class CircleHandler extends BaseFigureHandler {
+  constructor(centerPoint, circlePoint, figureInfo) {
+    super([circlePoint], figureInfo); // Les cercles ont un point sur la circonférence
+    this.centerPoint = centerPoint;
+    this.circlePoint = circlePoint;
+  }
+  
+  getSidesToShow() {
+    // CERCLE : Pas de côtés au sens classique
+    return [];
+  }
+  
+  getRightAngles() {
+    return []; // Pas d'angles dans un cercle
+  }
+  
+  getCodings() {
+    // CERCLE : Les rayons sont égaux (géré par updateCircleExtras)
+    return { groups: [], type: 'radii' };
+  }
+  
+  getRadius() {
+    return this.figureInfo.properties?.radius || 0;
+  }
+}
+
+/**
+ * Handler pour les polygones réguliers
+ */
+class RegularPolygonHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // POLYGONE RÉGULIER : Un seul côté (tous égaux)
+    return [0];
+  }
+  
+  getRightAngles() {
+    return []; // Généralement pas d'angles droits
+  }
+  
+  getCodings() {
+    // POLYGONE RÉGULIER : Tous les côtés égaux
+    const allSides = [...Array(this.points.length).keys()];
+    return {
+      groups: [
+        { sides: allSides, markCount: 1 }
+      ],
+      type: 'all-equal'
+    };
+  }
+}
+
+/**
+ * Handler par défaut pour les figures inconnues
+ */
+class DefaultFigureHandler extends BaseFigureHandler {
+  getSidesToShow() {
+    // FIGURE INCONNUE : Afficher tous les côtés
+    return [...Array(this.points.length).keys()];
+  }
+  
+  getRightAngles() {
+    return [];
+  }
+  
+  getCodings() {
+    return { groups: [], type: 'none' };
+  }
+}
+
+// ==========================================
+// FACTORY POUR CRÉER LES HANDLERS
+// ==========================================
+
+/**
+ * Factory pour créer le handler approprié selon le type de figure
+ */
+class FigureHandlerFactory {
+  
+  /**
+   * Crée le handler approprié pour une figure
+   * @param {Object} figureInfo - Information de la figure (depuis FigureDetector)
+   * @param {Array} figurePoints - Points de la figure
+   * @param {Object} extraData - Données supplémentaires (centerPoint, etc.)
+   * @returns {BaseFigureHandler} Handler spécialisé
+   */
+  static create(figureInfo, figurePoints, extraData = {}) {
+    if (!figureInfo || !figureInfo.type) {
+      console.warn('⚠️ Type de figure non défini, utilisation du handler par défaut');
+      return new DefaultFigureHandler(figurePoints, figureInfo);
+    }
+    
+    const { type, subtype } = figureInfo;
+    
+    console.log(`🏭 Création handler pour: ${type} - ${subtype}`);
+    
+    // CERCLES
+    if (type === 'circle') {
+      return new CircleHandler(extraData.centerPoint, extraData.circlePoint, figureInfo);
+    }
+    
+    // TRIANGLES
+    if (type === 'triangle') {
+      switch (subtype) {
+        case 'equilateral':
+          return new EquilateralTriangleHandler(figurePoints, figureInfo);
+        case 'right':
+          return new RightTriangleHandler(figurePoints, figureInfo);
+        case 'isosceles':
+          return new IsoscelesTriangleHandler(figurePoints, figureInfo);
+        case 'scalene':
+        default:
+          return new ScaleneTriangleHandler(figurePoints, figureInfo);
+      }
+    }
+    
+    // QUADRILATÈRES
+    if (type === 'quadrilateral') {
+      switch (subtype) {
+        case 'square':
+          return new SquareHandler(figurePoints, figureInfo);
+        case 'rectangle':
+          return new RectangleHandler(figurePoints, figureInfo);
+        case 'rhombus':
+          return new RhombusHandler(figurePoints, figureInfo);
+        case 'parallelogram':
+          return new ParallelogramHandler(figurePoints, figureInfo);
+        default:
+          return new DefaultFigureHandler(figurePoints, figureInfo);
+      }
+    }
+    
+    // POLYGONES
+    if (type === 'polygon') {
+      if (subtype.startsWith('regular_')) {
+        return new RegularPolygonHandler(figurePoints, figureInfo);
+      }
+      return new DefaultFigureHandler(figurePoints, figureInfo);
+    }
+    
+    // DÉFAUT
+    console.warn(`⚠️ Pas de handler spécialisé pour ${type}-${subtype}`);
+    return new DefaultFigureHandler(figurePoints, figureInfo);
+  }
+}
 
 
+// ==========================================
+// UTILITAIRE POUR OBTENIR LE HANDLER ACTUEL
+// ==========================================
 
+/**
+ * Obtient le handler pour la figure actuellement affichée
+ * @returns {BaseFigureHandler|null} Handler de la figure courante
+ */
+function getCurrentFigureHandler() {
+  // Obtenir les informations de la figure
+  const figureInfo = getCurrentFigureType();
+  
+  if (!figureInfo || figureInfo.type === 'unknown') {
+    console.warn('⚠️ Aucune figure détectée ou figure inconnue');
+    return null;
+  }
+  
+  // Préparer les données supplémentaires
+  const extraData = {
+    centerPoint: centerPoint,
+    circlePoint: circlePoint,
+    circleObject: circleObject
+  };
+  
+  // Créer et retourner le handler
+  const handler = FigureHandlerFactory.create(figureInfo, points, extraData);
+  
+  console.log(`🎯 Handler actuel: ${handler.constructor.name}`);
+  
+  return handler;
+}
+
+// ✅ FONCTION DE TEST (à supprimer après)
+function testHandlers() {
+  console.log('🧪 === TEST DES HANDLERS ===');
+  
+  const handler = getCurrentFigureHandler();
+  if (!handler) {
+    console.log('❌ Aucun handler trouvé');
+    return;
+  }
+  
+  console.log(`📝 Handler: ${handler.constructor.name}`);
+  console.log(`📏 Côtés à afficher: [${handler.getSidesToShow().join(', ')}]`);
+  console.log(`📐 Angles droits: [${handler.getRightAngles().join(', ')}]`);
+  console.log(`🔧 Codages:`, handler.getCodings());
+  console.log(`⚡ Un seul angle droit?: ${handler.shouldShowSingleRightAngle()}`);
+  console.log(`🚫 Cacher hypoténuse?: ${handler.shouldHideHypotenuse()}`);
+}
+
+// Rendre accessible depuis la console
+window.testHandlers = testHandlers;
 
 
 function getLabel(index) {
   const defaultLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
-  if (customLabels && customLabels.length > index) {
-    return customLabels[index];
+  
+  // ✅ CORRECTION : Parser les labels personnalisés caractère par caractère
+  if (customLabels && customLabels.length > 0) {
+    // Si l'utilisateur a tapé une seule chaîne comme "BDFG"
+    if (customLabels.length === 1 && customLabels[0].length > 1) {
+      const singleString = customLabels[0];
+      
+      // ✅ NOUVEAU : Séparer automatiquement les lettres
+      const individualLetters = singleString.split('');
+      
+      if (index < individualLetters.length) {
+        return individualLetters[index];
+      }
+    }
+    // Si l'utilisateur a tapé "B,D,F,G" ou "B D F G" (séparés)
+    else if (index < customLabels.length) {
+      return customLabels[index];
+    }
   }
-  return defaultLabels[index];
+  
+  // Fallback sur les labels par défaut
+  return defaultLabels[index] || `P${index}`;
 }
 
-// Fonction Cercles   
 function updateCircleExtras() {
-  if (!centerPoint || !circlePoint) return;
+  // Vérifications de base
+  if (!centerPoint || !circlePoint) {
+    console.log('❌ Pas de cercle détecté');
+    return;
+  }
+
+  // Récupération des options
+  const showRadius = document.getElementById("toggleRadius")?.checked || false;
+  const showDiameter = document.getElementById("toggleDiameter")?.checked || false;
+  const showCodings = document.getElementById("toggleCodings")?.checked || false;
+  const showLengths = document.getElementById("toggleLengths")?.checked || false;
+  const showUnits = document.getElementById("showUnitsCheckbox")?.checked || false;
+  const unit = document.getElementById("unitSelector")?.value || "cm";
+
+  // ✅ SECTION 1 : NETTOYAGE (y compris les codages existants)
+  if (radiusSegment) {
+    try { board.removeObject(radiusSegment); } catch (e) {}
+    radiusSegment = null;
+  }
+  if (radiusLabel) {
+    try { board.removeObject(radiusLabel); } catch (e) {}
+    radiusLabel = null;
+  }
+  if (diameterSegment) {
+    try { board.removeObject(diameterSegment); } catch (e) {}
+    diameterSegment = null;
+  }
+  diameterPoints.forEach(pt => { 
+    try { board.removeObject(pt); } catch (e) {} 
+  });
+  diameterPoints = [];
+
+  // ✅ NOUVEAU : Nettoyer les codages existants à chaque fois
+  codingMarks.forEach(mark => { 
+    try { board.removeObject(mark); } catch (e) {} 
+  });
+  codingMarks = [];
 
   const dx = circlePoint.X() - centerPoint.X();
   const dy = circlePoint.Y() - centerPoint.Y();
   const r = Math.sqrt(dx * dx + dy * dy);
-  const unitSelector = document.getElementById("unitSelector");
-  const unit = unitSelector ? unitSelector.value : "cm";
 
-  const showRadius = document.getElementById("toggleRadius").checked;
-  const showDiameter = document.getElementById("toggleDiameter")?.checked;
-  const showCodings = document.getElementById("toggleCodings")?.checked;
+  // ✅ SECTION 2 : CRÉER LES ÉLÉMENTS GÉOMÉTRIQUES D'ABORD
+  
+  // AFFICHAGE DU RAYON
+  if (showRadius) {
+    circlePoint.setAttribute({
+      fixed: false,
+      size: 3,
+      strokeOpacity: 1,
+      fillOpacity: 1,
+      strokeColor: 'black',
+      fillColor: 'black'
+    });
 
-  // Supprimer ancien segment de rayon
-  if (radiusSegment) {
-    board.removeObject(radiusSegment);
-    radiusSegment = null;
-  }
+    radiusSegment = board.create('segment', [centerPoint, circlePoint], {
+      strokeColor: 'black',
+      strokeWidth: 2,
+      fixed: true
+    });
 
-  // Supprimer ancien label de rayon
-  if (radiusLabel) {
-    board.removeObject(radiusLabel);
-    radiusLabel = null;
-  }
+    if (showLengths) {
+      const startX = (centerPoint.X() + circlePoint.X()) / 2 + 0.3;
+      const startY = (centerPoint.Y() + circlePoint.Y()) / 2 + 0.3;
 
-  // Supprimer anciens codages
-  codingSegments.forEach(obj => board.removeObject(obj));
-  codingSegments = [];
-
-  // Supprimer ancien diamètre
-  if (diameterSegment) {
-    board.removeObject(diameterSegment);
-    diameterSegment = null;
-  }
-  if (diameterPoints.length > 0) {
-    diameterPoints.forEach(pt => board.removeObject(pt));
-    diameterPoints = [];
-  }
-
-  // === Rayon ===
-    if (showRadius) {
-      circlePoint.setAttribute({
-        fixed: false,
-        size: 0,
-        strokeOpacity: 0,
-        fillOpacity: 0
-      });
-
-      radiusSegment = board.create('segment', [centerPoint, circlePoint], {
-        strokeColor: 'black',
-        strokeWidth: 2,
-        fixed: true
-      });
-
-      const showLengths = document.getElementById("toggleLengths")?.checked;
-      const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
-
-      // calculer position initiale du label (milieu du rayon + offset orthogonal)
-      const dx0 = circlePoint.X() - centerPoint.X();
-      const dy0 = circlePoint.Y() - centerPoint.Y();
-      const len0 = Math.sqrt(dx0 * dx0 + dy0 * dy0) || 1;
-      const offset0 = 0.3;
-      const nx0 = offset0 * (-dy0 / len0);
-      const ny0 = offset0 * (dx0 / len0);
-      const startX = (centerPoint.X() + circlePoint.X()) / 2 + nx0;
-      const startY = (centerPoint.Y() + circlePoint.Y()) / 2 + ny0;
-
-      // handle numérique déplaçable (zone cliquable invisible)
-      const handle = board.create('point', [startX, startY], {
+      const radiusHandle = board.create('point', [startX, startY], {
         size: 6,
         strokeOpacity: 0,
         fillOpacity: 0,
         fixed: false,
-        name: '',
         highlight: false,
         showInfobox: false
       });
-      try { if (handle.rendNode) handle.rendNode.style.cursor = 'move'; } catch (e) {}
 
-      // label qui suit le handle ; affiche la longueur seulement si showLengths
       radiusLabel = board.create('text', [
-        () => handle.X(),
-        () => handle.Y(),
+        () => radiusHandle.X(),
+        () => radiusHandle.Y(),
         () => {
-          const dx = circlePoint.X() - centerPoint.X();
-          const dy = circlePoint.Y() - centerPoint.Y();
-          const len = Math.sqrt(dx * dx + dy * dy);
-          if (!showLengths) return ''; // texte vide si on ne veut pas afficher la valeur
-          return showUnits ? `${Number(len.toFixed(2))} ${unit}` : `${Number(len.toFixed(2))}`;
+          const currentRadius = Math.sqrt(
+            Math.pow(circlePoint.X() - centerPoint.X(), 2) + 
+            Math.pow(circlePoint.Y() - centerPoint.Y(), 2)
+          );
+          const rounded = Math.round(currentRadius * 10) / 10;
+          const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
+          return showUnits ? `${value}\u00A0${unit}` : `${value}`;
         }
       ], {
         anchorX: 'middle',
         anchorY: 'middle',
         fontSize: 14,
-        fixed: false,
-        name: ''
+        fixed: false
       });
 
-      // rendre la zone de texte draggable : on relaie les événements souris vers le handle
-      try {
-        if (radiusLabel.rendNode) {
-          radiusLabel.rendNode.style.cursor = 'move';
-          radiusLabel.rendNode.addEventListener('mousedown', function (ev) {
-            ev.stopPropagation();
-            ev.preventDefault();
-            const start = board.getUsrCoordsOfMouse(ev);
-            function onMove(e) {
-              const pos = board.getUsrCoordsOfMouse(e);
-              const dxm = pos[0] - start[0];
-              const dym = pos[1] - start[1];
-              handle.moveTo([handle.X() + dxm, handle.Y() + dym], 0);
-              start[0] = pos[0]; start[1] = pos[1];
-              board.update();
-            }
-            function onUp() {
-              document.removeEventListener('mousemove', onMove);
-              document.removeEventListener('mouseup', onUp);
-            }
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onUp);
-          }, { passive: false });
-        }
-      } catch (e) { /* ignore if DOM not accessible */ }
-
-      // conserver pour nettoyage global si nécessaire
-      lengthHandles.push(handle);
+      lengthHandles.push(radiusHandle);
       lengthLabels.push(radiusLabel);
-    } 
-  // === Diamètre ===
+    }
+  } else {
+    circlePoint.setAttribute({
+      size: 0,
+      strokeOpacity: 0,
+      fillOpacity: 0
+    });
+  }
+
+  // AFFICHAGE DU DIAMÈTRE
   if (showDiameter) {
     const angleA = Math.atan2(dy, dx);
     const angleB = angleA + Math.PI / 3;
@@ -282,7 +1165,7 @@ function updateCircleExtras() {
       name: 'B',
       showInfobox: false,
       fixed: true,
-      size: 0,
+      size: 3,
       strokeColor: 'black',
       fillColor: 'black'
     });
@@ -294,7 +1177,7 @@ function updateCircleExtras() {
       name: 'C',
       showInfobox: false,
       fixed: true,
-      size: 0,
+      size: 3,
       strokeColor: 'black',
       fillColor: 'black'
     });
@@ -306,80 +1189,58 @@ function updateCircleExtras() {
       strokeWidth: 2,
       fixed: true
     });
-
-    // === Codages sur OB et OC ===
-    if (showCodings) {
-      for (let pt of diameterPoints) {
-        const tick = board.create('segment', [
-          () => [
-            (centerPoint.X() + pt.X()) / 2 + 0.2 * (pt.Y() - centerPoint.Y()) / r,
-            (centerPoint.Y() + pt.Y()) / 2 - 0.2 * (pt.X() - centerPoint.X()) / r
-          ],
-          () => [
-            (centerPoint.X() + pt.X()) / 2 - 0.2 * (pt.Y() - centerPoint.Y()) / r,
-            (centerPoint.Y() + pt.Y()) / 2 + 0.2 * (pt.X() - centerPoint.X()) / r
-          ]
-        ], {
-          strokeColor: 'black',
-          strokeWidth: 2,
-          fixed: true
-        });
-        codingSegments.push(tick);
-      }
-
-      // Aussi sur [OA]
-      const len = Math.sqrt(dx * dx + dy * dy);
-      const tick = board.create('segment', [
-        () => [
-          (centerPoint.X() + circlePoint.X()) / 2 + 0.2 * (dy / len),
-          (centerPoint.Y() + circlePoint.Y()) / 2 - 0.2 * (dx / len)
-        ],
-        () => [
-          (centerPoint.X() + circlePoint.X()) / 2 - 0.2 * (dy / len),
-          (centerPoint.Y() + circlePoint.Y()) / 2 + 0.2 * (dx / len)
-        ]
-      ], {
-        strokeColor: 'black',
-        strokeWidth: 2,
-        fixed: true
-      });
-      codingSegments.push(tick);
-    }
-
-  } else if (showCodings && showRadius) {
-    // === Codage sur [OA] uniquement (si pas de diamètre)
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const tick = board.create('segment', [
-      () => [
-        (centerPoint.X() + circlePoint.X()) / 2 + 0.2 * (dy / len),
-        (centerPoint.Y() + circlePoint.Y()) / 2 - 0.2 * (dx / len)
-      ],
-      () => [
-        (centerPoint.X() + circlePoint.X()) / 2 - 0.2 * (dy / len),
-        (centerPoint.Y() + circlePoint.Y()) / 2 + 0.2 * (dx / len)
-      ]
-    ], {
-      strokeColor: 'black',
-      strokeWidth: 2,
-      fixed: true
-    });
-    codingSegments.push(tick);
   }
-}
 
+  // ✅ SECTION 3 : CRÉER LES CODAGES APRÈS QUE TOUS LES POINTS EXISTENT
+  if (showCodings) {
+    console.log('🔧 Création des codages après création des éléments...');
+    
+    // Codage sur le rayon [OA] (si rayon affiché)
+    if (showRadius && centerPoint && circlePoint) {
+      createSimpleCodingMark(centerPoint, circlePoint, 1);
+      console.log('✅ Codage créé sur rayon OA');
+    }
+    
+    // Codages sur les rayons [OB] et [OC] (si diamètre affiché)
+    if (showDiameter && diameterPoints.length >= 2) {
+      createSimpleCodingMark(centerPoint, diameterPoints[0], 1);
+      createSimpleCodingMark(centerPoint, diameterPoints[1], 1);
+      console.log('✅ Codages créés sur rayons OB et OC');
+    }
+  }
+
+  // ✅ SECTION 4 : MISE À JOUR FINALE
+  board.update();
+  console.log(`✅ updateCircleExtras terminé - Codages: ${showCodings}, Rayon: ${showRadius}, Diamètre: ${showDiameter}`);
+}
 
 // Fonction Diagonales   
 function updateDiagonals() {
-  // Supprimer les anciennes diagonales
+  // Supprimer les anciennes diagonales ET le label d'intersection
   diagonals.forEach(d => board.removeObject(d));
   diagonals = [];
+  
+  if (intersectionLabel) {
+    try { board.removeObject(intersectionLabel); } catch (e) {}
+    intersectionLabel = null;
+  }
+  if (intersectionPoint) {
+    try { board.removeObject(intersectionPoint); } catch (e) {}
+    intersectionPoint = null;
+  }
 
   // Vérifier si on doit afficher les diagonales
   const show = document.getElementById('toggleDiagonals')?.checked;
-  if (!show) return;
+  const intersectionGroup = document.getElementById('intersectionGroup');
   
-  // Vérifier qu'on a un polygone avec des points
-  if (!points || points.length !== 4) return;
+  if (!show || !points || points.length !== 4) {
+    // Masquer l'option d'intersection si pas de diagonales
+    if (intersectionGroup) intersectionGroup.style.display = 'none';
+    return;
+  }
+
+  // ✅ AFFICHER l'option d'intersection quand les diagonales sont cochées
+  if (intersectionGroup) intersectionGroup.style.display = 'block';
 
   console.log('Création diagonales pour quadrilatère avec', points.length, 'points');
 
@@ -405,45 +1266,156 @@ function updateDiagonals() {
   diagonals.push(diag1, diag2);
   console.log('✅ 2 diagonales créées');
   
+  // ✅ CRÉER LE LABEL D'INTERSECTION (si demandé)
+  const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
+  if (showIntersectionLabel) {
+    createIntersectionLabel();
+  }
+  
   board.update();
 }
 
-
-
-
-function drawCodingMark(pt1, pt2, index = 1) {
-  const dx = pt2.X() - pt1.X();
-  const dy = pt2.Y() - pt1.Y();
-  const len = Math.sqrt(dx * dx + dy * dy);
-
-  // Milieu du segment
-  const mx = (pt1.X() + pt2.X()) / 2;
-  const my = (pt1.Y() + pt2.Y()) / 2;
-
-  // Vecteur normal perpendiculaire au segment (normalisé)
-  const nx = -dy / len;
-  const ny = dx / len;
-
-  const offset = 0.2;      // Distance du segment
-  const size = 0.3;        // Longueur des traits
-  const spacing = 0.2;     // Espace entre les traits
-
-  for (let i = 0; i < index; i++) {
-    const centerX = mx + nx * offset + nx * (i - (index - 1) / 2) * spacing;
-    const centerY = my + ny * offset + ny * (i - (index - 1) / 2) * spacing;
-
-    const mark = board.create('segment', [
-      [centerX - ny * size / 2, centerY + nx * size / 2],
-      [centerX + ny * size / 2, centerY - nx * size / 2]
-    ], {
-      strokeColor: 'black',
-      strokeWidth: 2,
-      fixed: true,
-      highlight: false
-    });
-
-    codingSegments.push(mark);
+// ✅ NOUVELLE FONCTION : Créer le label d'intersection
+function createIntersectionLabel() {
+  if (!points || points.length !== 4) return;
+  
+  // Récupérer le texte personnalisé (défaut : "I")
+  const intersectionTextInput = document.getElementById('intersectionTextInput');
+  const labelText = intersectionTextInput?.value.trim() || 'I';
+  
+  // ✅ CALCULER L'INTERSECTION DES DIAGONALES
+  const intersection = calculateDiagonalsIntersection();
+  if (!intersection) {
+    console.warn('⚠️ Impossible de calculer l\'intersection des diagonales');
+    return;
   }
+  
+  // ✅ NOUVEAU : Créer un handle invisible déplaçable pour positionner le label
+  const intersectionHandle = board.create('point', [
+    intersection.x + 0.2, // Position initiale avec décalage
+    intersection.y + 0.2
+  ], {
+    size: 6,
+    strokeOpacity: 0,
+    fillOpacity: 0,
+    fixed: false,
+    name: '',
+    highlight: false,
+    showInfobox: false
+  });
+  
+  // Point de calcul de l'intersection (invisible)
+  intersectionPoint = board.create('point', [intersection.x, intersection.y], {
+    visible: false,
+    fixed: true,
+    name: ''
+  });
+
+  // Label qui suit le handle déplaçable
+  intersectionLabel = board.create('text', [
+    () => intersectionHandle.X(), // Suit le handle
+    () => intersectionHandle.Y(),
+    labelText
+  ], {
+    anchorX: 'middle',
+    anchorY: 'middle',
+    fontSize: 14,
+    strokeColor: 'black',
+    fixed: false, // ✅ CHANGÉ : permettre le déplacement
+    highlight: false,
+    name: ''
+  });
+  
+  // Rendre le label déplaçable avec la souris/tactile
+  try {
+    if (intersectionHandle.rendNode) {
+      intersectionHandle.rendNode.style.cursor = 'move';
+    }
+    
+    if (intersectionLabel.rendNode) {
+      intersectionLabel.rendNode.style.cursor = 'move';
+      
+      // ✅ GESTION DU DRAG AND DROP pour le label
+      intersectionLabel.rendNode.addEventListener('pointerdown', function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        
+        const start = board.getUsrCoordsOfMouse(ev);
+        
+        function onMove(e) {
+          const pos = board.getUsrCoordsOfMouse(e);
+          const dx = pos[0] - start[0];
+          const dy = pos[1] - start[1];
+          
+          // Déplacer le handle (et donc le label qui le suit)
+          try {
+            intersectionHandle.moveTo([intersectionHandle.X() + dx, intersectionHandle.Y() + dy], 0);
+          } catch (err) {
+            try {
+              intersectionHandle.setPosition(JXG.COORDS_BY_USER, [intersectionHandle.X() + dx, intersectionHandle.Y() + dy]);
+            } catch (e) {}
+          }
+          
+          start[0] = pos[0];
+          start[1] = pos[1];
+          board.update();
+        }
+        
+        function onUp() {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        }
+        
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      }, { passive: false });
+    }
+  } catch (e) {
+    console.warn('⚠️ Impossible de configurer le drag and drop pour le label d\'intersection:', e);
+  }
+  
+  // ✅ NOUVEAU : Stocker le handle pour nettoyage
+  lengthHandles.push(intersectionHandle);
+  
+  console.log(`✅ Label d'intersection déplaçable créé: "${labelText}" à (${intersection.x.toFixed(2)}, ${intersection.y.toFixed(2)})`);
+}
+
+// ✅ FONCTION POUR CALCULER L'INTERSECTION DES DIAGONALES
+function calculateDiagonalsIntersection() {
+  if (!points || points.length !== 4) return null;
+  
+  // Points des diagonales
+  const A = points[0]; // Diagonale 1: A → C
+  const C = points[2];
+  const B = points[1]; // Diagonale 2: B → D  
+  const D = points[3];
+  
+  // Coordonnées
+  const x1 = A.X(), y1 = A.Y(); // Point A
+  const x2 = C.X(), y2 = C.Y(); // Point C
+  const x3 = B.X(), y3 = B.Y(); // Point B
+  const x4 = D.X(), y4 = D.Y(); // Point D
+  
+  // ✅ FORMULE D'INTERSECTION DE DEUX DROITES
+  // Diagonale AC: (x1,y1) → (x2,y2)
+  // Diagonale BD: (x3,y3) → (x4,y4)
+  
+  const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  
+  if (Math.abs(denominator) < 1e-10) {
+    console.warn('⚠️ Les diagonales sont parallèles (pas d\'intersection)');
+    return null;
+  }
+  
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+  
+  const intersectionX = x1 + t * (x2 - x1);
+  const intersectionY = y1 + t * (y2 - y1);
+  
+  return {
+    x: intersectionX,
+    y: intersectionY
+  };
 }
 
 function updateCodings() {
@@ -451,205 +1423,289 @@ function updateCodings() {
   codingMarks.forEach(m => board.removeObject(m));
   codingMarks = [];
 
-  if (!document.getElementById("toggleCodings").checked || points.length < 3) return;
+  if (!document.getElementById("toggleCodings").checked || !points || points.length < 3) {
+    return;
+  }
 
   const n = points.length;
-  const segmentLengths = [];
 
-  for (let i = 0; i < n; i++) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % n];
-    const len = Math.sqrt((pt2.X() - pt1.X()) ** 2 + (pt2.Y() - pt1.Y()) ** 2);
-    segmentLengths.push({ index: i, length: Math.round(len * 100) / 100 });
-  }
-
-  // Regrouper les segments par longueurs équivalentes
-  const groups = {};
-  segmentLengths.forEach(seg => {
-    const key = seg.length.toFixed(2); // arrondi pour regrouper
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(seg.index);
-  });
-
-  let markCount = 1;
-
-  for (const key in groups) {
-    const indices = groups[key];
-    if (indices.length < 2) continue;
-
-    for (const i of indices) {
+  // ✅ SYSTÈME SIMPLE ET DIRECT
+  if (n === 3) {
+    // TRIANGLE
+    const tolerance = 0.1;
+    const sideLengths = [];
+    
+    for (let i = 0; i < 3; i++) {
       const pt1 = points[i];
-      const pt2 = points[(i + 1) % n];
-
-      for (let j = 0; j < markCount; j++) {
-        const shift = (j - (markCount - 1) / 2) * 0.15; // espacement entre traits
-
-        const segment = board.create('segment', [
-          () => {
-            const x1 = pt1.X(), y1 = pt1.Y();
-            const x2 = pt2.X(), y2 = pt2.Y();
-            const midX = (x1 + x2) / 2;
-            const midY = (y1 + y2) / 2;
-
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const norm = Math.sqrt(dx * dx + dy * dy);
-            const ux = dx / norm;
-            const uy = dy / norm;
-
-            const angle = Math.PI / 4;
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-            const vx = cos * ux - sin * uy;
-            const vy = sin * ux + cos * uy;
-
-            const cx = midX + shift * ux;
-            const cy = midY + shift * uy;
-            const len = 0.20;
-
-            return [cx - vx * len / 2, cy - vy * len / 2];
-          },
-          () => {
-            const x1 = pt1.X(), y1 = pt1.Y();
-            const x2 = pt2.X(), y2 = pt2.Y();
-            const midX = (x1 + x2) / 2;
-            const midY = (y1 + y2) / 2;
-
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const norm = Math.sqrt(dx * dx + dy * dy);
-            const ux = dx / norm;
-            const uy = dy / norm;
-
-            const angle = Math.PI / 4;
-            const cos = Math.cos(angle);
-            const sin = Math.sin(angle);
-            const vx = cos * ux - sin * uy;
-            const vy = sin * ux + cos * uy;
-
-            const cx = midX + shift * ux;
-            const cy = midY + shift * uy;
-            const len = 0.20;
-
-            return [cx + vx * len / 2, cy + vy * len / 2];
-          }
-        ], {
-          strokeWidth: 1.4,
-          strokeColor: 'black',
-          fixed: true
-        });
-
-        codingMarks.push(segment);
+      const pt2 = points[(i + 1) % 3];
+      const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+      sideLengths.push(length);
+    }
+    
+    // Triangle équilatéral
+    if (sideLengths.every(len => Math.abs(len - sideLengths[0]) < tolerance)) {
+      for (let i = 0; i < 3; i++) {
+        createSimpleCodingMark(points[i], points[(i + 1) % 3], 1);
       }
     }
-
-    markCount++;
+    // Triangle isocèle
+    else {
+      for (let i = 0; i < 3; i++) {
+        for (let j = i + 1; j < 3; j++) {
+          if (Math.abs(sideLengths[i] - sideLengths[j]) < tolerance) {
+            createSimpleCodingMark(points[i], points[(i + 1) % 3], 1);
+            createSimpleCodingMark(points[j], points[(j + 1) % 3], 1);
+            return;
+          }
+        }
+      }
+    }
+    
+  } else if (n === 4) {
+    // QUADRILATÈRE
+    const figureType = detectQuadrilateralType();
+    
+    if (figureType === 'square') {
+      // CARRÉ : tous les côtés égaux
+      for (let i = 0; i < 4; i++) {
+        createSimpleCodingMark(points[i], points[(i + 1) % 4], 1);
+      }
+    } 
+    else if (figureType === 'rectangle') {
+      // RECTANGLE : côtés opposés égaux
+      createSimpleCodingMark(points[0], points[1], 1); // AB
+      createSimpleCodingMark(points[2], points[3], 1); // DC
+      createSimpleCodingMark(points[1], points[2], 2); // BC
+      createSimpleCodingMark(points[3], points[0], 2); // AD
+    }
+    else if (figureType === 'rhombus') {
+      // LOSANGE : tous les côtés égaux
+      for (let i = 0; i < 4; i++) {
+        createSimpleCodingMark(points[i], points[(i + 1) % 4], 1);
+      }
+    }
+    else if (figureType === 'parallelogram') {
+      // PARALLÉLOGRAMME : côtés opposés égaux
+      createSimpleCodingMark(points[0], points[1], 1); // AB
+      createSimpleCodingMark(points[2], points[3], 1); // DC
+      createSimpleCodingMark(points[1], points[2], 2); // BC
+      createSimpleCodingMark(points[3], points[0], 2); // AD
+    }
   }
-}
-
-
-// Fonction pour ajouter les angles droits
-function updateRightAngleMarkers(visible) {
-  // Accepter event ou bool
-  if (typeof visible === 'object' && visible !== null && 'target' in visible) {
-    visible = !!visible.target.checked;
-  } else {
-    visible = !!visible;
+  // ✅ NOUVEAU : CAS DES POLYGONES RÉGULIERS (n >= 5)
+  else if (n >= 5) {
+    // POLYGONES RÉGULIERS : vérifier si tous les côtés sont égaux
+    const tolerance = 0.15; // Tolérance plus large pour les polygones complexes
+    const sideLengths = [];
+    
+    // Calculer toutes les longueurs de côtés
+    for (let i = 0; i < n; i++) {
+      const pt1 = points[i];
+      const pt2 = points[(i + 1) % n];
+      const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
+      sideLengths.push(length);
+    }
+    
+    // Vérifier si c'est un polygone régulier (tous les côtés égaux)
+    const isRegular = sideLengths.every(len => Math.abs(len - sideLengths[0]) < tolerance);
+    
+    if (isRegular) {
+      // POLYGONE RÉGULIER : tous les côtés égaux (1 trait sur chaque)
+      console.log(`✅ Polygone régulier détecté (${n} côtés) - tous les côtés égaux`);
+      for (let i = 0; i < n; i++) {
+        createSimpleCodingMark(points[i], points[(i + 1) % n], 1);
+      }
+    } else {
+      // POLYGONE IRRÉGULIER : pas de codage particulier
+      console.log(`ℹ️ Polygone irrégulier (${n} côtés) - pas de codage`);
+    }
   }
 
-  // Nettoyer les anciens marqueurs
-  rightAngleMarkers.forEach(m => { 
-    try { board.removeObject(m); } catch (e) {} 
-  });
-  rightAngleMarkers = [];
-
-  // Gérer l'affichage du groupe "un seul angle"
-  const singleAngleGroup = document.getElementById('singleAngleGroup');
-  const singleAngleCheckbox = document.getElementById('toggleSingleAngle');
-  
-  // ✅ CORRECTION : Vérifier les figures avec angles droits (carrés, rectangles ET triangles rectangles)
-  const hasRightAngles = isRectangularFigure() || (points.length === 3 && isRightTriangle().isRight);
-  
-  if (visible && hasRightAngles) {
-    // Afficher l'option "un seul angle" pour toutes les figures avec angles droits
-    if (singleAngleGroup) singleAngleGroup.style.display = 'block';
-  } else {
-    // Cacher l'option et décocher si nécessaire
-    if (singleAngleGroup) singleAngleGroup.style.display = 'none';
-    if (singleAngleCheckbox) singleAngleCheckbox.checked = false;
-  }
-
-  if (!visible || !points || points.length < 3) { 
-    board.update(); 
-    return; 
-  }
-
-  // Vérifier si on doit afficher un seul angle
-  const showSingleAngle = singleAngleCheckbox && singleAngleCheckbox.checked;
-  
-  // Créer les marqueurs d'angles droits
-  createRightAngleMarkers(showSingleAngle);
-  
   board.update();
 }
 
-// Fonction helper pour détecter si c'est un carré/rectangle
-function isRectangularFigure() {
-  if (!points || points.length !== 4) return false;
+function createSimpleCodingMark(pt1, pt2, markCount = 1) {
+  const dx = pt2.X() - pt1.X();
+  const dy = pt2.Y() - pt1.Y();
+  const len = Math.hypot(dx, dy);
   
-  const tolerance = 0.15; // ✅ Tolérance plus stricte
-  let rightAngleCount = 0;
+  if (len === 0) return;
+
+  const mx = (pt1.X() + pt2.X()) / 2;
+  const my = (pt1.Y() + pt2.Y()) / 2;
+
+  // ✅ DÉTECTION DE L'ORIENTATION DU SEGMENT
+  const segmentAngle = Math.atan2(dy, dx);
+  const isHorizontal = Math.abs(Math.sin(segmentAngle)) < 0.2; // ~11°
+  const isVertical = Math.abs(Math.cos(segmentAngle)) < 0.2;   // ~11°
   
-  // Vérifier chaque angle
-  for (let i = 0; i < 4; i++) {
-    const A = points[(i - 1 + 4) % 4];
-    const B = points[i];
-    const C = points[(i + 1) % 4];
+  let finalX, finalY;
+
+  if (isHorizontal || isVertical) {
+    // ✅ CAS 1 : CÔTÉS HORIZONTAUX/VERTICAUX → Perpendiculaire + 30°
+    const perpX = -dy / len;  // Direction perpendiculaire
+    const perpY = dx / len;
     
-    const v1x = A.X() - B.X();
-    const v1y = A.Y() - B.Y();
-    const v2x = C.X() - B.X();
-    const v2y = C.Y() - B.Y();
+    const angle30 = Math.PI / 6; // 30° en radians
+    const cos30 = Math.cos(angle30);
+    const sin30 = Math.sin(angle30);
     
-    const dotProduct = v1x * v2x + v1y * v2y;
-    const len1 = Math.hypot(v1x, v1y);
-    const len2 = Math.hypot(v2x, v2y);
+    // Rotation de 30° de la perpendiculaire
+    finalX = perpX * cos30 - perpY * sin30;
+    finalY = perpX * sin30 + perpY * cos30;
     
-    if (len1 > 0 && len2 > 0) {
-      const cosAngle = dotProduct / (len1 * len2);
-      const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
-      const angleDegrees = angle * 180 / Math.PI;
-      
-      // ✅ DEBUG : Afficher les angles pour diagnostic
-      console.log(`🔍 Angle ${i}: ${angleDegrees.toFixed(1)}°`);
-      
-      // Compter les angles droits (proches de 90°)
-      if (Math.abs(angle - Math.PI/2) < tolerance) {
-        rightAngleCount++;
-      }
-    }
+  } else {
+    // ✅ CAS 2 : CÔTÉS OBLIQUES → Codage STRICTEMENT PERPENDICULAIRE au segment
+    finalX = -dy / len;  // Perpendiculaire X (rotation 90° du vecteur directeur)
+    finalY = dx / len;   // Perpendiculaire Y (rotation 90° du vecteur directeur)
+  }
+
+  const markLength = 0.15;
+  const spacing = 0.12;
+
+  for (let i = 0; i < markCount; i++) {
+    const offset = (i - (markCount - 1) / 2) * spacing;
+    const centerX = mx + (dx / len) * offset;
+    const centerY = my + (dy / len) * offset;
+
+    const mark = board.create('segment', [
+      [centerX - finalX * markLength, centerY - finalY * markLength],
+      [centerX + finalX * markLength, centerY + finalY * markLength]
+    ], {
+      strokeColor: 'black',
+      strokeWidth: 1.5,
+      fixed: true,
+      highlight: false
+    });
+
+    codingMarks.push(mark);
   }
   
-  // ✅ CORRECTION : Un quadrilatère rectangulaire doit avoir EXACTEMENT 4 angles droits
-  const isRectangular = (rightAngleCount === 4);
-  
-  console.log(`🔍 Quadrilatère: ${rightAngleCount}/4 angles droits → ${isRectangular ? 'RECTANGULAIRE' : 'PAS RECTANGULAIRE'}`);
-  
-  return isRectangular;
+  console.log(`✅ Codage créé : ${isHorizontal || isVertical ? 'perpendiculaire+30°' : 'strictement perpendiculaire'}`);
 }
 
-// Fonction pour créer les marqueurs d'angles droits
-function createRightAngleMarkers(singleAngle = false) {
-  if (!points || points.length < 3) return;
-  
-  if (points.length === 3) {
-    // TRIANGLE RECTANGLE
-    createTriangleRightAngleMarker(singleAngle);
-  } else if (points.length === 4) {
-    // QUADRILATÈRE (carré, rectangle)
-    createQuadrilateralRightAngleMarkers(singleAngle);
+
+// ✅ FONCTION UNIVERSELLE POUR CRÉER UN MARQUEUR D'ANGLE DROIT
+function createSingleRightAngleMarker(angleIndex, size, figureSize = 4) {
+  if (!points || angleIndex < 0 || angleIndex >= points.length) {
+    console.warn(`⚠️ Index d'angle invalide: ${angleIndex}`);
+    return;
   }
+  
+  const vertex = points[angleIndex];
+  const prevPoint = points[(angleIndex - 1 + figureSize) % figureSize];
+  const nextPoint = points[(angleIndex + 1) % figureSize];
+  
+  if (!vertex || !prevPoint || !nextPoint) {
+    console.warn(`⚠️ Points manquants pour l'angle ${angleIndex}`);
+    return;
+  }
+  
+  // Vecteurs depuis le sommet vers les points adjacents
+  const v1x = prevPoint.X() - vertex.X();
+  const v1y = prevPoint.Y() - vertex.Y();
+  const v2x = nextPoint.X() - vertex.X();
+  const v2y = nextPoint.Y() - vertex.Y();
+  
+  // Normaliser les vecteurs
+  const len1 = Math.hypot(v1x, v1y);
+  const len2 = Math.hypot(v2x, v2y);
+  
+  if (len1 === 0 || len2 === 0) {
+    console.warn(`⚠️ Vecteurs de longueur nulle pour l'angle ${angleIndex}`);
+    return;
+  }
+  
+  const u1x = v1x / len1;
+  const u1y = v1y / len1;
+  const u2x = v2x / len2;
+  const u2y = v2y / len2;
+  
+  // Créer le petit carré d'angle droit
+  const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+  
+  // Points du petit carré
+  const p1x = vertex.X() + u1x * cornerSize;
+  const p1y = vertex.Y() + u1y * cornerSize;
+  
+  const p2x = vertex.X() + u2x * cornerSize;
+  const p2y = vertex.Y() + u2y * cornerSize;
+  
+  const p3x = p1x + u2x * cornerSize;
+  const p3y = p1y + u2y * cornerSize;
+  
+  // Créer les segments du petit carré
+  const seg1 = board.create('segment', [
+    [p1x, p1y], [p3x, p3y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  const seg2 = board.create('segment', [
+    [p3x, p3y], [p2x, p2y]
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  rightAngleMarkers.push(seg1, seg2);
+  
+  console.log(`✅ Angle droit créé au sommet ${angleIndex} (${getLabel(angleIndex)})`);
 }
+
+// 🔍 FONCTION DE DEBUG AVANCÉE
+function debugRightAngles() {
+  console.log('🔍 === DEBUG ANGLES DROITS ===');
+  
+  if (!points || points.length === 0) {
+    console.log('❌ Aucun point dans la figure');
+    return;
+  }
+  
+  console.log(`📍 Figure avec ${points.length} points:`);
+  points.forEach((p, i) => {
+    console.log(`  [${i}] ${getLabel(i)}: (${p.X().toFixed(2)}, ${p.Y().toFixed(2)})`);
+  });
+  
+  const figureType = getCurrentFigureType();
+  console.log('🎯 Type détecté:', figureType);
+  
+  const handler = getCurrentFigureHandler();
+  if (handler) {
+    console.log(`🎯 Handler: ${handler.constructor.name}`);
+    
+    const rightAngles = handler.getRightAngles();
+    console.log(`📐 Angles droits selon handler: [${rightAngles.join(', ')}]`);
+    
+    rightAngles.forEach(angleIndex => {
+      const vertex = points[angleIndex];
+      if (vertex) {
+        console.log(`  → Angle ${angleIndex} (${getLabel(angleIndex)}): (${vertex.X().toFixed(2)}, ${vertex.Y().toFixed(2)})`);
+      }
+    });
+    
+    console.log(`⚡ Supporte un seul angle?: ${handler.shouldShowSingleRightAngle()}`);
+  } else {
+    console.log('❌ Aucun handler trouvé');
+  }
+  
+  // État des checkboxes
+  const rightAnglesCheckbox = document.getElementById('toggleRightAngles');
+  const singleAngleCheckbox = document.getElementById('toggleSingleAngle');
+  console.log('☑️ Angles droits activés:', rightAnglesCheckbox?.checked || false);
+  console.log('☑️ Un seul angle activé:', singleAngleCheckbox?.checked || false);
+  
+  // Marqueurs existants
+  console.log('🎨 Marqueurs actuels:', rightAngleMarkers.length);
+}
+
+// Rendre accessible depuis la console
+window.debugRightAngles = debugRightAngles;
 
 // Fonction pour créer le marqueur d'angle droit du triangle
 function createTriangleRightAngleMarker(singleAngle = false) {
@@ -663,20 +1719,6 @@ function createTriangleRightAngleMarker(singleAngle = false) {
   createSingleTriangleRightAngleMarker(rightAngleIndex, size);
 }
 
-// Fonction pour créer les marqueurs d'angles droits du quadrilatère
-function createQuadrilateralRightAngleMarkers(singleAngle = false) {
-  const size = 0.3;
-  
-  if (singleAngle) {
-    // Afficher seulement l'angle en haut à droite (index 1)
-    createSingleRightAngleMarker(1, size);
-  } else {
-    // Afficher tous les angles droits
-    for (let i = 0; i < 4; i++) {
-      createSingleRightAngleMarker(i, size);
-    }
-  }
-}
 
 // Fonction pour créer un marqueur d'angle droit de triangle
 function createSingleTriangleRightAngleMarker(angleIndex, size) {
@@ -740,65 +1782,6 @@ function createSingleTriangleRightAngleMarker(angleIndex, size) {
   console.log(`✅ Angle droit créé au sommet ${angleIndex} du triangle rectangle`);
 }
 
-// Fonction pour créer un seul marqueur d'angle droit (quadrilatères)
-function createSingleRightAngleMarker(angleIndex, size) {
-  const vertex = points[angleIndex];
-  const prevPoint = points[(angleIndex - 1 + 4) % 4];
-  const nextPoint = points[(angleIndex + 1) % 4];
-  
-  if (!vertex || !prevPoint || !nextPoint) return;
-  
-  // Vecteurs depuis le sommet vers les points adjacents
-  const v1x = prevPoint.X() - vertex.X();
-  const v1y = prevPoint.Y() - vertex.Y();
-  const v2x = nextPoint.X() - vertex.X();
-  const v2y = nextPoint.Y() - vertex.Y();
-  
-  // Normaliser les vecteurs
-  const len1 = Math.hypot(v1x, v1y);
-  const len2 = Math.hypot(v2x, v2y);
-  
-  if (len1 === 0 || len2 === 0) return;
-  
-  const u1x = v1x / len1;
-  const u1y = v1y / len1;
-  const u2x = v2x / len2;
-  const u2y = v2y / len2;
-  
-  // Créer le petit carré d'angle droit
-  const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
-  
-  // Points du petit carré
-  const p1x = vertex.X() + u1x * cornerSize;
-  const p1y = vertex.Y() + u1y * cornerSize;
-  
-  const p2x = vertex.X() + u2x * cornerSize;
-  const p2y = vertex.Y() + u2y * cornerSize;
-  
-  const p3x = p1x + u2x * cornerSize;
-  const p3y = p1y + u2y * cornerSize;
-  
-  // Créer les segments du petit carré
-  const seg1 = board.create('segment', [
-    [p1x, p1y], [p3x, p3y]
-  ], {
-    strokeColor: 'black',
-    strokeWidth: 1.5,
-    fixed: true,
-    highlight: false
-  });
-  
-  const seg2 = board.create('segment', [
-    [p3x, p3y], [p2x, p2y]
-  ], {
-    strokeColor: 'black',
-    strokeWidth: 1.5,
-    fixed: true,
-    highlight: false
-  });
-  
-  rightAngleMarkers.push(seg1, seg2);
-}
 
 // Fonction pour ajouter les marqueurs d'angles égaux
 function updateEqualAngleMarkers(visible) {
@@ -933,7 +1916,7 @@ function updateEqualAngleMarkers(visible) {
       const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
       const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
       if (l1 === 0 || l2 === 0) continue;
-      const u1x =
+      const u1x = v1x / l1, u1y = v1y / l1; 
       const u2x = v2x / l2, u2y = v2y / l2;
 
       let a1 = Math.atan2(u1y, u1x);
@@ -998,62 +1981,6 @@ function updateEqualAngleMarkers(visible) {
   board.update();
 }
 
-// Détection du type de figure pour ajuster les angles droits
-function detectCurrentFigure() {
-  // Quadrilatère : vérifier si 4 angles droits (produit scalaire)
-  if (points.length === 4 && polygon) {
-    const n = 4;
-    const REL_TOL = 5e-4;
-    for (let i = 0; i < n; i++) {
-      const A = points[(i - 1 + n) % n];
-      const B = points[i];
-      const C = points[(i + 1) % n];
-      if (!A || !B || !C) return "";
-      const ax = A.X(), ay = A.Y();
-      const bx = B.X(), by = B.Y();
-      const cx = C.X(), cy = C.Y();
-      const v1x = ax - bx, v1y = ay - by;
-      const v2x = cx - bx, v2y = cy - by;
-      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
-      if (len1 === 0 || len2 === 0) return "";
-      const dot = v1x * v2x + v1y * v2y;
-      const tol = Math.max(1e-6, REL_TOL * (len1 * len2));
-      if (Math.abs(dot) > tol) return "";
-    }
-
-    // tous les angles sont droits -> différencier carré/rectangle
-    const lens = [];
-    for (let i = 0; i < 4; i++) lens.push(points[i].Dist(points[(i + 1) % 4]));
-    const rounded = lens.map(l => Math.round(l * 100) / 100);
-    const unique = [...new Set(rounded.map(v => v.toFixed(2)))];
-    if (unique.length === 1) return "square";
-    return "rectangle";
-  }
-
-  // Triangle rectangle ?
-  if (points.length === 3) {
-    const n = 3;
-    const REL_TOL = 5e-4;
-    for (let i = 0; i < n; i++) {
-      const A = points[(i - 1 + n) % n];
-      const B = points[i];
-      const C = points[(i + 1) % n];
-      if (!A || !B || !C) continue;
-      const ax = A.X(), ay = A.Y();
-      const bx = B.X(), by = B.Y();
-      const cx = C.X(), cy = C.Y();
-      const v1x = ax - bx, v1y = ay - by;
-      const v2x = cx - bx, v2y = cy - by;
-      const len1 = Math.hypot(v1x, v1y), len2 = Math.hypot(v2x, v2y);
-      if (len1 === 0 || len2 === 0) continue;
-      const dot = v1x * v2x + v1y * v2y;
-      const tol = Math.max(1e-6, REL_TOL * (len1 * len2));
-      if (Math.abs(dot) <= tol) return "rightTriangle";
-    }
-  }
-
-  return "";
-}
 
 // Remplacement consolidé : détection et affichage des angles droits / égaux
 function getRightAngleTriples() {
@@ -1485,25 +2412,7 @@ function centerFigure() {
   const dy = boardCy - figCy;
   if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return;
 
-  // déplacer les points (sommets, gliders, centre du cercle si nécessaire)
-  (points || []).forEach(p => {
-    try { p.moveTo([p.X() + dx, p.Y() + dy], 0); } catch (e) {
-      try { p.setPosition(JXG.COORDS_BY_USER, [p.X() + dx, p.Y() + dy]); } catch (ee) {}
-    }
-  });
-
-  if (typeof centerPoint !== 'undefined' && centerPoint && !points.includes(centerPoint)) {
-    try { centerPoint.moveTo([centerPoint.X() + dx, centerPoint.Y() + dy], 0); } catch (e) {
-      try { centerPoint.setPosition(JXG.COORDS_BY_USER, [centerPoint.X() + dx, centerPoint.Y() + dy]); } catch (ee) {}
-    }
-  }
-  if (typeof circlePoint !== 'undefined' && circlePoint && !points.includes(circlePoint)) {
-    try { circlePoint.moveTo([circlePoint.X() + dx, circlePoint.Y() + dy], 0); } catch (e) {
-      try { circlePoint.setPosition(JXG.COORDS_BY_USER, [circlePoint.X() + dx, circlePoint.Y() + dy]); } catch (ee) {}
-    }
-  }
-
-  // déplacer les handles invisibles (labels, length handles, etc.)
+  // Fonction helper pour déplacer un objet
   const moveObj = (o) => {
     if (!o) return;
     try { o.moveTo([o.X() + dx, o.Y() + dy], 0); } catch (e) {
@@ -1511,10 +2420,23 @@ function centerFigure() {
     }
   };
 
-  (labelHandles || []).forEach(moveObj);
+  // 1. Déplacer les points principaux (sommets, gliders, centre du cercle)
+  (points || []).forEach(moveObj);
+
+  if (typeof centerPoint !== 'undefined' && centerPoint && !points.includes(centerPoint)) {
+    moveObj(centerPoint);
+  }
+  if (typeof circlePoint !== 'undefined' && circlePoint && !points.includes(circlePoint)) {
+    moveObj(circlePoint);
+  }
+
+  // 2. ✅ CORRECTION : Déplacer les handles des labels de mesures
   (lengthHandles || []).forEach(moveObj);
 
-  // déplacer les textes si possible
+  // 3. Déplacer les handles des labels de points
+  (labelHandles || []).forEach(moveObj);
+
+  // 4. Déplacer les textes si possible
   const moveText = (t) => {
     if (!t) return;
     try {
@@ -1525,9 +2447,9 @@ function centerFigure() {
   };
   (labelTexts || []).forEach(moveText);
   (texts || []).forEach(moveText);
-  (lengthLabels || []).forEach(moveText);
+  (lengthLabels || []).forEach(moveText); // ✅ AJOUT : Déplacer aussi les labels de longueur
 
-  // Mise à jour finale
+  // 5. Mise à jour finale
   updateCodings();
   updateDiagonals();
   updateLengthLabels();
@@ -1536,80 +2458,361 @@ function centerFigure() {
   board.update();
 }
 
-
-function generateFigure() {
-  const prompt = document.getElementById("promptInput").value.toLowerCase();
-
-  const labelInput = document.getElementById("labelInput").value.trim();
-  if (labelInput.includes(",")) {
-    customLabels = labelInput.split(',').map(s => s.trim().toUpperCase());
-  } else if (labelInput.includes(" ")) {
-    customLabels = labelInput.split(' ').map(s => s.trim().toUpperCase());
+// Fonction pour ajouter les angles droits
+function updateRightAngleMarkers(visible) {
+  // Accepter event ou bool
+  if (typeof visible === 'object' && visible !== null && 'target' in visible) {
+    visible = !!visible.target.checked;
   } else {
-    customLabels = labelInput.toUpperCase().split('');
+    visible = !!visible;
   }
 
-  // Réinitialiser proprement le board
-  board.removeObject([...board.objectsList]);
-  while (board.objectsList.length > 0) board.removeObject(board.objectsList[0]);
+  // Nettoyer les anciens marqueurs
+  rightAngleMarkers.forEach(m => { 
+    try { board.removeObject(m); } catch (e) {} 
+  });
+  rightAngleMarkers = [];
 
-  // reset locals
+  // Gérer l'affichage du groupe "un seul angle"
+  const singleAngleGroup = document.getElementById('singleAngleGroup');
+  const singleAngleCheckbox = document.getElementById('toggleSingleAngle');
+
+  if (!visible || !points || points.length < 3) {
+    // Cacher l'option si pas d'angles droits à afficher
+    if (singleAngleGroup) singleAngleGroup.style.display = 'none';
+    if (singleAngleCheckbox) singleAngleCheckbox.checked = false;
+    board.update(); 
+    return; 
+  }
+
+  // ==========================================
+  // ✅ UTILISER LE HANDLER POUR DÉTERMINER LES ANGLES DROITS
+  // ==========================================
+  
+  const handler = getCurrentFigureHandler();
+  
+  if (!handler) {
+    console.warn('⚠️ Pas de handler trouvé pour les angles droits');
+    if (singleAngleGroup) singleAngleGroup.style.display = 'none';
+    board.update();
+    return;
+  }
+  
+  const rightAngles = handler.getRightAngles();
+  console.log(`🎯 Handler ${handler.constructor.name} → angles droits: [${rightAngles.join(', ')}]`);
+  
+  // ✅ Vérifier si cette figure supporte l'option "un seul angle"
+  const supportsSingleAngle = handler.shouldShowSingleRightAngle();
+  
+  if (rightAngles.length > 0 && supportsSingleAngle) {
+    // Afficher l'option "un seul angle" 
+    if (singleAngleGroup) singleAngleGroup.style.display = 'block';
+  } else {
+    // Cacher l'option et décocher si nécessaire
+    if (singleAngleGroup) singleAngleGroup.style.display = 'none';
+    if (singleAngleCheckbox) singleAngleCheckbox.checked = false;
+  }
+  
+  // ✅ Vérifier si on doit afficher un seul angle
+  const showSingleAngle = singleAngleCheckbox && singleAngleCheckbox.checked;
+  
+  // ✅ Créer les marqueurs selon les spécifications du handler
+  if (rightAngles.length > 0) {
+    createRightAngleMarkersFromHandler(rightAngles, showSingleAngle, points.length);
+  }
+  
+  board.update();
+
+  // ==========================================
+  // ✅ FONCTION POUR CRÉER LES MARQUEURS DEPUIS LE HANDLER
+  // ==========================================
+  
+  function createRightAngleMarkersFromHandler(angleIndices, singleAngle, figureSize) {
+    const size = 0.3;
+    
+    if (singleAngle && angleIndices.length > 1) {
+      // Afficher seulement le premier angle de la liste
+      createSingleRightAngleMarker(angleIndices[0], size, figureSize);
+      console.log(`📐 Un seul angle droit affiché: index ${angleIndices[0]}`);
+    } else {
+      // Afficher tous les angles droits
+      angleIndices.forEach(angleIndex => {
+        createSingleRightAngleMarker(angleIndex, size, figureSize);
+      });
+      console.log(`📐 ${angleIndices.length} angles droits affichés`);
+    }
+  }
+}
+
+function generateFigure() {
+  // ==========================================
+  // 1. NETTOYAGE INITIAL
+  // ==========================================
+  
+  // Nettoyer tous les éléments existants
+  if (polygon) try { board.removeObject(polygon); } catch (e) {}
+  if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
+  if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
+  if (circleObject) try { board.removeObject(circleObject); } catch (e) {}
+
+  // Nettoyer les arrays d'éléments
+  points.forEach(p => { try { board.removeObject(p); } catch (e) {} });
+  texts.forEach(t => { try { board.removeObject(t); } catch (e) {} });
+  rightAngleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  lengthLabels.forEach(l => { try { board.removeObject(l); } catch (e) {} });
+  lengthHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+  codingMarks.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  codingSegments.forEach(s => { try { board.removeObject(s); } catch (e) {} });
+  diagonals.forEach(d => { try { board.removeObject(d); } catch (e) {} });
+  angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  diameterPoints.forEach(p => { try { board.removeObject(p); } catch (e) {} });
+  if (diameterSegment) try { board.removeObject(diameterSegment); } catch (e) {}
+  if (radiusSegment) try { board.removeObject(radiusSegment); } catch (e) {}
+  if (radiusLabel) try { board.removeObject(radiusLabel); } catch (e) {}
+
+  // Reset des variables globales
+  polygon = null;
   points = [];
   texts = [];
-  polygon = null;
+  rightAngleMarkers = [];
+  lengthLabels = [];
+  lengthHandles = [];
+  lengthHandleMeta = [];
+  codingMarks = [];
+  codingSegments = [];
+  diagonals = [];
+  if (intersectionLabel) try { board.removeObject(intersectionLabel); } catch (e) {}
+  if (intersectionPoint) try { board.removeObject(intersectionPoint); } catch (e) {}
+  intersectionLabel = null;
+  intersectionPoint = null;
+  angleMarkers = [];
   centerPoint = null;
   circlePoint = null;
   circleObject = null;
+  radiusSegment = null;
+  radiusLabel = null;
+  diameterSegment = null;
+  diameterPoints = [];
+  customLabels = [];
 
-  if (prompt.includes("carré")) {
-    const size = extractNumber(prompt, 4);
-    drawSquare(size);
-  } else if (prompt.includes("triangle rectangle")) {
-    const [base, height] = extractTwoNumbers(prompt, [3, 4]);
-    drawRightTriangle(base, height);
-  } else if (prompt.includes("rectangle")) {
-    const [width, height] = extractTwoNumbers(prompt, [3, 5]);
-    drawRectangle(width, height);
-  } else if (prompt.includes("cercle")) {
-    const radius = extractNumber(prompt, 2);
-    drawCircle(radius);
-    updateCircleExtras();
-  } else if (prompt.includes("triangle équilatéral")) {
-    const side = extractNumber(prompt, 4);
-    drawEquilateralTriangle(side);
-  } else if (prompt.includes("triangle isocèle")) {
-    const [base, height] = extractTwoNumbers(prompt, [4, 3]);
-    drawIsoscelesTriangle(base, height);
-  } else if (prompt.includes("losange")) {
-    const size = extractNumber(prompt, 5);
-    drawLosange(size);
-  } else if (prompt.includes("parallélogramme")) {
-    // ✅ CORRECTION : Le 2e paramètre est la longueur du côté oblique BC, pas la hauteur
-    const [base, sideLength] = extractTwoNumbers(prompt, [5, 3]); // base=5, côté oblique=3
-    drawParallelogram(base, sideLength);
-  } else if (prompt.includes("hexagone")) {
-    const side = extractNumber(prompt, 4);
-    drawRegularPolygon(6, side);
-  } else if (prompt.includes("pentagone")) {
-    const side = extractNumber(prompt, 4);
-    drawRegularPolygon(5, side);
+  // ==========================================
+  // 2. RÉCUPÉRATION DES DONNÉES UTILISATEUR
+  // ==========================================
+  
+  const input = document.getElementById("promptInput").value.trim().toLowerCase();
+  const labelInput = document.getElementById("labelInput")?.value.trim() || '';
+
+  if (!input) {
+    alert("Veuillez entrer une description de figure.");
+    return;
   }
 
-  // recentrer la figure générée au centre du panneau
-  try { centerFigure(); } catch (e) { console.warn('centerFigure failed', e); }
+  console.log(`🎨 Génération de figure: "${input}"`);
 
-  // ✅ AJOUT : Appliquer l'effet main levée si la checkbox est cochée
+  // Traitement des labels personnalisés
+  if (labelInput) {
+    customLabels = labelInput.split(/[,\s]+/).filter(label => label.length > 0);
+    console.log(`🏷️ Labels personnalisés: [${customLabels.join(', ')}]`);
+  }
+
+  // ==========================================
+  // 3. PARSING ET GÉNÉRATION DE LA FIGURE
+  // ==========================================
+  
+  try {
+    // CARRÉS
+    if (input.includes("carré")) {
+      const size = extractNumber(input, 4);
+      drawSquare(size);
+      console.log(`✅ Carré généré (côté: ${size})`);
+    }
+    
+    else if (input.includes("triangle rectangle") || input.includes("triangle droit")) {
+    const [base, height] = extractTwoNumbers(input, [3, 4]);
+    drawRightTriangle(base, height);
+    console.log(`✅ Triangle rectangle généré (base: ${base}, hauteur: ${height})`);
+    }
+    // RECTANGLES
+    else if (input.includes("rectangle")) {
+      const [width, height] = extractTwoNumbers(input, [5, 3]);
+      drawRectangle(width, height);
+      console.log(`✅ Rectangle généré (${width} × ${height})`);
+    }
+    
+    // LOSANGES
+    else if (input.includes("losange")) {
+      const side = extractNumber(input, 4);
+      drawLosange(side);
+      console.log(`✅ Losange généré (côté: ${side})`);
+    }
+    
+    // PARALLÉLOGRAMMES
+    else if (input.includes("parallélogramme") || input.includes("parallelogramme")) {
+      const [base, side] = extractTwoNumbers(input, [5, 3]);
+      drawParallelogram(base, side);
+      console.log(`✅ Parallélogramme généré (base: ${base}, côté: ${side})`);
+    }
+    
+    // TRIANGLES
+    else if (input.includes("triangle")) {
+      if (input.includes("équilatéral") || input.includes("equilateral")) {
+        const side = extractNumber(input, 4);
+        drawEquilateralTriangle(side);
+        console.log(`✅ Triangle équilatéral généré (côté: ${side})`);
+      }
+      else if (input.includes("isocèle") || input.includes("isocele")) {
+        const [base, height] = extractTwoNumbers(input, [6, 4]);
+        drawIsoscelesTriangle(base, height);
+        console.log(`✅ Triangle isocèle généré (base: ${base}, hauteur: ${height})`);
+      }
+      else {
+        // Triangle quelconque par défaut
+        const [base, height] = extractTwoNumbers(input, [4, 3]);
+        drawRightTriangle(base, height);
+        console.log(`✅ Triangle généré (base: ${base}, hauteur: ${height})`);
+      }
+    }
+    
+    // CERCLES
+    else if (input.includes("cercle")) {
+      const radius = extractNumber(input, 2);
+      drawCircle(radius);
+      console.log(`✅ Cercle généré (rayon: ${radius})`);
+    }
+    
+    // POLYGONES RÉGULIERS
+    else if (input.includes("pentagone") || input.includes("pentagon")) {
+      const side = extractNumber(input, 3);
+      drawRegularPolygon(5, side);
+      console.log(`✅ Pentagone généré (côté: ${side})`);
+    }
+    else if (input.includes("hexagone") || input.includes("hexagon")) {
+      const side = extractNumber(input, 3);
+      drawRegularPolygon(6, side);
+      console.log(`✅ Hexagone généré (côté: ${side})`);
+    }
+    else if (input.includes("heptagone") || input.includes("heptagon")) {
+      const side = extractNumber(input, 3);
+      drawRegularPolygon(7, side);
+      console.log(`✅ Heptagone généré (côté: ${side})`);
+    }
+    else if (input.includes("octogone") || input.includes("octagon")) {
+      const side = extractNumber(input, 3);
+      drawRegularPolygon(8, side);
+      console.log(`✅ Octogone généré (côté: ${side})`);
+    }
+    
+    // FIGURE NON RECONNUE
+    else {
+      // ✅ CORRECTION : Essayer d'utiliser les suggestions disponibles
+      const suggestionBox = document.getElementById('suggestionBox');
+      const hasSuggestions = suggestionBox && suggestionBox.style.display === 'block';
+      
+      if (hasSuggestions) {
+        // Utiliser la première suggestion automatiquement
+        const firstSuggestion = suggestionBox.querySelector('.suggestion-item');
+        if (firstSuggestion) {
+          const suggestionText = firstSuggestion.textContent;
+          document.getElementById("promptInput").value = suggestionText;
+          console.log(`🔄 Auto-correction: "${input}" → "${suggestionText}"`);
+          
+          // Relancer la génération avec la suggestion
+          setTimeout(() => generateFigure(), 100);
+          return;
+        }
+      }
+      
+      // Sinon, message d'erreur standard
+      alert(`Figure non reconnue: "${input}". Essayez: carré, rectangle, triangle, cercle, losange, parallélogramme, pentagone, hexagone.`);
+      console.warn(`❌ Figure non reconnue: "${input}"`);
+      return;
+    }
+
+  } catch (error) {
+    console.error('❌ Erreur lors de la génération:', error);
+    alert('❌ Erreur lors de la génération de la figure');
+    return;
+  }
+
+  // ==========================================
+  // 4. ✅ FINALISATION AVEC SYSTÈME DE HANDLERS
+  // ==========================================
+  
+  // Invalider le cache de détection
+  invalidateFigureCache('new figure generated');
+  
+  // Recentrer la figure
+  try { 
+    centerFigure(); 
+  } catch (e) { 
+    console.warn('centerFigure failed', e); 
+  }
+  
+  // Appliquer l'effet main levée si activé
   const handDrawnCheckbox = document.getElementById('toggleHandDrawn');
   if (handDrawnCheckbox && handDrawnCheckbox.checked) {
     setTimeout(() => {
       applyHandDrawnEffect();
-    }, 100); // Petit délai pour s'assurer que la figure est créée
+    }, 100);
   }
-
-  // mise à jour finale
+  
+  // Mise à jour intelligente : seulement ce qui est activé
+  setTimeout(() => {
+    autoInvalidateCache();
+  }, 150);
+  
+  // Mise à jour finale du board
   board.update();
+  
+  console.log(`✅ Figure générée et optimisée avec le système de handlers`);
+  
+  // ==========================================
+  // 5. FEEDBACK UTILISATEUR
+  // ==========================================
+  
+  // Masquer les suggestions
+  const suggestionBox = document.getElementById('suggestionBox');
+  if (suggestionBox) {
+    suggestionBox.style.display = 'none';
+  }
+  
+  // Log de confirmation
+  const figureType = getCurrentFigureType();
+  if (figureType && figureType.type !== 'unknown') {
+    console.log(`🎯 Type détecté: ${figureType.type} - ${figureType.subtype}`);
+  }
+}
+// ==========================================
+// 🔍 MONITORING DES PERFORMANCES
+// ==========================================
+
+/**
+ * Mesure le temps d'exécution d'une fonction
+ */
+function measurePerformance(functionName, fn) {
+  const startTime = performance.now();
+  const result = fn();
+  const endTime = performance.now();
+  const duration = endTime - startTime;
+  
+  if (duration > 10) { // Seulement si > 10ms
+    console.log(`⏱️ ${functionName}: ${duration.toFixed(2)}ms`);
+  }
+  
+  return result;
 }
 
+/**
+ * Version optimisée de getCurrentFigureHandler avec monitoring
+ */
+function getCurrentFigureHandlerOptimized() {
+  return measurePerformance('getCurrentFigureHandler', () => {
+    return getCurrentFigureHandler();
+  });
+}
+
+// ✅ Utiliser dans les fonctions critiques si besoin de debug performance
+// const handler = getCurrentFigureHandlerOptimized();
     
 document.getElementById("promptInput").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
@@ -1641,17 +2844,35 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
       const dy = newCoords[1] - startCoords[1];
       startCoords = newCoords;
 
+      // 1. Déplacer les points principaux de la figure
       points.forEach(pt => {
         try { pt.moveTo([pt.X() + dx, pt.Y() + dy], 0); }
         catch (err) { try { pt.setPosition(JXG.COORDS_BY_USER, [pt.X() + dx, pt.Y() + dy]); } catch(e){} }
       });
 
-      // déplacer aussi les handles (labels) si fournis
+      // 2. ✅ NOUVEAU : Déplacer les handles des labels de mesures
+      if (lengthHandles && lengthHandles.length > 0) {
+        lengthHandles.forEach(handle => {
+          try { handle.moveTo([handle.X() + dx, handle.Y() + dy], 0); }
+          catch (err) { try { handle.setPosition(JXG.COORDS_BY_USER, [handle.X() + dx, handle.Y() + dy]); } catch(e){} }
+        });
+      }
+
+      // 3. ✅ NOUVEAU : Déplacer les handles des labels de points (si ils existent)
+      if (labelHandles && labelHandles.length > 0) {
+        labelHandles.forEach(h => {
+          try { h.moveTo([h.X() + dx, h.Y() + dy], 0); }
+          catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e){} }
+        });
+      }
+
+      // 4. Déplacer les handles fournis en paramètre (legacy)
       handles.forEach(h => {
         try { h.moveTo([h.X() + dx, h.Y() + dy], 0); }
         catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e){} }
       });
 
+      // 5. Déplacer les textes (labels des points)
       texts.forEach(txt => {
         try {
           if (typeof txt.setPosition === 'function') {
@@ -1660,6 +2881,7 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
         } catch (err) { /* ignore */ }
       });
 
+      // 6. ✅ IMPORTANT : Mettre à jour les codages qui dépendent de la position
       updateCodings();
       board.update();
     }
@@ -1667,6 +2889,15 @@ function addDraggingToPolygon(polygon, points, texts, handles = []) {
     function onMouseUp() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      
+      // ✅ NOUVEAU : Mise à jour complète après le déplacement
+      setTimeout(() => {
+        updateCodings();
+        updateDiagonals();
+        updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
+        updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
+        board.update();
+      }, 50);
     }
 
     document.addEventListener('mousemove', onMouseMove);
@@ -1760,15 +2991,20 @@ function drawLosange(side) {
 }
 
 function drawRectangle(width, height) {
-  // Points dans l'ordre : A (bas-gauche), B (bas-droite), C (haut-droite), D (haut-gauche)
-  const A = board.create('point', [0, 0], { name: '', fixed: true, visible: false });
-  const B = board.create('point', [width, 0], { name: '', fixed: true, visible: false });
-  const C = board.create('point', [width, height], { name: '', fixed: true, visible: false });
-  const D = board.create('point', [0, height], { name: '', fixed: true, visible: false });
+  // ✅ CORRECTION : Points dans l'ordre horaire depuis le haut-gauche
+  // A (haut-gauche), B (haut-droite), C (bas-droite), D (bas-gauche)
+  const A = board.create('point', [0, height], { name: '', fixed: true, visible: false }); // HAUT-GAUCHE
+  const B = board.create('point', [width, height], { name: '', fixed: true, visible: false }); // HAUT-DROITE
+  const C = board.create('point', [width, 0], { name: '', fixed: true, visible: false }); // BAS-DROITE
+  const D = board.create('point', [0, 0], { name: '', fixed: true, visible: false }); // BAS-GAUCHE
 
-  points = [A, B, C, D]; // A=0, B=1, C=2, D=3
+  points = [A, B, C, D]; // A=0, B=1, C=2, D=3 dans l'ordre horaire
   
-  console.log('Rectangle créé - Points dans l\'ordre:', 'A(0,0)', 'B(' + width + ',0)', 'C(' + width + ',' + height + ')', 'D(0,' + height + ')'); // Debug
+  console.log('Rectangle créé - Points dans l\'ordre horaire:', 
+    'A(0,' + height + ')', 
+    'B(' + width + ',' + height + ')', 
+    'C(' + width + ',0)', 
+    'D(0,0)'); // Debug
 
   polygon = board.create('polygon', points, {
     borders: {
@@ -1779,10 +3015,11 @@ function drawRectangle(width, height) {
     fillOpacity: 1
   });
 
-  let labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
-  let labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
-  let labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
-  let labelD = board.create('text', [D.X(), D.Y() + 0.3, getLabel(3)]);
+  // ✅ LABELS REPOSITIONNÉS SELON LE NOUVEL ORDRE
+  let labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.2, getLabel(0)]); // HAUT-GAUCHE
+  let labelB = board.create('text', [B.X() + 0.15, B.Y() + 0.2, getLabel(1)]); // HAUT-DROITE
+  let labelC = board.create('text', [C.X() + 0.15, C.Y() - 0.2, getLabel(2)]); // BAS-DROITE
+  let labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.2, getLabel(3)]); // BAS-GAUCHE
   texts.push(labelA, labelB, labelC, labelD);
 
   addDraggingToPolygon(polygon, points, texts);
@@ -1792,53 +3029,18 @@ function drawRectangle(width, height) {
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
 }
 
-// Fonction pour détecter le type de quadrilatère pour l'affichage des mesures
+// ✅ NOUVELLE VERSION utilisant le détecteur centralisé
 function detectQuadrilateralType() {
-  if (!points || points.length !== 4) return 'unknown';
+  const figureInfo = getCurrentFigureType();
   
-  const tolerance = 0.1;
-  
-  // Calculer les longueurs des 4 côtés
-  const sideLengths = [];
-  for (let i = 0; i < 4; i++) {
-    const pt1 = points[i];
-    const pt2 = points[(i + 1) % 4];
-    const length = Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y());
-    sideLengths.push(length);
+  if (figureInfo.type === 'quadrilateral') {
+    console.log(`🎯 Détection centralisée: ${figureInfo.subtype}`);
+    return figureInfo.subtype; // 'square', 'rectangle', 'rhombus', 'parallelogram', 'irregular'
   }
   
-  // Compter combien de côtés sont égaux
-  const roundedLengths = sideLengths.map(l => Math.round(l * 100) / 100);
-  const uniqueLengths = [...new Set(roundedLengths.map(l => l.toFixed(2)))];
-  
-  // ✅ CORRECTION : Vérifier si c'est un quadrilatère rectangulaire (4 angles droits)
-  const hasRightAngles = isRectangularFigure();
-  
-  // LOGIQUE DE DÉTECTION
-  if (uniqueLengths.length === 1) {
-    // Tous les côtés égaux
-    if (hasRightAngles) {
-      return 'square'; // Carré
-    } else {
-      return 'rhombus'; // Losange
-    }
-  } else if (uniqueLengths.length === 2) {
-    // Deux paires de côtés égaux
-    if (hasRightAngles) {
-      return 'rectangle'; // Rectangle
-    } else {
-      // Vérifier si c'est un parallélogramme (côtés opposés égaux)
-      const isParallelogram = (
-        Math.abs(sideLengths[0] - sideLengths[2]) < tolerance &&
-        Math.abs(sideLengths[1] - sideLengths[3]) < tolerance
-      );
-      return isParallelogram ? 'parallelogram' : 'quadrilateral';
-    }
-  } else {
-    // Côtés de longueurs différentes
-    return 'quadrilateral';
-  }
+  return 'unknown';
 }
+
 function updateLengthLabels() {
   // ==========================================
   // 1. NETTOYAGE DES ANCIENS ÉLÉMENTS
@@ -1901,52 +3103,34 @@ function updateLengthLabels() {
   }
   
   const hideHypotenuse = hideHypotenuseCheckbox && hideHypotenuseCheckbox.checked;
-  const hypotenuseIndex = hideHypotenuse ? getHypotenuseIndex() : -1;
 
   // ==========================================
-  // 4. DÉTERMINER QUELS CÔTÉS AFFICHER - VERSION SIMPLIFIÉE
+  // 4. UTILISER LES HANDLERS POUR DÉTERMINER LES CÔTÉS
   // ==========================================
   
- function getSidesToShow() {
-  const n = points.length;
-  let sidesToShow = [];
-  
-  if (n === 3) {
-    // TRIANGLES : Tous les côtés par défaut
-    sidesToShow = [0, 1, 2];
+  function getSidesToShow() {
+    const handler = getCurrentFigureHandler();
     
-    // Filtrer l'hypoténuse si demandé
-    if (hideHypotenuse && hypotenuseIndex !== -1) {
-      sidesToShow = sidesToShow.filter(i => i !== hypotenuseIndex);
+    if (!handler) {
+      console.warn('⚠️ Pas de handler trouvé, affichage de tous les côtés');
+      return [...Array(points.length).keys()];
     }
     
-  } else if (n === 4) {
-    // ✅ DÉTECTION DU TYPE DE QUADRILATÈRE
-    const figureType = detectQuadrilateralType();
+    let sidesToShow = handler.getSidesToShow();
     
-    if (figureType === 'square' || figureType === 'rhombus') {
-      // CARRÉ ET LOSANGE : Seulement le côté du bas (index 3: D→A)
-      sidesToShow = [2];
-      console.log(`🔍 ${figureType} détecté → affichage côté bas uniquement`);
-      
-    } else if (figureType === 'rectangle' || figureType === 'parallelogram') {
-      // RECTANGLE ET PARALLÉLOGRAMME : Deux côtés consécutifs (bas et droite)
-      sidesToShow = [1, 2]; // AB (bas) et DA (gauche)
-      console.log(`🔍 ${figureType} détecté → affichage de 2 côtés consécutifs`);
-      
-    } else {
-      // QUADRILATÈRE GÉNÉRAL : Tous les côtés
-      sidesToShow = [0, 1, 2, 3];
-      console.log(`🔍 Quadrilatère général → affichage de tous les côtés`);
+    // Filtrer l'hypoténuse si nécessaire
+    if (hideHypotenuse && handler.shouldHideHypotenuse()) {
+      const hypotenuseIndex = handler.getHypotenuseIndex();
+      if (hypotenuseIndex !== -1) {
+        sidesToShow = sidesToShow.filter(i => i !== hypotenuseIndex);
+        console.log(`🚫 Hypoténuse (côté ${hypotenuseIndex}) cachée`);
+      }
     }
     
-  } else {
-    // AUTRES POLYGONES : Tous les côtés
-    sidesToShow = [...Array(n).keys()];
+    console.log(`🎯 Handler ${handler.constructor.name} → côtés: [${sidesToShow.join(', ')}]`);
+    
+    return sidesToShow;
   }
-  
-  return sidesToShow;
-}
 
   // ==========================================
   // 5. FONCTIONS UTILITAIRES
@@ -1954,7 +3138,7 @@ function updateLengthLabels() {
   
   function formatLength(len) {
     const rounded = Math.round(len * 10) / 10;
-    const space = '\u00A0'; // Espace insécable
+    const space = '\u00A0';
     const value = Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace('.', ',');
     return showUnits ? `${value}${space}${unit.trim()}` : `${value}`;
   }
@@ -1966,35 +3150,84 @@ function updateLengthLabels() {
     
     console.log(`🏷️ Création label pour côté ${sideIndex}: ${getLabel(sideIndex)}${getLabel((sideIndex + 1) % n)}`);
     
-    // Position du handle (sauvegardée ou par défaut)
+    // ==========================================
+    // CALCUL DE LA POSITION INTELLIGENTE
+    // ==========================================
+    
     let startX, startY;
-    const offset = -0.4; // Offset fixe pour simplifier
     
     if (savedPositions[sideIndex] && savedPositions[sideIndex] !== null) {
-      // Utiliser la position sauvegardée
+      // Position sauvegardée (déplacée manuellement)
       startX = savedPositions[sideIndex].x;
       startY = savedPositions[sideIndex].y;
     } else {
-      // Calculer la position par défaut
+      // ✅ NOUVEAU : Position par défaut avec règle pour quadrilatères
       const dx = pt2.X() - pt1.X();
       const dy = pt2.Y() - pt1.Y();
       const len = Math.hypot(dx, dy) || 1;
-
-        // ✅ CORRECTION : Décaler vers le bas pour le côté horizontal du carré
-  let offsetX = offset * (dy / len);
-  let offsetY = -offset * (dx / len);
-  
-  // ✅ AJOUT : Décalage supplémentaire vers le bas pour le côté du bas
-  if (Math.abs(dy) < 0.1) { // Si c'est un segment horizontal (côté du bas/haut)
-    offsetY -= 0.2; // Décaler encore plus vers le bas
-  }
       
-      // Position au milieu du côté + décalage perpendiculaire
-      startX = (pt1.X() + pt2.X()) / 2 + offset * (dy / len);
-      startY = (pt1.Y() + pt2.Y()) / 2 - offset * (dx / len);
+      // Point milieu du segment
+      const midX = (pt1.X() + pt2.X()) / 2;
+      const midY = (pt1.Y() + pt2.Y()) / 2;
+      
+      // ✅ DÉTECTION DU TYPE DE FIGURE
+      const figureType = getCurrentFigureType();
+      const isQuadrilateral = figureType && figureType.type === 'quadrilateral';
+      
+      let offsetX, offsetY;
+      
+      if (isQuadrilateral) {
+        // ✅ RÈGLE POUR QUADRILATÈRES : Placer à l'EXTÉRIEUR
+        
+        // Calculer le centre de la figure pour déterminer la direction "extérieure"
+        const figureCenter = getFigureCenter();
+        const centerX = figureCenter[0];
+        const centerY = figureCenter[1];
+        
+        // Vecteur perpendiculaire au segment (2 directions possibles)
+        const perpX = -dy / len;
+        const perpY = dx / len;
+        
+        // Vecteur du centre vers le milieu du segment
+        const toCenterX = midX - centerX;
+        const toCenterY = midY - centerY;
+        
+        // Choisir la direction perpendiculaire qui s'ÉLOIGNE du centre
+        const dotProduct = toCenterX * perpX + toCenterY * perpY;
+        const direction = dotProduct > 0 ? 1 : -1; // 1 = s'éloigner, -1 = se rapprocher
+        
+        // Appliquer le décalage vers l'EXTÉRIEUR
+        const offset = 0.5; // Distance du segment
+        offsetX = direction * perpX * offset;
+        offsetY = direction * perpY * offset;
+        
+        console.log(`📐 Quadrilatère détecté : label ${sideIndex} placé à l'EXTÉRIEUR (direction: ${direction > 0 ? 'vers ext.' : 'vers int. (corrigé)'})`);
+        
+      } else {
+        // ✅ RÈGLE POUR AUTRES FIGURES (triangles, polygones) : Position intelligente
+        
+        const offset = -0.4;
+        offsetX = -offset * (dy / len);
+        offsetY = offset * (dx / len);
+        
+        // Ajustement spécial pour segments horizontaux (vers le bas)
+        if (Math.abs(dy) < 0.1) {
+          offsetY += 0.2;
+        }
+        
+        console.log(`📐 Figure non-quadrilatère : placement standard pour côté ${sideIndex}`);
+      }
+      
+      // Position finale
+      startX = midX + offsetX;
+      startY = midY + offsetY;
     }
 
-    // Créer le handle invisible déplaçable
+    // ==========================================
+    // CRÉATION DU HANDLE ET DU LABEL
+    // ==========================================
+
+    // Handle invisible déplaçable
     const handle = board.create('point', [startX, startY], {
       size: 6,
       strokeOpacity: 0,
@@ -2012,7 +3245,7 @@ function updateLengthLabels() {
       if (handle.rendNode) handle.rendNode.style.cursor = 'move'; 
     } catch (e) {}
 
-    // Créer le label qui suit le handle
+    // Label qui suit le handle
     const label = board.create('text', [
       () => handle.X(),
       () => handle.Y(),
@@ -2036,7 +3269,7 @@ function updateLengthLabels() {
       handle, 
       pt1, 
       pt2, 
-      offset,
+      offset: 0.5,
       sideIndex 
     });
     
@@ -2085,12 +3318,12 @@ function updateLengthLabels() {
   }
 
   // ==========================================
-  // 6. CRÉER TOUS LES LABELS
+  // 6. UTILISER LE HANDLER POUR CRÉER LES LABELS
   // ==========================================
   
   const sidesToShow = getSidesToShow();
   
-  console.log(`🔍 Côtés à afficher pour figure de ${points.length} points:`, sidesToShow);
+  console.log(`🔍 Côtés à afficher: [${sidesToShow.join(', ')}]`);
   
   sidesToShow.forEach(sideIndex => {
     createLengthLabel(sideIndex);
@@ -2551,6 +3784,8 @@ createBoardControls();
   radiusLabelAnchor = null;
   extraElements = [];
   r = null;
+  intersectionLabel = null;
+  intersectionPoint = null;
 }
 
 function enableDrag() {
@@ -2577,7 +3812,8 @@ const suggestionsList = [
   "losange de côté 5",
   "parallélogramme 5 x 3",
   "hexagone de côté 4",
-  "pentagone de côté 4"
+  "pentagone de côté 4",
+  "octogone de côté 4"
 ];
 
 // Affichage dynamique des suggestions
@@ -2830,6 +4066,33 @@ document.addEventListener('DOMContentLoaded', function () {
   addSafeEventListener('toggleDiagonals', 'change', () => {
     if (typeof updateDiagonals === 'function') updateDiagonals();
   }, 'Diagonales');
+  
+      // ✅ Event listener pour la checkbox d'intersection
+    addSafeEventListener('toggleIntersectionLabel', 'change', () => {
+      if (typeof updateDiagonals === 'function') updateDiagonals();
+    }, 'Label d\'intersection');
+
+    // ✅ Event listener pour le champ texte d'intersection
+    addSafeEventListener('intersectionTextInput', 'input', () => {
+      const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
+      if (showIntersectionLabel && typeof updateDiagonals === 'function') {
+        updateDiagonals(); // Recréer le label avec le nouveau texte
+      }
+    }, 'Texte d\'intersection');
+
+    // ✅ Event listener pour Enter dans le champ texte
+    const intersectionTextInput = document.getElementById('intersectionTextInput');
+    if (intersectionTextInput) {
+      intersectionTextInput.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
+          if (showIntersectionLabel && typeof updateDiagonals === 'function') {
+            updateDiagonals();
+          }
+        }
+      });
+    }
   
   // Angles égaux
   addSafeEventListener('toggleEqualAngles', 'change', (e) => {
@@ -3260,7 +4523,68 @@ function getEngagementRatio() {
   });
 }
 
-// Copier le board JSXGraph dans le presse-papier (image PNG) avec découpage intelligent
+// ✅ FONCTION D'EXPORT SVG
+function exportBoardToSVG() {
+  try {
+    // Mise à jour des éléments visuels avant export
+    if (document.getElementById('toggleDiagonals')?.checked) {
+      updateDiagonals();
+    }
+    if (document.getElementById('toggleCodings')?.checked) {
+      updateCodings();
+    }
+    if (document.getElementById('toggleRadius')?.checked || document.getElementById('toggleDiameter')?.checked) {
+      updateCircleExtras();
+    }
+    if (document.getElementById('toggleEqualAngles')?.checked) {
+      updateEqualAngleMarkers(true);
+    }
+    if (document.getElementById('toggleRightAngles')?.checked) {
+      updateRightAngleMarkers(true);
+    }
+    
+    board.update();
+
+    // Obtenir le SVG du board
+    const svgRoot = board.renderer.svgRoot;
+    if (!svgRoot) {
+      alert('❌ Impossible de générer le SVG');
+      return;
+    }
+
+    // Cloner le SVG pour éviter de modifier l'original
+    const svgClone = svgRoot.cloneNode(true);
+    
+    // Ajouter les namespace nécessaires
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    
+    // Serializer le SVG
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgClone);
+    
+    // Créer le fichier et le télécharger
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'figure-geometrique.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Nettoyer l'URL
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
+    console.log('✅ Export SVG réussi');
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'export SVG:', error);
+    alert('❌ Erreur lors de l\'export SVG');
+  }
+}
+
 // Copier le board JSXGraph dans le presse-papier (image PNG) avec dimensions réelles
 async function copyBoardToClipboard() {
   try {
