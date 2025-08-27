@@ -933,7 +933,7 @@ function updateEqualAngleMarkers(visible) {
       const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
       const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
       if (l1 === 0 || l2 === 0) continue;
-      const u1x = v1x / l1, u1y = v1y / l1;
+      const u1x =
       const u2x = v2x / l2, u2y = v2y / l2;
 
       let a1 = Math.atan2(u1y, u1x);
