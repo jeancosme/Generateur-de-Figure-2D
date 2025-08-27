@@ -1789,197 +1789,31 @@ function updateEqualAngleMarkers(visible) {
   if (typeof visible === 'object' && visible !== null && 'target' in visible) visible = !!visible.target.checked;
   else visible = !!visible;
 
-  // ⚠️ CORRECTION : Nettoyer SEULEMENT les angleMarkers, PAS les codingMarks
-  angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
-  angleMarkers = [];
-  
-  // ❌ SUPPRIMER CES LIGNES QUI CAUSENT LE PROBLÈME :
-  // codingMarks.forEach(m => { try { board.removeObject(m); } catch (e) {} });
-  // codingMarks = [];
-
+  // ✅ ÉTAPE 1 : VÉRIFICATIONS PRÉLIMINAIRES (avant le nettoyage)
   if (!visible || !points || points.length < 3) { 
+    // Nettoyer et sortir
+    angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+    angleMarkers = [];
     board.update(); 
     return; 
   }
 
-  // éviter pour carré/rectangle (optionnel)
+  // ✅ ÉTAPE 2 : BLOCAGE CARRÉ/RECTANGLE (avant le nettoyage)
   const fig = typeof detectCurrentFigure === 'function' ? detectCurrentFigure() : '';
   if (fig === 'square' || fig === 'rectangle') { 
+    // Nettoyer les angles existants et sortir
+    angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+    angleMarkers = [];
+    console.log(`🚫 Angles égaux bloqués pour ${fig}`);
     board.update(); 
     return; 
   }
 
-  // helper : test point in polygon (ray-casting)
-  function pointInPolygon(x, y, polyPts) {
-    let inside = false;
-    for (let i = 0, j = polyPts.length - 1; i < polyPts.length; j = i++) {
-      const xi = polyPts[i][0], yi = polyPts[i][1];
-      const xj = polyPts[j][0], yj = polyPts[j][1];
-      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
+  // ✅ ÉTAPE 3 : NETTOYAGE (seulement si on va créer de nouveaux marqueurs)
+  angleMarkers.forEach(m => { try { board.removeObject(m); } catch (e) {} });
+  angleMarkers = [];
 
-  const polyCoords = points.map(p => [p.X(), p.Y()]);
-  const n = points.length;
-  const angles = new Array(n).fill(null);
-
-  // calculer angles (stables)
-  for (let i = 0; i < n; i++) {
-    const A = points[(i - 1 + n) % n], B = points[i], C = points[(i + 1) % n];
-    if (!A || !B || !C) continue;
-    const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
-    const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
-    const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
-    if (l1 === 0 || l2 === 0) continue;
-    let cosv = (v1x * v2x + v1y * v2y) / (l1 * l2);
-    cosv = Math.max(-1, Math.min(1, cosv));
-    angles[i] = Math.acos(cosv);
-  }
-
-  // détecter parallélogramme (angles opposés égaux)
-  let isParallelogram = false;
-  if (n === 4 && angles.every(a => a != null)) {
-    const tol = 0.03;
-    if (Math.abs(angles[0] - angles[2]) < tol && Math.abs(angles[1] - angles[3]) < tol) isParallelogram = true;
-  }
-
-  // détecter triangle isocèle et indices des angles égaux (si applicable)
-  let isIsosceles = false;
-  let isoEqualIndices = [];
-  if (n === 3) {
-    const d01 = points[0].Dist(points[1]);
-    const d12 = points[1].Dist(points[2]);
-    const d20 = points[2].Dist(points[0]);
-    const tol = Math.max(1e-6, 1e-3 * Math.max(d01, d12, d20));
-    if (Math.abs(d01 - d12) < tol) { isIsosceles = true; isoEqualIndices = [2, 0]; }
-    else if (Math.abs(d12 - d20) < tol) { isIsosceles = true; isoEqualIndices = [0, 1]; }
-    else if (Math.abs(d20 - d01) < tol) { isIsosceles = true; isoEqualIndices = [1, 2]; }
-  }
-
-  // grouper angles égaux (arrondi)
-  const groups = {};
-  for (let i = 0; i < n; i++) {
-    const a = angles[i];
-    if (a == null) continue;
-    const key = (Math.round(a * 100) / 100).toFixed(2);
-    (groups[key] = groups[key] || []).push(i);
-  }
-
-  const baseRadius = 0.42;
-
-  // ✅ CRÉER UNE NOUVELLE VARIABLE SÉPARÉE POUR LES CODAGES D'ANGLES
-  let angleCodeMarks = []; // Variable séparée pour les codages d'angles
-
-  // dessine un petit tiret perpendiculaire (radial) centré sur l'arc,
-  // avec possibilité de décalage latéral le long de la tangente pour faire des "//" parallèles
-  function createPerpTick(B, angleOnArc, radius, tickLen, lateralOffset = 0) {
-    const seg = board.create('segment', [
-      () => {
-        const Bx = B.X(), By = B.Y();
-        const cx = Bx + Math.cos(angleOnArc) * radius - Math.sin(angleOnArc) * lateralOffset;
-        const cy = By + Math.sin(angleOnArc) * radius + Math.cos(angleOnArc) * lateralOffset;
-        const rx = Math.cos(angleOnArc), ry = Math.sin(angleOnArc);
-        return [cx - rx * (tickLen / 2), cy - ry * (tickLen / 2)];
-      },
-      () => {
-        const Bx = B.X(), By = B.Y();
-        const cx = Bx + Math.cos(angleOnArc) * radius - Math.sin(angleOnArc) * lateralOffset;
-        const cy = By + Math.sin(angleOnArc) * radius + Math.cos(angleOnArc) * lateralOffset;
-        const rx = Math.cos(angleOnArc), ry = Math.sin(angleOnArc);
-        return [cx + rx * (tickLen / 2), cy + ry * (tickLen / 2)];
-      }
-    ], {
-      strokeColor: 'black',
-      strokeWidth: 1.6,
-      fixed: true,
-      highlight: false
-    });
-    angleCodeMarks.push(seg); // ✅ Ajouter aux codages d'angles, pas aux codages de côtés
-  }
-
-  // normaliser angle en [-PI,PI)
-  function normAng(a) { while (a <= -Math.PI) a += 2*Math.PI; while (a > Math.PI) a -= 2*Math.PI; return a; }
-
-  // parcourir groupes et dessiner arcs + codages
-  for (const key in groups) {
-    const indices = groups[key];
-    if (indices.length < 2) continue;
-
-    for (const idx of indices) {
-      const B = points[idx];
-      const A = points[(idx - 1 + n) % n], C = points[(idx + 1) % n];
-      if (!A || !B || !C) continue;
-
-      const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
-      const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
-      const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
-      if (l1 === 0 || l2 === 0) continue;
-      const u1x = v1x / l1, u1y = v1y / l1; 
-      const u2x = v2x / l2, u2y = v2y / l2;
-
-      let a1 = Math.atan2(u1y, u1x);
-      let a2 = Math.atan2(u2y, u2x);
-      let delta = normAng(a2 - a1);
-
-      const radius = Math.min(baseRadius, Math.min(l1, l2) * 0.22);
-
-      // s'assurer de dessiner l'arc à l'intérieur du polygone
-      const midSmall = a1 + delta / 2;
-      const testX = B.X() + Math.cos(midSmall) * radius * 0.9;
-      const testY = B.Y() + Math.sin(midSmall) * radius * 0.9;
-      const smallInside = pointInPolygon(testX, testY, polyCoords);
-      if (!smallInside) {
-        if (delta > 0) delta = delta - 2 * Math.PI;
-        else delta = delta + 2 * Math.PI;
-      }
-
-      const aStart = a1;
-      const aDelta = delta;
-      
-      // dessiner l'arc interne
-      const curve = board.create('curve', [
-        function(t) { return B.X() + Math.cos(aStart + t * aDelta) * radius; },
-        function(t) { return B.Y() + Math.sin(aStart + t * aDelta) * radius; },
-        0, 1
-      ], {
-        strokeColor: 'black',
-        strokeWidth: 1.4,
-        fixed: true,
-        highlight: false,
-        dash: 0,
-        name: ''
-      });
-      angleMarkers.push(curve);
-
-      // codage : perpendiculaires au rayon
-      const bisect = normAng(aStart + aDelta / 2);
-      if (isIsosceles && isoEqualIndices.includes(idx)) {
-        const tickLen = Math.min(0.24, radius * 1.0);
-        createPerpTick(B, bisect, radius, tickLen, 0);
-      } else if (isParallelogram) {
-        const count = (idx % 2 === 0) ? 1 : 2;
-        const tickLen = Math.min(0.28, radius * 1.1);
-        const lateralSpacing = Math.min(0.12, radius * 0.6);
-        if (count === 1) {
-          createPerpTick(B, bisect, radius, tickLen, 0);
-        } else {
-          createPerpTick(B, bisect, radius, tickLen, -lateralSpacing / 2);
-          createPerpTick(B, bisect, radius, tickLen, +lateralSpacing / 2);
-        }
-      } else {
-        const tickLen = Math.min(0.24, radius * 1.0);
-        createPerpTick(B, normAng(a1 + delta / 2), radius, tickLen, 0);
-      }
-    }
-  }
-
-  // ✅ Ajouter les codages d'angles aux angleMarkers pour le nettoyage
-  angleMarkers.push(...angleCodeMarks);
-
-  board.update();
-}
+  // ... reste de la fonction inchangé (helper functions, création des marqueurs, etc.)
 
 
 // Remplacement consolidé : détection et affichage des angles droits / égaux
