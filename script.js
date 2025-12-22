@@ -2821,11 +2821,41 @@ function generateFigure() {
       console.log(`✅ Carré généré (côté: ${size})`);
     }
     
-    else if (input.includes("triangle rectangle") || input.includes("triangle droit")) {
-    const [base, height] = extractTwoNumbers(input, [3, 4]);
-    drawRightTriangle(base, height);
-    console.log(`✅ Triangle rectangle généré (base: ${base}, hauteur: ${height})`);
+    // TRIANGLES
+    else if (input.includes("triangle")) {
+      // Triangle quelconque avec 3 côtés (priorité absolue)
+      if ((input.includes("côté") || input.includes("cote") || input.includes("longueur")) 
+          && input.match(/(\d+(?:[.,]\d+)?)/g)?.length >= 3) {
+        const [a, b, c] = extractThreeNumbers(input, [3, 4, 5]);
+        drawScaleneTriangleFromSides(a, b, c);
+        console.log(`✅ Triangle quelconque généré (côtés: ${a}, ${b}, ${c})`);
+      }
+      // Triangle rectangle
+      else if (input.includes("rectangle") || input.includes("droit")) {
+        const [base, height] = extractTwoNumbers(input, [3, 4]);
+        drawRightTriangle(base, height);
+        console.log(`✅ Triangle rectangle généré (base: ${base}, hauteur: ${height})`);
+      }
+      // Triangle équilatéral
+      else if (input.includes("équilatéral") || input.includes("equilateral")) {
+        const side = extractNumber(input, 4);
+        drawEquilateralTriangle(side);
+        console.log(`✅ Triangle équilatéral généré (côté: ${side})`);
+      }
+      // Triangle isocèle
+      else if (input.includes("isocèle") || input.includes("isocele")) {
+        const [base, height] = extractTwoNumbers(input, [6, 4]);
+        drawIsoscelesTriangle(base, height);
+        console.log(`✅ Triangle isocèle généré (base: ${base}, hauteur: ${height})`);
+      }
+      // Triangle quelconque par défaut (avec base et hauteur)
+      else {
+        const [base, height] = extractTwoNumbers(input, [4, 3]);
+        drawRightTriangle(base, height);
+        console.log(`✅ Triangle généré (base: ${base}, hauteur: ${height})`);
+      }
     }
+    
     // RECTANGLES
     else if (input.includes("rectangle")) {
       const [width, height] = extractTwoNumbers(input, [5, 3]);
@@ -2845,26 +2875,6 @@ function generateFigure() {
       const [base, side] = extractTwoNumbers(input, [5, 3]);
       drawParallelogram(base, side);
       console.log(`✅ Parallélogramme généré (base: ${base}, côté: ${side})`);
-    }
-    
-    // TRIANGLES
-    else if (input.includes("triangle")) {
-      if (input.includes("équilatéral") || input.includes("equilateral")) {
-        const side = extractNumber(input, 4);
-        drawEquilateralTriangle(side);
-        console.log(`✅ Triangle équilatéral généré (côté: ${side})`);
-      }
-      else if (input.includes("isocèle") || input.includes("isocele")) {
-        const [base, height] = extractTwoNumbers(input, [6, 4]);
-        drawIsoscelesTriangle(base, height);
-        console.log(`✅ Triangle isocèle généré (base: ${base}, hauteur: ${height})`);
-      }
-      else {
-        // Triangle quelconque par défaut
-        const [base, height] = extractTwoNumbers(input, [4, 3]);
-        drawRightTriangle(base, height);
-        console.log(`✅ Triangle généré (base: ${base}, hauteur: ${height})`);
-      }
     }
     
     // CERCLES
@@ -3024,6 +3034,23 @@ document.getElementById("promptInput").addEventListener("keydown", function(even
     const matches = text.match(/(\d+(?:[.,]\d+)?)/g);
     if (!matches || matches.length < 2) return defaultValues;
     return matches.slice(0, 2).map(n => parseFloat(n.replace(',', '.')));
+}
+
+/**
+ * Extrait trois nombres d'une chaîne de texte
+ * @param {string} text - Texte contenant les nombres
+ * @param {Array} defaultValues - Valeurs par défaut [a, b, c]
+ * @returns {Array} Tableau de 3 nombres
+ */
+function extractThreeNumbers(text, defaultValues = [3, 4, 5]) {
+    const matches = text.match(/(\d+(?:[.,]\d+)?)/g);
+    
+    if (!matches || matches.length < 3) {
+        console.warn(`⚠️ Moins de 3 nombres trouvés dans "${text}", utilisation des valeurs par défaut`);
+        return defaultValues;
+    }
+    
+    return matches.slice(0, 3).map(n => parseFloat(n.replace(',', '.')));
 }
 
 function addDraggingToPolygon(polygon, points, texts, handles = []) {
@@ -3629,6 +3656,65 @@ function drawCircle(radius) {
   updateCircleExtras();
 }
 
+/**
+ * Dessine un triangle quelconque connaissant les trois côtés
+ * @param {number} a - Longueur du premier côté
+ * @param {number} b - Longueur du deuxième côté
+ * @param {number} c - Longueur du troisième côté
+ */
+function drawScaleneTriangleFromSides(a, b, c) {
+  // Vérification de l'inégalité triangulaire
+  if (a + b <= c || a + c <= b || b + c <= a) {
+    alert(`⚠️ Impossible de construire un triangle avec ces côtés !\n\n` +
+          `Vérification de l'inégalité triangulaire :\n` +
+          `• ${a} + ${b} = ${a + b} ${a + b > c ? '>' : '≤'} ${c}\n` +
+          `• ${a} + ${c} = ${a + c} ${a + c > b ? '>' : '≤'} ${b}\n` +
+          `• ${b} + ${c} = ${b + c} ${b + c > a ? '>' : '≤'} ${a}\n\n` +
+          `Pour former un triangle, la somme de deux côtés doit être strictement supérieure au troisième.`);
+    console.error(`❌ Triangle invalide : a=${a}, b=${b}, c=${c} ne respectent pas l'inégalité triangulaire`);
+    return;
+  }
+
+  // Placement des points :
+  // A à l'origine
+  // B sur l'axe X à distance a de A
+  // C calculé avec la loi des cosinus
+  
+  // Loi des cosinus pour trouver l'angle en A : cos(A) = (b² + c² - a²) / (2bc)
+  const cosA = (b * b + c * c - a * a) / (2 * b * c);
+  const angleA = Math.acos(cosA);
+  
+  // Position de C : à distance b de A et angle angleA par rapport à l'axe X
+  const Cx = b * Math.cos(angleA);
+  const Cy = b * Math.sin(angleA);
+  
+  // Centrage de la figure
+  const centerX = a / 2;
+  const centerY = Cy / 2;
+  
+  // Création des points avec centrage
+  const A = board.create('point', [-centerX, -centerY], {visible: false, fixed: true});
+  const B = board.create('point', [a - centerX, -centerY], {visible: false, fixed: true});
+  const C = board.create('point', [Cx - centerX, Cy - centerY], {visible: false, fixed: true});
+
+  points = [A, B, C];
+  polygon = board.create('polygon', points, {
+    borders: {strokeColor: "black", fixed: true},
+    fillColor: "white",
+    fillOpacity: 1
+  });
+
+  // Labels des sommets
+  const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
+  const labelB = board.create('text', [B.X(), B.Y() - 0.3, getLabel(1)]);
+  const labelC = board.create('text', [C.X(), C.Y() + 0.3, getLabel(2)]);
+  texts.push(labelA, labelB, labelC);
+
+  addDraggingToPolygon(polygon, points, texts);
+  
+  console.log(`→ Triangle quelconque généré avec côtés a=${a}, b=${b}, c=${c}`);
+}
+
 
 function drawRightTriangle(base, height) {
 const offsetX = -base / 2;
@@ -4002,6 +4088,9 @@ const suggestionsList = [
   "triangle équilatéral de côté 4",
   "triangle rectangle de base 3 et hauteur 4",
   "triangle isocèle de base 6 et hauteur 4",
+  "triangle côtés 3, 4, 5",
+  "triangle de côtés 5, 6, 7",
+  "triangle quelconque 4, 5, 6",
   "cercle de rayon 2",
   "losange de côté 5",
   "parallélogramme 5 x 3",
