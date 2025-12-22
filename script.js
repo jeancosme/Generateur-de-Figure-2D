@@ -4448,6 +4448,7 @@ document.addEventListener('DOMContentLoaded', function () {
           'Triangle équilatéral': 'triangle équilatéral de côté 4',
           'Triangle rectangle': 'triangle rectangle de base 3 et hauteur 4',
           'Triangle isocèle': 'triangle isocèle de base 6 et hauteur 4',
+          'Triangle quelconque': 'triangle côtés 4.5, 5, 7',
           'Cercle': 'cercle de rayon 2',
           'Losange': 'losange de côté 5',
           'Parallélogramme': 'parallélogramme base 5 hauteur 3',
