@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur de figure 2D</title>
+
+  <!-- Lien vers le CSS -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/x-icon" href="favicon_io\favicon.ico">
+
+  <!-- JSXGraph -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css">
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+
+  <!-- ✅ MODULES ES6 - Architecture modulaire -->
+  <script type="module" defer src="js/main.js"></script>
+
+</head>
+
+<body>
+  <h1>Générateur de figure 2D</h1>
+    <!-- Barre avec prompt + bouton -->
+  <div class="controls">
+    <div class="control-group">
+      <label for="promptInput" class="control-label">Nature de la figure</label>
+      <div class="input-container">
+        <input type="text" id="promptInput" placeholder="Ex : carré de côté 4" autocomplete="off">
+        <div class="suggestions" id="suggestionBox" style="display: none;"></div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label for="labelInput" class="control-label">Nom de la figure</label>
+      <input type="text" id="labelInput" placeholder="Lettres des points (ex: ABCD ou A,B,C,D)">
+    </div>
+
+    <div class="control-actions">
+      <button onclick="generateFigure()">Générer</button>
+    </div>
+  </div>
+
+<div class="layout">
+  <!-- zone de dessin (gauche) -->
+  <div id="jxgbox" class="jxgbox"></div>
+
+  <!-- colonne droite qui contient le panneau options (à gauche) et le panneau figures (à droite) -->
+  <div class="right-column">
+    <div class="options-column">
+      <div id="optionsPanel" class="option-box">
+        <h3>🛠️ Options d'affichage</h3>
+
+        <label><input type="checkbox" id="toggleRightAngles"> Afficher les angles droits</label>
+
+        <!-- NOUVELLE CHECKBOX CONDITIONNELLE -->
+        <div id="singleAngleGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="toggleSingleAngle"> Afficher un seul angle
+          </label>
+        </div>
+
+        <label><input type="checkbox" id="toggleEqualAngles"> Afficher les angles égaux</label>
+
+        <label>
+          <input type="checkbox" id="toggleLengths"> Afficher les mesures
+        </label>
+
+        <div id="unitGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="showUnitsCheckbox"> Afficher les unités
+          </label>
+          <select id="unitSelector" style="margin-left: 10px; font-size: 13px;">
+            <option value="cm">cm</option>
+            <option value="m">m</option>
+            <option value="mm">mm</option>
+          </select>
+        </div>
+
+        <!-- NOUVELLE CHECKBOX CONDITIONNELLE POUR L'HYPOTÉNUSE -->
+        <div id="hypotenuseGroup" style="display: none; margin-left: 20px; margin-top: 5px;">
+          <label style="font-size: 13px;">
+            <input type="checkbox" id="toggleHideHypotenuse"> Cacher l'hypoténuse
+          </label>
+        </div>
+
+        <label><input type="checkbox" id="toggleCodings"> Afficher les codages</label>
+        <label><input type="checkbox" id="toggleDiagonals"> Afficher les diagonales</label>
+              <div id="intersectionGroup" class="sub-option" style="display: none; margin-left: 20px; margin-top: 8px;">
+                 <div class="checkbox-item" style="display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="toggleIntersectionLabel">
+                  <label for="toggleIntersectionLabel" style="margin-right: 8px;">Nommer l'intersection</label>
+                  <input type="text" id="intersectionTextInput" placeholder="I" maxlength="3" 
+                        style="width: 40px; padding: 2px 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px;">
+                  </div>
+                </div>
+        <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
+        <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
+        <label><input type="checkbox" id="toggleHandDrawn"> Dessin à main levée</label>
+      </div>
+
+      <!-- bouton placé sous le panneau (HTML statique) -->
+      <button id="exportSvgBtn" class="export-btn external-export-btn" type="button"
+              title="Télécharger la figure au format SVG" onclick="exportBoardToSVG()">
+        Exporter SVG
+      </button>
+    </div>
+
+    <!-- panneau des figures (à droite du panneau d'options) -->
+    <div id="figuresPanel" class="figures-panel">
+      <h3>📚 Liste des figures</h3>
+        <ul id="figuresList" class="figures-list" role="list">
+          <!-- ORDRE ALPHABÉTIQUE -->
+          <li data-prompt="carré de côté 4"><span class="figure-name">Carré</span><span class="figure-desc"> — côté 4</span></li>
+          <li data-prompt="cercle de rayon 2"><span class="figure-name">Cercle</span><span class="figure-desc"> — rayon 2</span></li>
+          <li data-prompt="hexagone de côté 4"><span class="figure-name">Hexagone</span><span class="figure-desc"> — côté 4</span></li>
+          <li data-prompt="losange de côté 5"><span class="figure-name">Losange</span><span class="figure-desc"> — côté 5</span></li>
+          <li data-prompt="parallélogramme 5 x 3 "><span class="figure-name">Parallélogramme</span><span class="figure-desc"> — 5 x 3</span></li>
+          <li data-prompt="rectangle 5 sur 3"><span class="figure-name">Rectangle</span><span class="figure-desc"> — 5 × 3</span></li>
+          <li data-prompt="triangle équilatéral de côté 4"><span class="figure-name">Triangle équilatéral</span><span class="figure-desc"> — côté 4</span></li>
+          <li data-prompt="triangle isocèle de base 6 et hauteur 4"><span class="figure-name">Triangle isocèle</span><span class="figure-desc"> — base 6, hauteur 4</span></li>
+          <li data-prompt="triangle côtés 4.5, 5, 7"><span class="figure-name">Triangle quelconque</span><span class="figure-desc"> — côtés 4.5, 5, 7</span></li>
+          <li data-prompt="triangle rectangle de base 3 et hauteur 4"><span class="figure-name">Triangle rectangle</span><span class="figure-desc"> — base 3, hauteur 4</span></li>
+        </ul>
+    </div>
+  </div>
+</div>
+
+  <!-- Pied de page -->
+<footer id="footer">
+  <div class="footer-content">
+    <div class="footer-left">
+      Développé par<strong>Jean-Cosme Garnier</strong><br>Avec assistance IA (ChatGPT/Mistral/Claude)<br>
+      <a href="https://github.com/jeancosme/Generateur-de-Figure-2D" target="_blank" class="credit-link">Lien vers le projet</a>
+    </div>
+    <div class="footer-right">
+      Licence MIT
+    </div>
+  </div>
+</footer>
+ 
+  <!-- Explications -->
+  <div id="helpBox" style="display: none;">
+  <h3> Explications</h3>
+  <p>Utilise la barre de script pour décrire une figure, par exemple :</p>
+  <ul>
+    <li><code>carré de côté 4</code></li>
+    <li><code>rectangle de 5 sur 3</code></li>
+    <li><code>triangle équilatéral de côté 6</code></li>
+  </ul>
+  <p>Tu peux aussi afficher des éléments :</p>
+  <ul>
+    <li>✔️ les angles droits</li>
+    <li>✔️ les longueurs, les unités</li>
+    <li>✔️ les codages, diagonales, rayons, diamètres</li>
+  </ul>
+  <p>👉 Clique sur <strong>"Générer"</strong> pour afficher la figure. Tu peux la faire tourner ou la réinitialiser avec les boutons au-dessus.</p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Modules</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js"></script>
+</head>
+<body>
+  <h1>Test Modules ES6</h1>
+  
+  <div>
+    <input type="text" id="promptInput" placeholder="Entrez une figure" value="carré de côté 5" />
+    <button onclick="window.generateFigure()">Générer</button>
+  </div>
+  
+  <div id="jxgbox" style="width:600px; height:600px; border:1px solid #ccc; margin-top:20px;"></div>
+  
+  <div id="console-log" style="margin-top:20px; padding:10px; background:#f0f0f0; font-family:monospace; white-space:pre-wrap;"></div>
+  
+  <script>
+    // Intercepter console.log pour l'afficher dans la page
+    const consoleDiv = document.getElementById('console-log');
+    const originalLog = console.log;
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      consoleDiv.textContent += args.join(' ') + '\n';
+    };
+    
+    // Intercepter les erreurs
+    window.onerror = function(msg, url, line, col, error) {
+      consoleDiv.textContent += `❌ ERREUR: ${msg} (ligne ${line})\n`;
+      return false;
+    };
+  </script>
+  
+  <script type="module">
+    import { generateFigure } from './js/ui.js';
+    import { initBoard } from './js/board.js';
+    
+    console.log('🔍 Test de chargement des modules...');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ DOMContentLoaded déclenché');
+      
+      // Initialiser le board
+      try {
+        initBoard();
+        console.log('✅ Board initialisé');
+      } catch(e) {
+        console.log('❌ Erreur initBoard:', e.message);
+      }
+      
+      // Exposer generateFigure
+      window.generateFigure = generateFigure;
+      console.log('✅ generateFigure exposé');
+      
+      // Test manuel
+      console.log('🧪 Test de génération...');
+      setTimeout(() => {
+        try {
+          generateFigure();
+          console.log('✅ Génération réussie !');
+        } catch(e) {
+          console.log('❌ Erreur génération:', e.message, e.stack);
+        }
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
