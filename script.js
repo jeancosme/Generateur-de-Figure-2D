@@ -3712,6 +3712,9 @@ function drawScaleneTriangleFromSides(a, b, c) {
 
   addDraggingToPolygon(polygon, points, texts);
   
+  // Mise à jour des labels de longueur si la checkbox est cochée
+  updateLengthLabels(document.getElementById("toggleLengths").checked);
+  
   console.log(`→ Triangle quelconque généré avec côtés a=${a}, b=${b}, c=${c}`);
 }
 
