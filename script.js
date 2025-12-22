@@ -3658,9 +3658,9 @@ function drawCircle(radius) {
 
 /**
  * Dessine un triangle quelconque connaissant les trois côtés
- * @param {number} a - Longueur du premier côté
- * @param {number} b - Longueur du deuxième côté
- * @param {number} c - Longueur du troisième côté
+ * @param {number} a - Longueur du côté AB (base)
+ * @param {number} b - Longueur du côté BC
+ * @param {number} c - Longueur du côté CA
  */
 function drawScaleneTriangleFromSides(a, b, c) {
   // Vérification de l'inégalité triangulaire
@@ -3676,17 +3676,19 @@ function drawScaleneTriangleFromSides(a, b, c) {
   }
 
   // Placement des points :
-  // A à l'origine
-  // B sur l'axe X à distance a de A
-  // C calculé avec la loi des cosinus
+  // A à l'origine (0, 0)
+  // B sur l'axe X à distance a de A  → AB = a
+  // C calculé pour que BC = b et CA = c
   
-  // Loi des cosinus pour trouver l'angle en A : cos(A) = (b² + c² - a²) / (2bc)
-  const cosA = (b * b + c * c - a * a) / (2 * b * c);
-  const angleA = Math.acos(cosA);
+  // On utilise la loi des cosinus pour trouver l'angle en B
+  // c² = a² + b² - 2ab·cos(B)
+  // cos(B) = (a² + b² - c²) / (2ab)
+  const cosB = (a * a + b * b - c * c) / (2 * a * b);
+  const angleB = Math.acos(Math.max(-1, Math.min(1, cosB))); // Clamp pour éviter les erreurs d'arrondi
   
-  // Position de C : à distance b de A et angle angleA par rapport à l'axe X
-  const Cx = b * Math.cos(angleA);
-  const Cy = b * Math.sin(angleA);
+  // Position de C : depuis B, à distance b, avec un angle (π - angleB) par rapport à l'axe X
+  const Cx = a - b * Math.cos(angleB);
+  const Cy = b * Math.sin(angleB);
   
   // Centrage de la figure
   const centerX = a / 2;
@@ -3715,7 +3717,7 @@ function drawScaleneTriangleFromSides(a, b, c) {
   // Mise à jour des labels de longueur si la checkbox est cochée
   updateLengthLabels(document.getElementById("toggleLengths").checked);
   
-  console.log(`→ Triangle quelconque généré avec côtés a=${a}, b=${b}, c=${c}`);
+  console.log(`→ Triangle quelconque généré avec côtés AB=${a}, BC=${b}, CA=${c}`);
 }
 
 
