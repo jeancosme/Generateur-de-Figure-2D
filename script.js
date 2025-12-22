@@ -3675,20 +3675,20 @@ function drawScaleneTriangleFromSides(a, b, c) {
     return;
   }
 
-  // Placement des points :
+  // Construction du triangle :
   // A à l'origine (0, 0)
-  // B sur l'axe X à distance a de A  → AB = a
-  // C calculé pour que BC = b et CA = c
+  // B sur l'axe X à distance a  → AB = a
+  // C calculé pour que AC = c et BC = b
   
-  // On utilise la loi des cosinus pour trouver l'angle en B
-  // c² = a² + b² - 2ab·cos(B)
-  // cos(B) = (a² + b² - c²) / (2ab)
-  const cosB = (a * a + b * b - c * c) / (2 * a * b);
-  const angleB = Math.acos(Math.max(-1, Math.min(1, cosB))); // Clamp pour éviter les erreurs d'arrondi
+  // Utilisation de la loi des cosinus pour trouver l'angle en A
+  // b² = a² + c² - 2ac·cos(A)
+  // cos(A) = (a² + c² - b²) / (2ac)
+  const cosA = (a * a + c * c - b * b) / (2 * a * c);
+  const angleA = Math.acos(Math.max(-1, Math.min(1, cosA))); // Clamp pour éviter les erreurs d'arrondi
   
-  // Position de C : depuis B, à distance b, avec un angle (π - angleB) par rapport à l'axe X
-  const Cx = a - b * Math.cos(angleB);
-  const Cy = b * Math.sin(angleB);
+  // Position de C : depuis A, à distance c, avec un angle angleA par rapport à l'axe X
+  const Cx = c * Math.cos(angleA);
+  const Cy = c * Math.sin(angleA);
   
   // Centrage de la figure
   const centerX = a / 2;
@@ -3717,7 +3717,7 @@ function drawScaleneTriangleFromSides(a, b, c) {
   // Mise à jour des labels de longueur si la checkbox est cochée
   updateLengthLabels(document.getElementById("toggleLengths").checked);
   
-  console.log(`→ Triangle quelconque généré avec côtés AB=${a}, BC=${b}, CA=${c}`);
+  console.log(`→ Triangle quelconque généré : AB=${a}, BC=${b}, CA=${c}`);
 }
 
 
