@@ -25,61 +25,73 @@ js/
 
 ---
 
-## 🔧 Comment Lancer l'Application
+## 🎯 3 Versions Disponibles
 
-### ⚠️ IMPORTANT : Les modules ES6 nécessitent un serveur HTTP
+### 1️⃣ **Version Modules** (index.html) - DÉVELOPPEMENT
+- ✅ Architecture modulaire ES6
+- ✅ Code organisé et maintenable
+- ✅ Auto-refresh avec Live Server
+- ⚠️ **NÉCESSITE un serveur HTTP** (Live Server)
 
-Les modules ES6 (`import`/`export`) **ne fonctionnent PAS** avec le protocole `file://` pour des raisons de sécurité CORS.
-
-### ✅ Solution 1 : Live Server (Recommandé)
-
-1. **Installer l'extension Live Server dans VS Code**
-   ```
-   Ctrl+Shift+X → Rechercher "Live Server" → Installer
-   ```
-
-2. **Lancer le serveur**
-   - Clic droit sur `index.html` → "Open with Live Server"
-   - Ou cliquer sur "Go Live" dans la barre de statut
-
-3. **L'application s'ouvre sur** `http://127.0.0.1:5500`
-
-### 🔄 Solution 2 : Autre serveur HTTP
-
-**Python :**
+**Utilisation :**
 ```bash
-python -m http.server 8000
-# Puis ouvrir http://localhost:8000
+# Dans VS Code
+Clic droit sur index.html → "Open with Live Server"
 ```
 
-**Node.js :**
+### 2️⃣ **Version Bundle** (index-bundle.html) - PRODUCTION
+- ✅ Fonctionne en double-clic (file://)
+- ✅ Un seul fichier JavaScript (150 KB)
+- ✅ Parfait pour partager/distribuer
+- ❌ Pas de structure modulaire visible
+
+**Utilisation :**
 ```bash
-npx http-server -p 8000
+# Double-clic sur index-bundle.html
+# OU
+.\build-bundle.ps1   # Pour regénérer le bundle
 ```
 
-**PHP :**
-```bash
-php -S localhost:8000
-```
-
-### 📄 Solution 3 : Version sans modules (Fallback)
-
-Si vous ne pouvez pas utiliser de serveur HTTP, utilisez `script.js` :
-```html
-<!-- Modifier index.html -->
-<script defer src="script.js"></script>
-```
+### 3️⃣ **Version Classique** (script.js) - LEGACY
+- ✅ Fonctionne en double-clic (file://)
+- ❌ Fichier monolithique (5430 lignes)
+- ❌ Difficile à maintenir
+- ⚠️ **Déprécié - Utiliser la version Bundle**
 
 ---
 
-## 🎯 Avantages de l'Architecture Modulaire
+## 🔧 Workflow Recommandé
 
-✅ **Maintenabilité** : Chaque module a une responsabilité claire
-✅ **Scalabilité** : Ajout de nouvelles figures facilité
-✅ **Debugging** : Erreurs localisées plus facilement
-✅ **Performance** : Imports à la demande (tree-shaking possible)
-✅ **Collaboration** : Plusieurs développeurs peuvent travailler simultanément
-✅ **Réutilisabilité** : Modules réutilisables dans d'autres projets
+### Pour Développer
+1. Lancer Live Server
+2. Modifier les fichiers dans `js/`
+3. Tester avec `index.html`
+4. L'auto-refresh recharge automatiquement
+
+### Pour Déployer/Partager
+1. Exécuter `.\build-bundle.ps1`
+2. Partager `index-bundle.html` + `script-bundle.js`
+3. Fonctionne partout sans serveur !
+
+---
+
+## 🔨 Script de Build
+
+Le fichier `build-bundle.ps1` :
+- Combine tous les modules en ordre de dépendance
+- Retire les `import`/`export`
+- Génère `script-bundle.js` (150 KB, 4683 lignes)
+
+**Commande :**
+```powershell
+.\build-bundle.ps1
+```
+
+**Ordre de concaténation :**
+```
+config.js → utils.js → board.js → handlers.js → 
+drawing.js → markers.js → effects.js → ui.js → main.js
+```
 
 ---
 
