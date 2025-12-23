@@ -26,16 +26,8 @@
 
 console.log('🚀 Initialisation du Générateur de Figures 2D...');
 
-// 1. Initialiser le board JSXGraph
-initBoard();
-console.log('✅ Board JSXGraph initialisé');
-
-// 2. Configurer les event listeners
-setupEventListeners();
-console.log('✅ Event listeners configurés');
-
 // ==========================================
-// EXPOSITION DES FONCTIONS GLOBALES
+// EXPOSITION DES FONCTIONS GLOBALES D'ABORD
 // ==========================================
 
 // Rendre les fonctions accessibles depuis le HTML (onclick, etc.)
@@ -51,4 +43,21 @@ window.updateDiagonals = updateDiagonals;
 window.updateCircleExtras = updateCircleExtras;
 
 console.log('✅ Fonctions exposées globalement');
-console.log('🎉 Application prête !');
+
+// Vérifier que JXG est chargé
+if (typeof JXG === 'undefined') {
+  console.error('❌ JSXGraph (JXG) n\'est pas chargé !');
+  alert('Erreur : JSXGraph n\'est pas chargé. Vérifiez votre connexion Internet.');
+} else {
+  console.log('✅ JSXGraph détecté');
+  
+  // 1. Initialiser le board JSXGraph
+  initBoard();
+  console.log('✅ Board JSXGraph initialisé');
+
+  // 2. Configurer les event listeners
+  setupEventListeners();
+  console.log('✅ Event listeners configurés');
+  
+  console.log('🎉 Application prête !');
+}

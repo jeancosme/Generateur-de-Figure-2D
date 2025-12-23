@@ -344,7 +344,7 @@ function exportBoardToSVG() {
 // COPIE DANS LE PRESSE-PAPIERS
 // ==========================================
 
-export async function copyBoardToClipboard() {
+async function copyBoardToClipboard() {
   try {
     if (document.getElementById('toggleDiagonals')?.checked) {
       updateDiagonals();
