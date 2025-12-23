@@ -6,42 +6,16 @@
  * Gestion des marqueurs visuels (longueurs, codages, angles droits, diagonales)
  */
 
-import {
-  board,
-  points,
-  polygon,
-  texts,
-  centerPoint,
-  circlePoint,
-  circleObject,
-  lengthHandles, setLengthHandles,
-  lengthLabels, setLengthLabels,
-  lengthHandleMeta, setLengthHandleMeta,
-  codingMarks, setCodingMarks,
-  diagonals, setDiagonals,
-  rightAngleMarkers, setRightAngleMarkers,
-  angleMarkers, setAngleMarkers,
-  diameterPoints, setDiameterPoints,
-  radiusSegment, setRadiusSegment,
-  radiusLabel, setRadiusLabel,
-  diameterSegment, setDiameterSegment,
-  intersectionLabel, setIntersectionLabel,
-  intersectionPoint, setIntersectionPoint
-} from './config.js';
-
-import { getLabel } from './utils.js';
 
 // ⚠️ Import temporaire - sera activé quand handlers.js sera finalisé
-import { getCurrentFigureHandler, getCurrentFigureType } from './handlers.js';
 
 // Import temporaire depuis board.js
-import { getFigureCenter } from './board.js';
 
 // ==========================================
 // CERCLES - EXTRAS (RAYON, DIAMÈTRE)
 // ==========================================
 
-export function updateCircleExtras() {
+function updateCircleExtras() {
   // Vérifications de base
   if (!centerPoint || !circlePoint) {
     console.log('❌ Pas de cercle détecté');
@@ -216,7 +190,7 @@ export function updateCircleExtras() {
 // DIAGONALES
 // ==========================================
 
-export function updateDiagonals() {
+function updateDiagonals() {
   // Supprimer les anciennes diagonales ET le label d'intersection
   diagonals.forEach(d => board.removeObject(d));
   setDiagonals([]);
@@ -416,7 +390,7 @@ function calculateDiagonalsIntersection() {
 // CODAGES (CÔTÉS ÉGAUX)
 // ==========================================
 
-export function updateCodings() {
+function updateCodings() {
   // Supprimer les codages existants
   codingMarks.forEach(m => board.removeObject(m));
   setCodingMarks([]);
@@ -512,7 +486,7 @@ export function updateCodings() {
   board.update();
 }
 
-export function createSimpleCodingMark(pt1, pt2, markCount = 1) {
+function createSimpleCodingMark(pt1, pt2, markCount = 1) {
   const dx = pt2.X() - pt1.X();
   const dy = pt2.Y() - pt1.Y();
   const len = Math.hypot(dx, dy);
@@ -572,7 +546,7 @@ export function createSimpleCodingMark(pt1, pt2, markCount = 1) {
 // ANGLES DROITS
 // ==========================================
 
-export function updateRightAngleMarkers(visible) {
+function updateRightAngleMarkers(visible) {
   if (typeof visible === 'object' && visible !== null && 'target' in visible) {
     visible = !!visible.target.checked;
   } else {
@@ -709,7 +683,7 @@ function createSingleRightAngleMarker(angleIndex, size, figureSize = 4) {
 // ANGLES ÉGAUX
 // ==========================================
 
-export function updateEqualAngleMarkers(visible) {
+function updateEqualAngleMarkers(visible) {
   if (typeof visible === 'object' && visible !== null && 'target' in visible) visible = !!visible.target.checked;
   else visible = !!visible;
 
@@ -887,7 +861,7 @@ export function updateEqualAngleMarkers(visible) {
 // LABELS DE LONGUEURS
 // ==========================================
 
-export function updateLengthLabels() {
+function updateLengthLabels() {
   // Sauvegarder les positions des handles déplacés manuellement
   const savedPositions = [];
   for (let i = 0; i < (points ? points.length : 0); i++) {

@@ -7,7 +7,6 @@
  * géométriques (triangles, quadrilatères, cercles, polygones)
  */
 
-import { points, centerPoint, circlePoint, circleObject } from './config.js';
 
 // ==========================================
 // CACHE DE DÉTECTION
@@ -31,7 +30,7 @@ let _rightAnglesCache = null;
 /**
  * Détecteur centralisé pour identifier le type exact d'une figure géométrique
  */
-export class FigureDetector {
+class FigureDetector {
   
   /**
    * Détecte le type de figure basé sur les points
@@ -280,7 +279,7 @@ export class FigureDetector {
 // FONCTIONS DE CACHE
 // ==========================================
 
-export function getCurrentFigureType() {
+function getCurrentFigureType() {
   const currentPoints = points ? [...points] : [];
   const currentExtraData = {
     centerPoint: centerPoint,
@@ -307,7 +306,7 @@ export function getCurrentFigureType() {
   return _figureCache.result;
 }
 
-export function invalidateFigureCache(reason = 'manual') {
+function invalidateFigureCache(reason = 'manual') {
   const wasValid = _figureCache.isValid;
   _figureCache.isValid = false;
   
@@ -320,7 +319,7 @@ export function invalidateFigureCache(reason = 'manual') {
   _rightAnglesCache = null;
 }
 
-export function getActiveDisplayOptions() {
+function getActiveDisplayOptions() {
   return {
     lengths: document.getElementById('toggleLengths')?.checked || false,
     codings: document.getElementById('toggleCodings')?.checked || false,
@@ -337,7 +336,7 @@ export function getActiveDisplayOptions() {
 // CLASSES DE HANDLERS
 // ==========================================
 
-export class BaseFigureHandler {
+class BaseFigureHandler {
   constructor(figurePoints, figureInfo) {
     this.points = figurePoints;
     this.figureInfo = figureInfo;
@@ -358,7 +357,7 @@ export class BaseFigureHandler {
   }
 }
 
-export class SquareHandler extends BaseFigureHandler {
+class SquareHandler extends BaseFigureHandler {
   getSidesToShow() { return [2]; }
   getRightAngles() { return [1, 0, 2, 3]; }
   getCodings() {
@@ -370,7 +369,7 @@ export class SquareHandler extends BaseFigureHandler {
   shouldShowSingleRightAngle() { return true; }
 }
 
-export class RectangleHandler extends BaseFigureHandler {
+class RectangleHandler extends BaseFigureHandler {
   getSidesToShow() { return [1, 2]; }
   getRightAngles() { return [1, 0, 2, 3]; }
   getCodings() {
@@ -388,7 +387,7 @@ export class RectangleHandler extends BaseFigureHandler {
   shouldShowSingleRightAngle() { return true; }
 }
 
-export class RhombusHandler extends BaseFigureHandler {
+class RhombusHandler extends BaseFigureHandler {
   getSidesToShow() { return [2]; }
   getRightAngles() { return []; }
   getCodings() {
@@ -399,7 +398,7 @@ export class RhombusHandler extends BaseFigureHandler {
   }
 }
 
-export class ParallelogramHandler extends BaseFigureHandler {
+class ParallelogramHandler extends BaseFigureHandler {
   getSidesToShow() { return [1, 2]; }
   getRightAngles() { return []; }
   getCodings() {
@@ -413,7 +412,7 @@ export class ParallelogramHandler extends BaseFigureHandler {
   }
 }
 
-export class EquilateralTriangleHandler extends BaseFigureHandler {
+class EquilateralTriangleHandler extends BaseFigureHandler {
   getSidesToShow() { return [0]; }
   getRightAngles() { return []; }
   getCodings() {
@@ -424,7 +423,7 @@ export class EquilateralTriangleHandler extends BaseFigureHandler {
   }
 }
 
-export class RightTriangleHandler extends BaseFigureHandler {
+class RightTriangleHandler extends BaseFigureHandler {
   getSidesToShow() { return [0, 1, 2]; }
   getRightAngles() {
     const rightAngleIndex = this.figureInfo.properties?.rightAngleIndex ?? -1;
@@ -452,7 +451,7 @@ export class RightTriangleHandler extends BaseFigureHandler {
   }
 }
 
-export class IsoscelesTriangleHandler extends BaseFigureHandler {
+class IsoscelesTriangleHandler extends BaseFigureHandler {
   getSidesToShow() { return [0, 1, 2]; }
   getRightAngles() {
     const rightAngleIndex = this.figureInfo.properties?.rightAngleIndex ?? -1;
@@ -482,13 +481,13 @@ export class IsoscelesTriangleHandler extends BaseFigureHandler {
   }
 }
 
-export class ScaleneTriangleHandler extends BaseFigureHandler {
+class ScaleneTriangleHandler extends BaseFigureHandler {
   getSidesToShow() { return [0, 1, 2]; }
   getRightAngles() { return []; }
   getCodings() { return { groups: [], type: 'none' }; }
 }
 
-export class CircleHandler extends BaseFigureHandler {
+class CircleHandler extends BaseFigureHandler {
   constructor(centerPoint, circlePoint, figureInfo) {
     super([circlePoint], figureInfo);
     this.centerPoint = centerPoint;
@@ -501,7 +500,7 @@ export class CircleHandler extends BaseFigureHandler {
   getRadius() { return this.figureInfo.properties?.radius || 0; }
 }
 
-export class RegularPolygonHandler extends BaseFigureHandler {
+class RegularPolygonHandler extends BaseFigureHandler {
   getSidesToShow() { return [0]; }
   getRightAngles() { return []; }
   getCodings() {
@@ -513,7 +512,7 @@ export class RegularPolygonHandler extends BaseFigureHandler {
   }
 }
 
-export class DefaultFigureHandler extends BaseFigureHandler {
+class DefaultFigureHandler extends BaseFigureHandler {
   getSidesToShow() { return [...Array(this.points.length).keys()]; }
   getRightAngles() { return []; }
   getCodings() { return { groups: [], type: 'none' }; }
@@ -523,7 +522,7 @@ export class DefaultFigureHandler extends BaseFigureHandler {
 // FACTORY
 // ==========================================
 
-export class FigureHandlerFactory {
+class FigureHandlerFactory {
   static create(figureInfo, figurePoints, extraData = {}) {
     if (!figureInfo || !figureInfo.type) {
       console.warn('⚠️ Type de figure non défini, utilisation du handler par défaut');
@@ -570,7 +569,7 @@ export class FigureHandlerFactory {
   }
 }
 
-export function getCurrentFigureHandler() {
+function getCurrentFigureHandler() {
   const figureInfo = getCurrentFigureType();
   
   if (!figureInfo || figureInfo.type === 'unknown') {

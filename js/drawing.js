@@ -6,20 +6,6 @@
  * Toutes les fonctions pour dessiner les différentes figures géométriques
  */
 
-import { 
-  board,
-  points, setPoints,
-  polygon, setPolygon,
-  texts, setTexts,
-  centerPoint, setCenterPoint,
-  circlePoint, setCirclePoint,
-  circleObject, setCircleObject,
-  labelHandles, setLabelHandles,
-  labelTexts, setLabelTexts,
-  lengthHandles
-} from './config.js';
-
-import { getLabel } from './utils.js';
 
 // ⚠️ Imports temporaires - seront activés quand les modules seront créés
 // import { updateRightAngleMarkers, updateLengthLabels, updateCodings, updateDiagonals, updateEqualAngleMarkers, updateCircleExtras } from './markers.js';
@@ -39,7 +25,7 @@ const updateCircleExtras = () => {};
 /**
  * Ajoute la fonctionnalité de déplacement à un polygone
  */
-export function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) {
+function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) {
   let startCoords = null;
 
   polygon.rendNode.addEventListener('mousedown', function (e) {
@@ -116,7 +102,7 @@ export function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles
 // CARRÉS
 // ==========================================
 
-export function drawSquare(size) {
+function drawSquare(size) {
   const A = board.create('point', [0, size], {name: '', fixed: true, visible: false});
   const B = board.create('point', [size, size], {name: '', fixed: true, visible: false});
   const C = board.create('point', [size, 0], {name: '', fixed: true, visible: false});
@@ -151,7 +137,7 @@ export function drawSquare(size) {
 // RECTANGLES
 // ==========================================
 
-export function drawRectangle(width, height) {
+function drawRectangle(width, height) {
   const A = board.create('point', [0, height], { name: '', fixed: true, visible: false });
   const B = board.create('point', [width, height], { name: '', fixed: true, visible: false });
   const C = board.create('point', [width, 0], { name: '', fixed: true, visible: false });
@@ -185,7 +171,7 @@ export function drawRectangle(width, height) {
 // LOSANGES
 // ==========================================
 
-export function drawLosange(side) {
+function drawLosange(side) {
   const theta = Math.PI / 3;
   const ox = side * Math.cos(theta);
   const oy = side * Math.sin(theta);
@@ -236,7 +222,7 @@ export function drawLosange(side) {
 // PARALLÉLOGRAMMES
 // ==========================================
 
-export function drawParallelogram(base, sideLength) {
+function drawParallelogram(base, sideLength) {
   const theta = Math.PI / 3;
   const offset = sideLength * Math.cos(theta);
   const height = sideLength * Math.sin(theta);
@@ -276,7 +262,7 @@ export function drawParallelogram(base, sideLength) {
 // TRIANGLES
 // ==========================================
 
-export function drawEquilateralTriangle(side) {
+function drawEquilateralTriangle(side) {
   const A = board.create('point', [0, 0], {visible: false});
   const B = board.create('point', [side, 0], {visible: false});
   const height = (Math.sqrt(3) / 2) * side;
@@ -302,7 +288,7 @@ export function drawEquilateralTriangle(side) {
   addDraggingToPolygon(newPolygon, newPoints, newTexts);
 }
 
-export function drawRightTriangle(base, height) {
+function drawRightTriangle(base, height) {
   const offsetX = -base / 2;
   const offsetY = -height / 2;
 
@@ -331,7 +317,7 @@ export function drawRightTriangle(base, height) {
   console.log("→ Triangle rectangle généré avec base =", base, "et hauteur =", height);
 }
 
-export function drawIsoscelesTriangle(base = 4, height = 3) {
+function drawIsoscelesTriangle(base = 4, height = 3) {
   const A = board.create('point', [0, 0], {visible: false, fixed: true});
   const B = board.create('point', [base, 0], {visible: false, fixed: true});
   const C = board.create('point', [base / 2, height], {visible: false, fixed: true});
@@ -360,7 +346,7 @@ export function drawIsoscelesTriangle(base = 4, height = 3) {
   updateDiagonals();
 }
 
-export function drawScaleneTriangleFromSides(a, b, c) {
+function drawScaleneTriangleFromSides(a, b, c) {
   // Vérification de l'inégalité triangulaire
   if (a + b <= c || a + c <= b || b + c <= a) {
     alert(`⚠️ Impossible de construire un triangle avec ces côtés !\n\n` +
@@ -413,7 +399,7 @@ export function drawScaleneTriangleFromSides(a, b, c) {
 // POLYGONES RÉGULIERS
 // ==========================================
 
-export function drawRegularPolygon(n, side) {
+function drawRegularPolygon(n, side) {
   const center = [0, 0];
   const angle = (2 * Math.PI) / n;
   const radius = side / (2 * Math.sin(Math.PI / n));
@@ -449,7 +435,7 @@ export function drawRegularPolygon(n, side) {
 // CERCLES
 // ==========================================
 
-export function drawCircle(radius) {
+function drawCircle(radius) {
   // Cleanup
   if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
   if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
@@ -550,7 +536,7 @@ export function drawCircle(radius) {
 // UTILITAIRES TRIANGLES
 // ==========================================
 
-export function isRightTriangle() {
+function isRightTriangle() {
   if (!points || points.length !== 3) return false;
   
   const tolerance = 0.1;
@@ -582,7 +568,7 @@ export function isRightTriangle() {
   return { isRight: false, rightAngleIndex: -1 };
 }
 
-export function getHypotenuseIndex() {
+function getHypotenuseIndex() {
   if (!points || points.length !== 3) return -1;
   
   const sideLengths = [];

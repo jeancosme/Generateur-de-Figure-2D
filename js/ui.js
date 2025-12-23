@@ -6,62 +6,14 @@
  * Fonction principale generateFigure() et toutes les fonctions d'interface
  */
 
-import { 
-  board,
-  points, setPoints,
-  polygon, setPolygon,
-  texts, setTexts,
-  centerPoint, setCenterPoint,
-  circlePoint, setCirclePoint,
-  circleObject, setCircleObject,
-  lengthLabels, setLengthLabels,
-  lengthHandles, setLengthHandles,
-  lengthHandleMeta, setLengthHandleMeta,
-  codingMarks, setCodingMarks,
-  codingSegments, setCodingSegments,
-  diagonals, setDiagonals,
-  angleMarkers, setAngleMarkers,
-  rightAngleMarkers, setRightAngleMarkers,
-  diameterPoints, setDiameterPoints,
-  radiusSegment, setRadiusSegment,
-  radiusLabel, setRadiusLabel,
-  diameterSegment, setDiameterSegment,
-  intersectionLabel, setIntersectionLabel,
-  intersectionPoint, setIntersectionPoint,
-  customLabels, setCustomLabels,
-  resetAllGlobalVariables
-} from './config.js';
 
-import { extractNumber, extractTwoNumbers, extractThreeNumbers } from './utils.js';
-import { centerFigure } from './board.js';
-import { invalidateFigureCache, getCurrentFigureType, getCurrentFigureHandler } from './handlers.js';
-import { 
-  drawSquare, 
-  drawRectangle, 
-  drawLosange, 
-  drawParallelogram,
-  drawEquilateralTriangle,
-  drawRightTriangle,
-  drawIsoscelesTriangle,
-  drawScaleneTriangleFromSides,
-  drawRegularPolygon,
-  drawCircle
-} from './drawing.js';
-import { 
-  updateCodings, 
-  updateDiagonals, 
-  updateLengthLabels, 
-  updateEqualAngleMarkers, 
-  updateRightAngleMarkers,
-  updateCircleExtras
-} from './markers.js';
-import { applyHandDrawnEffect } from './effects.js';
+
 
 // ==========================================
 // FONCTION PRINCIPALE : GÉNÉRATION DE FIGURE
 // ==========================================
 
-export function generateFigure() {
+function generateFigure() {
   // ==========================================
   // 1. NETTOYAGE INITIAL
   // ==========================================
@@ -287,7 +239,7 @@ export function generateFigure() {
 // CACHE ET OPTIMISATION
 // ==========================================
 
-export function autoInvalidateCache() {
+function autoInvalidateCache() {
   invalidateFigureCache('figure modified');
   
   const activeOptions = getActiveDisplayOptions();
@@ -317,7 +269,7 @@ function getActiveDisplayOptions() {
 // MONITORING DES PERFORMANCES
 // ==========================================
 
-export function measurePerformance(functionName, fn) {
+function measurePerformance(functionName, fn) {
   const startTime = performance.now();
   const result = fn();
   const endTime = performance.now();
@@ -334,7 +286,7 @@ export function measurePerformance(functionName, fn) {
 // EXPORT SVG
 // ==========================================
 
-export function exportBoardToSVG() {
+function exportBoardToSVG() {
   try {
     if (document.getElementById('toggleDiagonals')?.checked) {
       updateDiagonals();
@@ -797,7 +749,7 @@ function calculateFigureBounds() {
 // SETUP EVENT LISTENERS
 // ==========================================
 
-export function setupEventListeners() {
+function setupEventListeners() {
   console.log('🚀 Initialisation du générateur de figures 2D...');
 
   // ==========================================

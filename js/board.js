@@ -6,12 +6,6 @@
  * Initialisation, zoom, rotation, reset, centrage
  */
 
-import { 
-  board, setBoard, 
-  points, centerPoint, circlePoint, texts, 
-  lengthHandles, labelHandles, labelTexts, lengthLabels,
-  setIsHandDrawnMode, setOriginalPolygon
-} from './config.js';
 
 // ⚠️ Ces imports seront ajoutés quand les modules seront créés
 // import { updateCircleExtras } from './markers.js';
@@ -35,7 +29,7 @@ const removeHandDrawnElements = () => {};
 /**
  * Initialise le board JSXGraph
  */
-export function initBoard() {
+function initBoard() {
   const newBoard = JXG.JSXGraph.initBoard('jxgbox', {
     boundingbox: [-5, 5, 5, -5],
     axis: false,
@@ -66,7 +60,7 @@ export function initBoard() {
 /**
  * Crée le panneau de contrôles (zoom, rotation, reset)
  */
-export function createBoardControls() {
+function createBoardControls() {
   const container = document.getElementById('jxgbox');
   if (!container) return;
 
@@ -165,11 +159,11 @@ function setupWheelZoom() {
 // FONCTIONS DE ZOOM
 // ==========================================
 
-export function zoomIn() {
+function zoomIn() {
   board.zoomIn();
 }
 
-export function zoomOut() {
+function zoomOut() {
   board.zoomOut();
 }
 
@@ -189,7 +183,7 @@ function rotateCoord(x, y, cx, cy, angle) {
 /**
  * Fait pivoter la figure de +10°
  */
-export function rotateFigure(step = Math.PI / 18) {
+function rotateFigure(step = Math.PI / 18) {
   // Cas 1 : cercle (centerPoint + circlePoint)
   if (centerPoint && circlePoint) {
     const cx = centerPoint.X(), cy = centerPoint.Y();
@@ -237,7 +231,7 @@ export function rotateFigure(step = Math.PI / 18) {
 /**
  * Fait pivoter la figure de -10°
  */
-export function rotateFigureLeft(step = Math.PI / 18) {
+function rotateFigureLeft(step = Math.PI / 18) {
   rotateFigure(-Math.abs(step));
 }
 
@@ -248,7 +242,7 @@ export function rotateFigureLeft(step = Math.PI / 18) {
 /**
  * Réinitialise complètement le board
  */
-export function resetBoard() {
+function resetBoard() {
   // Supprime l'ancien board
   JXG.JSXGraph.freeBoard(board);
 
@@ -305,7 +299,7 @@ export function resetBoard() {
 /**
  * Retourne le centre du board
  */
-export function getBoardCenter() {
+function getBoardCenter() {
   const bb = board.getBoundingBox();
   const xmin = bb[0], ymax = bb[1], xmax = bb[2], ymin = bb[3];
   return [(xmin + xmax) / 2, (ymax + ymin) / 2];
@@ -314,7 +308,7 @@ export function getBoardCenter() {
 /**
  * Retourne le centre de la figure
  */
-export function getFigureCenter() {
+function getFigureCenter() {
   // Cercle : préférer centre explicite
   if (typeof centerPoint !== 'undefined' && centerPoint) {
     return [centerPoint.X(), centerPoint.Y()];
@@ -331,7 +325,7 @@ export function getFigureCenter() {
 /**
  * Centre la figure sur le board
  */
-export function centerFigure() {
+function centerFigure() {
   const [figCx, figCy] = getFigureCenter();
   const [boardCx, boardCy] = getBoardCenter();
   const dx = boardCx - figCx;

@@ -11,26 +11,14 @@
 // ==========================================
 
 // Configuration et état global
-import { board } from './config.js';
 
 // Initialisation du board JSXGraph
-import { initBoard } from './board.js';
 
 // Interface utilisateur et événements
-import { setupEventListeners, generateFigure, exportBoardToSVG, copyBoardToClipboard } from './ui.js';
 
 // Effets visuels
-import { toggleHandDrawnEffect } from './effects.js';
 
 // Marqueurs visuels
-import { 
-  updateLengthLabels, 
-  updateCodings, 
-  updateRightAngleMarkers, 
-  updateEqualAngleMarkers, 
-  updateDiagonals,
-  updateCircleExtras
-} from './markers.js';
 
 // ==========================================
 // INITIALISATION DE L'APPLICATION

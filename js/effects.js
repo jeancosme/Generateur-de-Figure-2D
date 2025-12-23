@@ -6,23 +6,12 @@
  * Gestion de l'effet "main levée" pour les figures géométriques
  */
 
-import {
-  board,
-  points,
-  polygon, setPolygon,
-  centerPoint,
-  circlePoint,
-  circleObject,
-  originalPolygon, setOriginalPolygon,
-  handDrawnElements, setHandDrawnElements,
-  isHandDrawnMode, setIsHandDrawnMode
-} from './config.js';
 
 // ==========================================
 // TOGGLE EFFET MAIN LEVÉE
 // ==========================================
 
-export function toggleHandDrawnEffect(enabled) {
+function toggleHandDrawnEffect(enabled) {
   if (typeof enabled === 'object' && enabled !== null && 'target' in enabled) {
     enabled = !!enabled.target.checked;
   } else {
@@ -44,7 +33,7 @@ export function toggleHandDrawnEffect(enabled) {
 // APPLIQUER L'EFFET
 // ==========================================
 
-export function applyHandDrawnEffect() {
+function applyHandDrawnEffect() {
   if (!points || points.length === 0) return;
   
   // Nettoyer les anciens éléments main levée
@@ -103,7 +92,7 @@ export function applyHandDrawnEffect() {
 // SUPPRIMER L'EFFET
 // ==========================================
 
-export function removeHandDrawnEffect() {
+function removeHandDrawnEffect() {
   // Nettoyer les éléments main levée
   removeHandDrawnElements();
   
@@ -152,7 +141,7 @@ export function removeHandDrawnEffect() {
 // NETTOYAGE
 // ==========================================
 
-export function removeHandDrawnElements() {
+function removeHandDrawnElements() {
   handDrawnElements.forEach(element => {
     try { board.removeObject(element); } catch (e) {}
   });
@@ -354,7 +343,7 @@ function createHandDrawnCircle() {
 // VERSION MULTI-COUCHES (ALTERNATIVE)
 // ==========================================
 
-export function createHandDrawnSegmentMultiLayer(startPoint, endPoint) {
+function createHandDrawnSegmentMultiLayer(startPoint, endPoint) {
   const curves = [];
   const numLayers = 2; // Deux passes pour simuler le reppassage naturel
   

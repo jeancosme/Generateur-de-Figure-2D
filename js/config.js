@@ -18,12 +18,12 @@
  * Instance principale du board JSXGraph
  * Initialisée dans board.js via initBoard()
  */
-export let board = null;
+let board = null;
 
 /**
  * Setter pour le board (appelé uniquement depuis board.js)
  */
-export function setBoard(newBoard) {
+function setBoard(newBoard) {
   board = newBoard;
 }
 
@@ -31,101 +31,101 @@ export function setBoard(newBoard) {
 // ÉLÉMENTS GÉOMÉTRIQUES
 // ==========================================
 
-export let points = [];
-export let polygon = null;
-export let texts = [];
-export let customLabels = [];
+let points = [];
+let polygon = null;
+let texts = [];
+let customLabels = [];
 
 // ==========================================
 // MARQUEURS VISUELS
 // ==========================================
 
-export let rightAngleMarkers = [];
-export let lengthLabels = [];
-export let lengthHandles = [];
-export let lengthHandleMeta = [];
-export let codingMarks = [];
-export let codingSegments = [];
-export let angleMarkers = [];
-export let diagonals = [];
+let rightAngleMarkers = [];
+let lengthLabels = [];
+let lengthHandles = [];
+let lengthHandleMeta = [];
+let codingMarks = [];
+let codingSegments = [];
+let angleMarkers = [];
+let diagonals = [];
 
 // ==========================================
 // ÉLÉMENTS SPÉCIFIQUES AU CERCLE
 // ==========================================
 
-export let centerPoint = null;
-export let circlePoint = null;
-export let circleObject = null;
-export let radiusSegment = null;
-export let radiusLabel = null;
-export let radiusLabelAnchor = null;
-export let diameterSegment = null;
-export let diameterPoints = [];
+let centerPoint = null;
+let circlePoint = null;
+let circleObject = null;
+let radiusSegment = null;
+let radiusLabel = null;
+let radiusLabelAnchor = null;
+let diameterSegment = null;
+let diameterPoints = [];
 
 // ==========================================
 // ÉLÉMENTS DES LABELS
 // ==========================================
 
-export let labelHandles = [];
-export let labelTexts = [];
+let labelHandles = [];
+let labelTexts = [];
 
 // ==========================================
 // INTERSECTION DES DIAGONALES
 // ==========================================
 
-export let intersectionLabel = null;
-export let intersectionPoint = null;
+let intersectionLabel = null;
+let intersectionPoint = null;
 
 // ==========================================
 // EFFET MAIN LEVÉE
 // ==========================================
 
-export let originalPolygon = null;
-export let handDrawnElements = [];
-export let isHandDrawnMode = false;
+let originalPolygon = null;
+let handDrawnElements = [];
+let isHandDrawnMode = false;
 
 // ==========================================
 // DIVERS
 // ==========================================
 
-export let extraElements = [];
-export let r = null;
-export let _lengthSyncAttached = false;
+let extraElements = [];
+let r = null;
+let _lengthSyncAttached = false;
 
 // ==========================================
 // SETTERS POUR MODIFICATION D'ÉTAT
 // ==========================================
 
-export function setPoints(newPoints) { points = newPoints; }
-export function setPolygon(newPolygon) { polygon = newPolygon; }
-export function setTexts(newTexts) { texts = newTexts; }
-export function setCustomLabels(newLabels) { customLabels = newLabels; }
-export function setRightAngleMarkers(newMarkers) { rightAngleMarkers = newMarkers; }
-export function setLengthLabels(newLabels) { lengthLabels = newLabels; }
-export function setLengthHandles(newHandles) { lengthHandles = newHandles; }
-export function setLengthHandleMeta(newMeta) { lengthHandleMeta = newMeta; }
-export function setCodingMarks(newMarks) { codingMarks = newMarks; }
-export function setCodingSegments(newSegments) { codingSegments = newSegments; }
-export function setAngleMarkers(newMarkers) { angleMarkers = newMarkers; }
-export function setDiagonals(newDiagonals) { diagonals = newDiagonals; }
-export function setCenterPoint(newPoint) { centerPoint = newPoint; }
-export function setCirclePoint(newPoint) { circlePoint = newPoint; }
-export function setCircleObject(newCircle) { circleObject = newCircle; }
-export function setRadiusSegment(newSegment) { radiusSegment = newSegment; }
-export function setRadiusLabel(newLabel) { radiusLabel = newLabel; }
-export function setRadiusLabelAnchor(newAnchor) { radiusLabelAnchor = newAnchor; }
-export function setDiameterSegment(newSegment) { diameterSegment = newSegment; }
-export function setDiameterPoints(newPoints) { diameterPoints = newPoints; }
-export function setLabelHandles(newHandles) { labelHandles = newHandles; }
-export function setLabelTexts(newTexts) { labelTexts = newTexts; }
-export function setIntersectionLabel(newLabel) { intersectionLabel = newLabel; }
-export function setIntersectionPoint(newPoint) { intersectionPoint = newPoint; }
-export function setOriginalPolygon(newPolygon) { originalPolygon = newPolygon; }
-export function setHandDrawnElements(newElements) { handDrawnElements = newElements; }
-export function setIsHandDrawnMode(newMode) { isHandDrawnMode = newMode; }
-export function setExtraElements(newElements) { extraElements = newElements; }
-export function setR(newR) { r = newR; }
-export function setLengthSyncAttached(newValue) { _lengthSyncAttached = newValue; }
+function setPoints(newPoints) { points = newPoints; }
+function setPolygon(newPolygon) { polygon = newPolygon; }
+function setTexts(newTexts) { texts = newTexts; }
+function setCustomLabels(newLabels) { customLabels = newLabels; }
+function setRightAngleMarkers(newMarkers) { rightAngleMarkers = newMarkers; }
+function setLengthLabels(newLabels) { lengthLabels = newLabels; }
+function setLengthHandles(newHandles) { lengthHandles = newHandles; }
+function setLengthHandleMeta(newMeta) { lengthHandleMeta = newMeta; }
+function setCodingMarks(newMarks) { codingMarks = newMarks; }
+function setCodingSegments(newSegments) { codingSegments = newSegments; }
+function setAngleMarkers(newMarkers) { angleMarkers = newMarkers; }
+function setDiagonals(newDiagonals) { diagonals = newDiagonals; }
+function setCenterPoint(newPoint) { centerPoint = newPoint; }
+function setCirclePoint(newPoint) { circlePoint = newPoint; }
+function setCircleObject(newCircle) { circleObject = newCircle; }
+function setRadiusSegment(newSegment) { radiusSegment = newSegment; }
+function setRadiusLabel(newLabel) { radiusLabel = newLabel; }
+function setRadiusLabelAnchor(newAnchor) { radiusLabelAnchor = newAnchor; }
+function setDiameterSegment(newSegment) { diameterSegment = newSegment; }
+function setDiameterPoints(newPoints) { diameterPoints = newPoints; }
+function setLabelHandles(newHandles) { labelHandles = newHandles; }
+function setLabelTexts(newTexts) { labelTexts = newTexts; }
+function setIntersectionLabel(newLabel) { intersectionLabel = newLabel; }
+function setIntersectionPoint(newPoint) { intersectionPoint = newPoint; }
+function setOriginalPolygon(newPolygon) { originalPolygon = newPolygon; }
+function setHandDrawnElements(newElements) { handDrawnElements = newElements; }
+function setIsHandDrawnMode(newMode) { isHandDrawnMode = newMode; }
+function setExtraElements(newElements) { extraElements = newElements; }
+function setR(newR) { r = newR; }
+function setLengthSyncAttached(newValue) { _lengthSyncAttached = newValue; }
 
 // ==========================================
 // HELPERS POUR RESET COMPLET
@@ -135,7 +135,7 @@ export function setLengthSyncAttached(newValue) { _lengthSyncAttached = newValue
  * Réinitialise toutes les variables globales à leur état initial
  * Utilisé lors d'un reset complet de la figure
  */
-export function resetAllGlobalVariables() {
+function resetAllGlobalVariables() {
   points = [];
   polygon = null;
   texts = [];

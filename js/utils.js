@@ -7,7 +7,6 @@
  * sans dépendances complexes.
  */
 
-import { customLabels } from './config.js';
 
 // ==========================================
 // EXTRACTION DE NOMBRES
@@ -19,7 +18,7 @@ import { customLabels } from './config.js';
  * @param {number} defaultValue - Valeur par défaut si aucun nombre trouvé
  * @returns {number} Le nombre extrait ou la valeur par défaut
  */
-export function extractNumber(text, defaultValue = 1) {
+function extractNumber(text, defaultValue = 1) {
   const match = text.match(/(\d+(?:[.,]\d+)?)/);
   if (!match) return defaultValue;
   return parseFloat(match[1].replace(',', '.'));
@@ -31,7 +30,7 @@ export function extractNumber(text, defaultValue = 1) {
  * @param {Array} defaultValues - Valeurs par défaut [a, b]
  * @returns {Array} Tableau de 2 nombres
  */
-export function extractTwoNumbers(text, defaultValues = [3, 5]) {
+function extractTwoNumbers(text, defaultValues = [3, 5]) {
   const matches = text.match(/(\d+(?:[.,]\d+)?)/g);
   if (!matches || matches.length < 2) return defaultValues;
   return matches.slice(0, 2).map(n => parseFloat(n.replace(',', '.')));
@@ -43,7 +42,7 @@ export function extractTwoNumbers(text, defaultValues = [3, 5]) {
  * @param {Array} defaultValues - Valeurs par défaut [a, b, c]
  * @returns {Array} Tableau de 3 nombres
  */
-export function extractThreeNumbers(text, defaultValues = [3, 4, 5]) {
+function extractThreeNumbers(text, defaultValues = [3, 4, 5]) {
   const matches = text.match(/(\d+(?:[.,]\d+)?)/g);
   
   if (!matches || matches.length < 3) {
@@ -63,7 +62,7 @@ export function extractThreeNumbers(text, defaultValues = [3, 4, 5]) {
  * @param {number} index - Index du point
  * @returns {string} Label du point (A, B, C, etc.)
  */
-export function getLabel(index) {
+function getLabel(index) {
   const defaultLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
   
   // ✅ CORRECTION : Parser les labels personnalisés caractère par caractère
@@ -99,7 +98,7 @@ export function getLabel(index) {
  * @param {Function} fn - Fonction à exécuter
  * @returns {*} Résultat de la fonction
  */
-export function measurePerformance(functionName, fn) {
+function measurePerformance(functionName, fn) {
   const startTime = performance.now();
   const result = fn();
   const endTime = performance.now();
