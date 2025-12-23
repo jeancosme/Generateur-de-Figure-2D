@@ -7,21 +7,6 @@
  */
 
 
-// ⚠️ Ces imports seront ajoutés quand les modules seront créés
-// import { updateCircleExtras } from './markers.js';
-// import { updateLengthLabels, updateCodings, updateDiagonals } from './markers.js';
-// import { updateEqualAngleMarkers, updateRightAngleMarkers } from './markers.js';
-// import { removeHandDrawnElements } from './effects.js';
-
-// Placeholders temporaires pour éviter les erreurs
-const updateCircleExtras = () => {};
-const updateLengthLabels = () => {};
-const updateCodings = () => {};
-const updateDiagonals = () => {};
-const updateEqualAngleMarkers = () => {};
-const updateRightAngleMarkers = () => {};
-const removeHandDrawnElements = () => {};
-
 // ==========================================
 // INITIALISATION DU BOARD
 // ==========================================

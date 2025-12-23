@@ -7,17 +7,6 @@
  */
 
 
-// ⚠️ Imports temporaires - seront activés quand les modules seront créés
-// import { updateRightAngleMarkers, updateLengthLabels, updateCodings, updateDiagonals, updateEqualAngleMarkers, updateCircleExtras } from './markers.js';
-
-// Placeholders temporaires
-const updateRightAngleMarkers = () => {};
-const updateLengthLabels = () => {};
-const updateCodings = () => {};
-const updateDiagonals = () => {};
-const updateEqualAngleMarkers = () => {};
-const updateCircleExtras = () => {};
-
 // ==========================================
 // FONCTION DE DRAGGING
 // ==========================================

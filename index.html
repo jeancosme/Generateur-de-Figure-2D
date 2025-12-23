@@ -17,17 +17,6 @@
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 
-  <!-- Scripts modulaires (ordre de dépendances) -->
-  <script defer src="./js/config.js"></script>
-  <script defer src="./js/utils.js"></script>
-  <script defer src="./js/board.js"></script>
-  <script defer src="./js/handlers.js"></script>
-  <script defer src="./js/drawing.js"></script>
-  <script defer src="./js/markers.js"></script>
-  <script defer src="./js/effects.js"></script>
-  <script defer src="./js/ui.js"></script>
-  <script defer src="./js/main.js"></script>
-
 </head>
 
 <body>
@@ -167,6 +156,17 @@
   </ul>
   <p>👉 Clique sur <strong>"Générer"</strong> pour afficher la figure. Tu peux la faire tourner ou la réinitialiser avec les boutons au-dessus.</p>
 </div>
+
+  <!-- Scripts modulaires chargés à la FIN (ordre de dépendances) -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/handlers.js"></script>
+  <script src="js/drawing.js"></script>
+  <script src="js/markers.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
 
 </body>
 </html>
