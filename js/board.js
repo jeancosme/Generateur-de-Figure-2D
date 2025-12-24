@@ -104,6 +104,7 @@ function createBoardControls() {
   row3.className = 'small-row reset-row';
 
   const reset = document.createElement('button');
+  reset.id = 'resetBtn';
   reset.className = 'reset-btn';
   reset.textContent = 'Réinitialiser';
   reset.title = 'Réinitialiser';

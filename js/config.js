@@ -185,3 +185,100 @@ function resetAllGlobalVariables() {
   r = null;
   _lengthSyncAttached = false;
 }
+
+// ==========================================
+// LANGUE ET TRADUCTIONS
+// ==========================================
+
+let currentLanguage = 'fr';
+
+const translations = {
+  fr: {
+    title: "Générateur de figure 2D",
+    figureNature: "Nature de la figure",
+    figureName: "Nom de la figure",
+    generate: "Générer",
+    placeholderNature: "Ex : carré de côté 4",
+    placeholderName: "Lettres des points (ex: ABCD ou A,B,C,D)",
+    displayOptions: "🛠️ Options d'affichage",
+    showRightAngles: "Afficher les angles droits",
+    showSingleAngle: "Afficher un seul angle",
+    showEqualAngles: "Afficher les angles égaux",
+    showMeasures: "Afficher les mesures",
+    showUnits: "Afficher les unités",
+    hideHypotenuse: "Cacher l'hypoténuse",
+    showCodings: "Afficher les codages",
+    showDiagonals: "Afficher les diagonales",
+    nameIntersection: "Nommer l'intersection",
+    rightAngleIntersection: "Angle droit à l'intersection",
+    showRadius: "Afficher un rayon",
+    showDiameter: "Afficher un diamètre",
+    handDrawn: "Dessin à main levée",
+    intensity: "Intensité",
+    exportSVG: "Exporter SVG",
+    copy: "Copier",
+    reset: "Réinitialiser",
+    figuresList: "📚 Liste des figures",
+    square: "Carré",
+    circle: "Cercle",
+    hexagon: "Hexagone",
+    rhombus: "Losange",
+    parallelogram: "Parallélogramme",
+    regularPolygon: "Polygone régulier",
+    rectangle: "Rectangle",
+    equilateralTriangle: "Triangle équilatéral",
+    isoscelesTriangle: "Triangle isocèle",
+    scaleneTriangle: "Triangle quelconque",
+    rightTriangle: "Triangle rectangle"
+  },
+  en: {
+    title: "2D Shape Generator",
+    figureNature: "Shape type",
+    figureName: "Shape name",
+    generate: "Generate",
+    placeholderNature: "Ex: square with side 4",
+    placeholderName: "Point letters (ex: ABCD or A,B,C,D)",
+    displayOptions: "🛠️ Display options",
+    showRightAngles: "Show right angles",
+    showSingleAngle: "Show single angle",
+    showEqualAngles: "Show equal angles",
+    showMeasures: "Show measurements",
+    showUnits: "Show units",
+    hideHypotenuse: "Hide hypotenuse",
+    showCodings: "Show codings",
+    showDiagonals: "Show diagonals",
+    nameIntersection: "Name intersection",
+    rightAngleIntersection: "Right angle at intersection",
+    showRadius: "Show radius",
+    showDiameter: "Show diameter",
+    handDrawn: "Hand-drawn effect",
+    intensity: "Intensity",
+    exportSVG: "Export SVG",
+    copy: "Copy",
+    reset: "Reset",
+    figuresList: "📚 Shape list",
+    square: "Square",
+    circle: "Circle",
+    hexagon: "Hexagon",
+    rhombus: "Rhombus",
+    parallelogram: "Parallelogram",
+    regularPolygon: "Regular polygon",
+    rectangle: "Rectangle",
+    equilateralTriangle: "Equilateral triangle",
+    isoscelesTriangle: "Isosceles triangle",
+    scaleneTriangle: "Scalene triangle",
+    rightTriangle: "Right triangle"
+  }
+};
+
+function getCurrentLanguage() {
+  return currentLanguage;
+}
+
+function setCurrentLanguage(lang) {
+  currentLanguage = lang;
+}
+
+function getTranslation(key) {
+  return translations[currentLanguage][key] || key;
+}

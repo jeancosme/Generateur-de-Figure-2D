@@ -1288,3 +1288,103 @@ function setupEventListeners() {
   console.log('🎉 Initialisation du générateur terminée avec succès !');
   console.log('📋 Tapez une figure dans le champ de saisie ou cliquez sur la liste');
 }
+
+// ==========================================
+// CHANGEMENT DE LANGUE
+// ==========================================
+
+function changeLanguage(lang) {
+  setCurrentLanguage(lang);
+  
+  // Mettre à jour les drapeaux (ajouter classe active)
+  document.getElementById('flagFR').classList.toggle('active', lang === 'fr');
+  document.getElementById('flagEN').classList.toggle('active', lang === 'en');
+  
+  // Mettre à jour tous les textes de l'interface
+  document.querySelector('h1').textContent = getTranslation('title');
+  document.querySelector('label[for="promptInput"]').textContent = getTranslation('figureNature');
+  document.querySelector('label[for="labelInput"]').textContent = getTranslation('figureName');
+  document.querySelector('.control-actions button[onclick="generateFigure()"]').textContent = getTranslation('generate');
+  document.getElementById('promptInput').placeholder = getTranslation('placeholderNature');
+  document.getElementById('labelInput').placeholder = getTranslation('placeholderName');
+  
+  // Options d'affichage
+  document.querySelector('#optionsPanel h3').textContent = getTranslation('displayOptions');
+  
+  // Fonction helper pour mettre à jour le texte des labels
+  const updateCheckboxLabel = (checkboxId, translationKey) => {
+    const checkbox = document.getElementById(checkboxId);
+    if (checkbox && checkbox.parentElement.tagName === 'LABEL') {
+      const label = checkbox.parentElement;
+      // Garder la checkbox et remplacer le texte
+      const textNode = label.childNodes[1];
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        textNode.textContent = ' ' + getTranslation(translationKey);
+      }
+    } else if (checkbox) {
+      // Si le label est séparé (avec for="...")
+      const label = document.querySelector(`label[for="${checkboxId}"]`);
+      if (label) {
+        label.textContent = getTranslation(translationKey);
+      }
+    }
+  };
+  
+  updateCheckboxLabel('toggleRightAngles', 'showRightAngles');
+  updateCheckboxLabel('toggleSingleAngle', 'showSingleAngle');
+  updateCheckboxLabel('toggleEqualAngles', 'showEqualAngles');
+  updateCheckboxLabel('toggleLengths', 'showMeasures');
+  updateCheckboxLabel('showUnitsCheckbox', 'showUnits');
+  updateCheckboxLabel('toggleHideHypotenuse', 'hideHypotenuse');
+  updateCheckboxLabel('toggleCodings', 'showCodings');
+  updateCheckboxLabel('toggleDiagonals', 'showDiagonals');
+  updateCheckboxLabel('toggleIntersectionLabel', 'nameIntersection');
+  updateCheckboxLabel('toggleIntersectionRightAngle', 'rightAngleIntersection');
+  updateCheckboxLabel('toggleRadius', 'showRadius');
+  updateCheckboxLabel('toggleDiameter', 'showDiameter');
+  updateCheckboxLabel('toggleHandDrawn', 'handDrawn');
+  
+  // Label d'intensité
+  const intensityLabel = document.querySelector('label[for="handDrawnIntensitySlider"]');
+  if (intensityLabel) {
+    const intensityValue = document.getElementById('handDrawnIntensityValue');
+    const currentValue = intensityValue ? intensityValue.textContent : '50';
+    intensityLabel.innerHTML = `${getTranslation('intensity')}: <span id="handDrawnIntensityValue">${currentValue}</span>%`;
+  }
+  
+  // Boutons
+  document.getElementById('exportSvgBtn').textContent = getTranslation('exportSVG');
+  
+  // Bouton Reset
+  const resetBtn = document.getElementById('resetBtn');
+  if (resetBtn) {
+    resetBtn.textContent = getTranslation('reset');
+    resetBtn.title = getTranslation('reset');
+    resetBtn.setAttribute('aria-label', getTranslation('reset'));
+  }
+  
+  // Bouton Copier
+  const copyButtons = document.querySelectorAll('button');
+  copyButtons.forEach(btn => {
+    if (btn.textContent.includes('Copier') || btn.textContent.includes('Copy')) {
+      btn.textContent = `📋 ${getTranslation('copy')}`;
+    }
+  });
+  
+  // Liste des figures
+  document.querySelector('#figuresPanel h3').textContent = getTranslation('figuresList');
+  
+  // Mettre à jour les noms de figures dans la liste
+  const figureItems = document.querySelectorAll('#figuresList li');
+  const figureKeys = ['square', 'circle', 'hexagon', 'rhombus', 'parallelogram', 'regularPolygon', 'rectangle', 'equilateralTriangle', 'isoscelesTriangle', 'scaleneTriangle', 'rightTriangle'];
+  figureItems.forEach((item, index) => {
+    if (index < figureKeys.length) {
+      const nameSpan = item.querySelector('.figure-name');
+      if (nameSpan) {
+        nameSpan.textContent = getTranslation(figureKeys[index]);
+      }
+    }
+  });
+  
+  console.log(`🌍 Langue changée: ${lang}`);
+}

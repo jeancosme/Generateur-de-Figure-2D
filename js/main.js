@@ -41,6 +41,7 @@ window.updateRightAngleMarkers = updateRightAngleMarkers;
 window.updateEqualAngleMarkers = updateEqualAngleMarkers;
 window.updateDiagonals = updateDiagonals;
 window.updateCircleExtras = updateCircleExtras;
+window.changeLanguage = changeLanguage;
 
 console.log('✅ Fonctions exposées globalement');
 
@@ -58,6 +59,9 @@ if (typeof JXG === 'undefined') {
   // 2. Configurer les event listeners
   setupEventListeners();
   console.log('✅ Event listeners configurés');
+  
+  // 3. Initialiser la langue par défaut (français)
+  document.getElementById('flagFR').classList.add('active');
   
   console.log('🎉 Application prête !');
 }
