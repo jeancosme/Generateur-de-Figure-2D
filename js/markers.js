@@ -204,11 +204,11 @@ function updateDiagonals() {
     setIntersectionPoint(null);
   }
   
-  // ✅ Nettoyer aussi les marqueurs d'angles droits à l'intersection (si existants)
-  rightAngleMarkers.forEach(m => { 
+  // ✅ Nettoyer uniquement les marqueurs d'angles droits à l'intersection
+  intersectionRightAngleMarkers.forEach(m => { 
     try { board.removeObject(m); } catch (e) {} 
   });
-  setRightAngleMarkers([]);
+  setIntersectionRightAngleMarkers([]);
 
   // Vérifier si on doit afficher les diagonales
   const show = document.getElementById('toggleDiagonals')?.checked;
@@ -567,8 +567,8 @@ function createIntersectionRightAngle() {
     highlight: false
   });
   
-  // Ajouter aux marqueurs d'angles droits pour le nettoyage
-  rightAngleMarkers.push(seg1, seg2);
+  // Ajouter aux marqueurs d'angles droits à l'intersection pour le nettoyage
+  intersectionRightAngleMarkers.push(seg1, seg2);
   
   const intersection = calculateDiagonalsIntersection();
   if (intersection) {

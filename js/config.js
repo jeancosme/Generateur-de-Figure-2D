@@ -41,6 +41,7 @@ let customLabels = [];
 // ==========================================
 
 let rightAngleMarkers = [];
+let intersectionRightAngleMarkers = []; // Marqueurs spécifiques pour l'angle droit à l'intersection
 let lengthLabels = [];
 let lengthHandles = [];
 let lengthHandleMeta = [];
@@ -107,6 +108,7 @@ function setPolygon(newPolygon) { polygon = newPolygon; }
 function setTexts(newTexts) { texts = newTexts; }
 function setCustomLabels(newLabels) { customLabels = newLabels; }
 function setRightAngleMarkers(newMarkers) { rightAngleMarkers = newMarkers; }
+function setIntersectionRightAngleMarkers(newMarkers) { intersectionRightAngleMarkers = newMarkers; }
 function setLengthLabels(newLabels) { lengthLabels = newLabels; }
 function setLengthHandles(newHandles) { lengthHandles = newHandles; }
 function setLengthHandleMeta(newMeta) { lengthHandleMeta = newMeta; }
@@ -156,6 +158,7 @@ function resetAllGlobalVariables() {
   texts = [];
   customLabels = [];
   rightAngleMarkers = [];
+  intersectionRightAngleMarkers = [];
   lengthLabels = [];
   lengthHandles = [];
   lengthHandleMeta = [];
