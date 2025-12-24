@@ -73,7 +73,7 @@ function updateCircleExtras() {
 
     const newRadiusSegment = board.create('segment', [centerPoint, circlePoint], {
       strokeColor: 'black',
-      strokeWidth: 2,
+      strokeWidth: 1.4,
       fixed: true
     });
     setRadiusSegment(newRadiusSegment);
@@ -156,7 +156,7 @@ function updateCircleExtras() {
 
     const newDiameterSegment = board.create('segment', [B, C], {
       strokeColor: 'black',
-      strokeWidth: 2,
+      strokeWidth: 1.4,
       fixed: true
     });
     

@@ -141,6 +141,32 @@ function generateFigure() {
     }
     
     // POLYGONES RÉGULIERS
+    else if (input.includes("polygone régulier") || input.includes("polygone regulier")) {
+      // Extraire n= de la chaîne
+      const nMatch = input.match(/n\s*=\s*(\d+)/);
+      if (nMatch) {
+        const n = parseInt(nMatch[1]);
+        // Extraire le nombre après "côté" ou "cote"
+        const sideMatch = input.match(/(?:côté|cote)\s+(\d+(?:[.,]\d+)?)/);
+        const side = sideMatch ? parseFloat(sideMatch[1].replace(',', '.')) : 3;
+        if (n >= 3 && n <= 20) {
+          drawRegularPolygon(n, side);
+          console.log(`✅ Polygone régulier à ${n} côtés généré (côté: ${side})`);
+          // Ajuster le zoom pour les polygones > 7 côtés
+          if (n > 7) {
+            setTimeout(() => board.zoom(1.5, 1.5), 50);
+          }
+        } else {
+          alert(`Le nombre de côtés doit être entre 3 et 20.`);
+          console.warn(`❌ Nombre de côtés invalide: ${n}`);
+          return;
+        }
+      } else {
+        alert(`Format attendu: "polygone régulier n=8 de côté 3"`);
+        console.warn(`❌ Format invalide pour polygone régulier: "${input}"`);
+        return;
+      }
+    }
     else if (input.includes("pentagone") || input.includes("pentagon")) {
       const side = extractNumber(input, 3);
       drawRegularPolygon(5, side);
@@ -773,7 +799,8 @@ function setupEventListeners() {
     "parallélogramme 5 x 3",
     "hexagone de côté 4",
     "pentagone de côté 4",
-    "octogone de côté 4"
+    "octogone de côté 4",
+    "polygone régulier n=8 de côté 3"
   ];
 
   let selectedSuggestionIndex = -1;

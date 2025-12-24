@@ -451,7 +451,7 @@ function drawCircle(radius) {
 
   // Créer le cercle
   const newCircleObject = board.create('circle', [newCenterPoint, radius], {
-    strokeWidth: 2,
+    strokeWidth: 1.4,
     strokeColor: 'black'
   });
 
