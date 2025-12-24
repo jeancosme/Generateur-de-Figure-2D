@@ -50,6 +50,12 @@ let angleMarkers = [];
 let diagonals = [];
 
 // ==========================================
+// PARAMÈTRES D'AFFICHAGE
+// ==========================================
+
+let globalFontSize = 14; // Taille par défaut de la police
+
+// ==========================================
 // ÉLÉMENTS SPÉCIFIQUES AU CERCLE
 // ==========================================
 
@@ -126,6 +132,15 @@ function setIsHandDrawnMode(newMode) { isHandDrawnMode = newMode; }
 function setExtraElements(newElements) { extraElements = newElements; }
 function setR(newR) { r = newR; }
 function setLengthSyncAttached(newValue) { _lengthSyncAttached = newValue; }
+
+// Getters/Setters pour globalFontSize
+function setGlobalFontSize(size) {
+  globalFontSize = Math.max(8, Math.min(24, size)); // Entre 8 et 24
+}
+
+function getGlobalFontSize() {
+  return globalFontSize;
+}
 
 // ==========================================
 // HELPERS POUR RESET COMPLET

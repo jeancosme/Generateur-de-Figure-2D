@@ -194,10 +194,10 @@ function drawLosange(side) {
     fillOpacity: 1
   });
 
-  const LA = board.create('text', [A.X() - 0.4, A.Y(), getLabel(0)]);
-  const LB = board.create('text', [B.X() - 0.1, B.Y() + 0.3, getLabel(1)]);
-  const LC = board.create('text', [C.X() + 0.25, C.Y(), getLabel(2)]);
-  const LD = board.create('text', [D.X() - 0.1, D.Y() - 0.3, getLabel(3)]);
+  const LA = board.create('text', [A.X() - 0.4, A.Y(), getLabel(0)], {fontSize: getGlobalFontSize()});
+  const LB = board.create('text', [B.X() - 0.1, B.Y() + 0.3, getLabel(1)], {fontSize: getGlobalFontSize()});
+  const LC = board.create('text', [C.X() + 0.25, C.Y(), getLabel(2)], {fontSize: getGlobalFontSize()});
+  const LD = board.create('text', [D.X() - 0.1, D.Y() - 0.3, getLabel(3)], {fontSize: getGlobalFontSize()});
   const newTexts = [LA, LB, LC, LD];
 
   setPoints(newPoints);
@@ -228,10 +228,10 @@ function drawParallelogram(base, sideLength) {
     fillOpacity: 1
   });
 
-  const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: 14});
-  const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: 14});
-  const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: 14});
-  const labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.3, getLabel(3)], {fontSize: 14});
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
+  const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: getGlobalFontSize()});
+  const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: getGlobalFontSize()});
+  const labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.3, getLabel(3)], {fontSize: getGlobalFontSize()});
   const newTexts = [labelA, labelB, labelC, labelD];
 
   setPoints(newPoints);
@@ -484,7 +484,7 @@ function drawCircle(radius) {
   ], {
     anchorX: 'middle',
     anchorY: 'bottom',
-    fontSize: 16,
+    fontSize: getGlobalFontSize(),
     fixed: true,
     name: ''
   });
@@ -497,7 +497,7 @@ function drawCircle(radius) {
   ], {
     anchorX: 'middle',
     anchorY: 'bottom',
-    fontSize: 16,
+    fontSize: getGlobalFontSize(),
     fixed: true,
     name: ''
   });

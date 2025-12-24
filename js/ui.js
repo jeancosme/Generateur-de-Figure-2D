@@ -1062,14 +1062,32 @@ function setupEventListeners() {
   // Effet main levée
   addSafeEventListener('toggleHandDrawn', 'change', (e) => {
     const isHandDrawnMode = e.target.checked;
+    const intensityGroup = document.getElementById('handDrawnIntensityGroup');
+    
     if (isHandDrawnMode) {
+      if (intensityGroup) intensityGroup.style.display = 'block';
       applyHandDrawnEffect();
     } else {
+      if (intensityGroup) intensityGroup.style.display = 'none';
       // Regenerate sans effet
       invalidateFigureCache();
       generateFigure();
     }
   }, 'Effet main levée');
+  
+  // Event listener pour le curseur d'intensité
+  addSafeEventListener('handDrawnIntensitySlider', 'input', (e) => {
+    const intensityValue = document.getElementById('handDrawnIntensityValue');
+    if (intensityValue) {
+      intensityValue.textContent = e.target.value;
+    }
+    
+    // Réappliquer l'effet avec la nouvelle intensité
+    const handDrawnCheckbox = document.getElementById('toggleHandDrawn');
+    if (handDrawnCheckbox && handDrawnCheckbox.checked) {
+      applyHandDrawnEffect();
+    }
+  }, 'Intensité main levée');
 
   // ==========================================
   // 5. INTERACTION AVEC LA LISTE DES FIGURES

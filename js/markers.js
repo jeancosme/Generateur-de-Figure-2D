@@ -106,7 +106,7 @@ function updateCircleExtras() {
       ], {
         anchorX: 'middle',
         anchorY: 'middle',
-        fontSize: 14,
+        fontSize: getGlobalFontSize(),
         fixed: false
       });
 
@@ -312,7 +312,7 @@ function createIntersectionLabel() {
   ], {
     anchorX: 'middle',
     anchorY: 'middle',
-    fontSize: 14,
+    fontSize: getGlobalFontSize(),
     strokeColor: 'black',
     fixed: false,
     highlight: false,
@@ -1309,7 +1309,7 @@ function updateLengthLabels() {
       () => handle.Y(),
       () => formatLength(Math.hypot(pt2.X() - pt1.X(), pt2.Y() - pt1.Y()))
     ], {
-      fontSize: 14,
+      fontSize: getGlobalFontSize(),
       fixed: false,
       anchorX: 'middle',
       anchorY: 'middle',

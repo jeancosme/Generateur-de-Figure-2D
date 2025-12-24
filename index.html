@@ -101,6 +101,15 @@
         <label><input type="checkbox" id="toggleRadius"> Afficher un rayon</label>
         <label><input type="checkbox" id="toggleDiameter"> Afficher un diamètre</label>
         <label><input type="checkbox" id="toggleHandDrawn"> Dessin à main levée</label>
+        
+        <!-- Curseur d'intensité pour l'effet main levée -->
+        <div id="handDrawnIntensityGroup" style="display: none; margin-left: 20px; margin-top: 8px;">
+          <label for="handDrawnIntensitySlider" style="font-size: 13px; display: block; margin-bottom: 5px;">
+            Intensité: <span id="handDrawnIntensityValue">50</span>%
+          </label>
+          <input type="range" id="handDrawnIntensitySlider" min="0" max="100" value="50" 
+                 style="width: 150px; cursor: pointer;">
+        </div>
       </div>
 
       <!-- bouton placé sous le panneau (HTML statique) -->

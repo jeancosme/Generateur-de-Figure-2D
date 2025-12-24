@@ -112,9 +112,31 @@ function createBoardControls() {
 
   row3.appendChild(reset);
 
+  // Rangée 4 : Taille de police
+  const row4 = document.createElement('div');
+  row4.className = 'small-row';
+
+  const fontMinus = document.createElement('button');
+  fontMinus.className = 'zoom-btn';
+  fontMinus.innerHTML = 'A-';
+  fontMinus.title = 'Réduire la taille du texte';
+  fontMinus.setAttribute('aria-label','Réduire la taille du texte');
+  fontMinus.addEventListener('click', (e) => { e.stopPropagation(); decreaseFontSize(); });
+
+  const fontPlus = document.createElement('button');
+  fontPlus.className = 'zoom-btn';
+  fontPlus.innerHTML = 'A+';
+  fontPlus.title = 'Augmenter la taille du texte';
+  fontPlus.setAttribute('aria-label','Augmenter la taille du texte');
+  fontPlus.addEventListener('click', (e) => { e.stopPropagation(); increaseFontSize(); });
+
+  row4.appendChild(fontMinus);
+  row4.appendChild(fontPlus);
+
   panel.appendChild(row1);
   panel.appendChild(row2);
   panel.appendChild(row3);
+  panel.appendChild(row4);
 
   container.appendChild(panel);
 }
@@ -150,6 +172,58 @@ function zoomIn() {
 
 function zoomOut() {
   board.zoomOut();
+}
+
+// ==========================================
+// TAILLE DE POLICE
+// ==========================================
+
+function increaseFontSize() {
+  const currentSize = getGlobalFontSize();
+  setGlobalFontSize(currentSize + 2);
+  updateAllFontSizes();
+  console.log(`📝 Taille de police augmentée: ${getGlobalFontSize()}px`);
+}
+
+function decreaseFontSize() {
+  const currentSize = getGlobalFontSize();
+  setGlobalFontSize(currentSize - 2);
+  updateAllFontSizes();
+  console.log(`📝 Taille de police réduite: ${getGlobalFontSize()}px`);
+}
+
+function updateAllFontSizes() {
+  const fontSize = getGlobalFontSize();
+  
+  // Mettre à jour tous les labels de points (texts)
+  if (texts && texts.length > 0) {
+    texts.forEach(text => {
+      if (text && typeof text.setAttribute === 'function') {
+        text.setAttribute({ fontSize: fontSize });
+      }
+    });
+  }
+  
+  // Mettre à jour tous les labels de longueurs
+  if (lengthLabels && lengthLabels.length > 0) {
+    lengthLabels.forEach(label => {
+      if (label && typeof label.setAttribute === 'function') {
+        label.setAttribute({ fontSize: fontSize });
+      }
+    });
+  }
+  
+  // Mettre à jour le label d'intersection
+  if (intersectionLabel && typeof intersectionLabel.setAttribute === 'function') {
+    intersectionLabel.setAttribute({ fontSize: fontSize });
+  }
+  
+  // Mettre à jour le label du rayon
+  if (radiusLabel && typeof radiusLabel.setAttribute === 'function') {
+    radiusLabel.setAttribute({ fontSize: fontSize });
+  }
+  
+  board.update();
 }
 
 // ==========================================

@@ -171,7 +171,12 @@ function createHandDrawnPolygon() {
 
 function createHandDrawnSegment(startPoint, endPoint) {
   const numPoints = 60; // Plus de points pour plus de détails
-  const baseIntensity = 0.06; // ✅ Intensité de base augmentée (x3)
+  
+  // ✅ Récupérer l'intensité depuis le curseur (0-100)
+  const intensitySlider = document.getElementById('handDrawnIntensitySlider');
+  const intensityPercent = intensitySlider ? parseInt(intensitySlider.value) : 50;
+  const intensityFactor = intensityPercent / 50; // 0-2 (50% = facteur 1)
+  const baseIntensity = 0.06 * intensityFactor; // Intensité ajustable
   
   // Calculer la longueur pour adapter l'intensité
   const segmentLength = Math.hypot(endPoint.X() - startPoint.X(), endPoint.Y() - startPoint.Y());
@@ -181,11 +186,11 @@ function createHandDrawnSegment(startPoint, endPoint) {
   const controlPoints = [];
   for (let i = 0; i <= 10; i++) { // ✅ Plus de points de contrôle
     const t = i / 10;
-    // ✅ Ondulations plus marquées avec plusieurs fréquences
-    const wave1 = Math.sin(t * Math.PI * 3.2) * 0.035 * lengthFactor; // Vague principale plus forte
-    const wave2 = Math.sin(t * Math.PI * 6.5) * 0.020 * lengthFactor; // Vague secondaire
-    const wave3 = Math.sin(t * Math.PI * 12.8) * 0.010 * lengthFactor; // Micro-ondulations
-    const noise = (Math.random() - 0.5) * 0.025 * lengthFactor; // ✅ Bruit plus fort
+    // ✅ Ondulations plus marquées avec plusieurs fréquences (ajustées par l'intensité)
+    const wave1 = Math.sin(t * Math.PI * 3.2) * 0.035 * lengthFactor * intensityFactor; // Vague principale
+    const wave2 = Math.sin(t * Math.PI * 6.5) * 0.020 * lengthFactor * intensityFactor; // Vague secondaire
+    const wave3 = Math.sin(t * Math.PI * 12.8) * 0.010 * lengthFactor * intensityFactor; // Micro-ondulations
+    const noise = (Math.random() - 0.5) * 0.025 * lengthFactor * intensityFactor; // Bruit ajusté
     controlPoints.push(wave1 + wave2 + wave3 + noise);
   }
   
@@ -209,9 +214,9 @@ function createHandDrawnSegment(startPoint, endPoint) {
       const len = Math.hypot(dx, dy) || 1;
       const perpX = -dy / len;
       
-      // ✅ Tremblement plus intense avec variation continue
+      // ✅ Tremblement plus intense avec variation continue (ajusté par l'intensité)
       const edgeFactor = Math.sin(t * Math.PI); // 0 aux bords, 1 au centre
-      const continuousTremor = Math.sin(t * Math.PI * 8.5) * 0.015 * edgeFactor * lengthFactor;
+      const continuousTremor = Math.sin(t * Math.PI * 8.5) * 0.015 * edgeFactor * lengthFactor * intensityFactor;
       const randomTremor = (Math.random() - 0.5) * baseIntensity * edgeFactor * lengthFactor;
       
       return baseX + controlOffset * perpX + continuousTremor + randomTremor * 0.3;
@@ -235,7 +240,7 @@ function createHandDrawnSegment(startPoint, endPoint) {
       const perpY = dx / len;
       
       const edgeFactor = Math.sin(t * Math.PI);
-      const continuousTremor = Math.cos(t * Math.PI * 7.8) * 0.018 * edgeFactor * lengthFactor; // ✅ Phase légèrement différente
+      const continuousTremor = Math.cos(t * Math.PI * 7.8) * 0.018 * edgeFactor * lengthFactor * intensityFactor; // Phase légèrement différente
       const randomTremor = (Math.random() - 0.5) * baseIntensity * edgeFactor * lengthFactor;
       
       return baseY + controlOffset * perpY + continuousTremor + randomTremor * 0.3;
@@ -263,6 +268,11 @@ function createHandDrawnCircle() {
     circleObject.setAttribute({ visible: false });
   }
   
+  // ✅ Récupérer l'intensité depuis le curseur
+  const intensitySlider = document.getElementById('handDrawnIntensitySlider');
+  const intensityPercent = intensitySlider ? parseInt(intensitySlider.value) : 50;
+  const intensityFactor = intensityPercent / 50; // 0-2 (50% = facteur 1)
+  
   const centerX = centerPoint.X();
   const centerY = centerPoint.Y();
   const radius = Math.hypot(circlePoint.X() - centerX, circlePoint.Y() - centerY);
@@ -272,12 +282,12 @@ function createHandDrawnCircle() {
   const radiusVariations = [];
   
   for (let i = 0; i < numSections; i++) {
-    // ✅ Variations plus marquées avec plusieurs harmoniques
+    // ✅ Variations plus marquées avec plusieurs harmoniques (ajustées par l'intensité)
     const angle = (i * Math.PI * 2) / numSections;
-    const baseVariation1 = Math.sin(angle * 2.7) * 0.055; // Vague principale plus forte
-    const baseVariation2 = Math.sin(angle * 5.3) * 0.032; // Vague secondaire
-    const baseVariation3 = Math.sin(angle * 11.1) * 0.018; // Micro-variations
-    const noise = (Math.random() - 0.5) * 0.040; // ✅ Bruit plus fort
+    const baseVariation1 = Math.sin(angle * 2.7) * 0.055 * intensityFactor; // Vague principale
+    const baseVariation2 = Math.sin(angle * 5.3) * 0.032 * intensityFactor; // Vague secondaire
+    const baseVariation3 = Math.sin(angle * 11.1) * 0.018 * intensityFactor; // Micro-variations
+    const noise = (Math.random() - 0.5) * 0.040 * intensityFactor; // Bruit ajusté
     radiusVariations.push(1 + baseVariation1 + baseVariation2 + baseVariation3 + noise);
   }
   
