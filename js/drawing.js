@@ -575,3 +575,185 @@ function getHypotenuseIndex() {
   
   return longestSide.index;
 }
+
+// ==========================================
+// CONFIGURATIONS DE THALÈS
+// ==========================================
+
+/**
+ * Dessine une configuration de Thalès classique
+ * Triangle avec une sécante parallèle à un côté
+ * @param {number} PQ - Longueur du petit segment vertical gauche
+ * @param {number} PR - Longueur du grand segment vertical gauche
+ * @param {number} PT - Longueur du petit segment vertical droit
+ */
+function drawThalesClassic(PQ, PR, PT) {
+  // Calcul de PS par le théorème de Thalès : PQ/PR = PT/PS
+  const PS = (PT * PR) / PQ;
+  
+  console.log(`📐 Thalès classique: PQ=${PQ}, PR=${PR}, PT=${PT}, PS=${PS.toFixed(2)}`);
+  
+  // Positions des points
+  // P au sommet, Q et T sur une ligne horizontale (sécante), R et S à la base
+  const P = board.create('point', [0, 3], { name: '', fixed: true, visible: false });
+  const Q = board.create('point', [-PQ * 0.4, 3 - PQ * 0.6], { name: '', fixed: true, visible: false });
+  const T = board.create('point', [PT * 0.4, 3 - PT * 0.6], { name: '', fixed: true, visible: false });
+  const R = board.create('point', [-PR * 0.4, 3 - PR * 0.6], { name: '', fixed: true, visible: false });
+  const S = board.create('point', [PS * 0.4, 3 - PS * 0.6], { name: '', fixed: true, visible: false });
+  
+  // Segments principaux
+  const segPR = board.create('segment', [P, R], { strokeColor: 'black', strokeWidth: 2 });
+  const segPS = board.create('segment', [P, S], { strokeColor: 'black', strokeWidth: 2 });
+  const segRS = board.create('segment', [R, S], { strokeColor: 'black', strokeWidth: 2 });
+  const segQT = board.create('segment', [Q, T], { strokeColor: 'blue', strokeWidth: 2, dash: 2 });
+  
+  // Labels des points
+  const labelP = board.create('text', [P.X(), P.Y() + 0.4, getLabel(0)], { fontSize: getGlobalFontSize() });
+  const labelQ = board.create('text', [Q.X() - 0.3, Q.Y(), getLabel(1)], { fontSize: getGlobalFontSize() });
+  const labelT = board.create('text', [T.X() + 0.3, T.Y(), getLabel(2)], { fontSize: getGlobalFontSize() });
+  const labelR = board.create('text', [R.X() - 0.3, R.Y() - 0.3, getLabel(3)], { fontSize: getGlobalFontSize() });
+  const labelS = board.create('text', [S.X() + 0.3, S.Y() - 0.3, getLabel(4)], { fontSize: getGlobalFontSize() });
+  
+  const newPoints = [P, Q, T, R, S];
+  const newTexts = [labelP, labelQ, labelT, labelR, labelS];
+  
+  // Stocker les segments comme éléments extra pour le déplacement
+  extraElements.push(segPR, segPS, segRS, segQT);
+  
+  setPoints(newPoints);
+  setTexts(newTexts);
+  setPolygon(null); // Pas de polygone pour Thalès
+  
+  // Ajouter le déplacement global
+  addThalesDragging(newPoints, newTexts, [segPR, segPS, segRS, segQT]);
+  
+  // Centrer la figure
+  setTimeout(() => centerBoard(), 100);
+  
+  console.log(`✅ Configuration de Thalès classique générée`);
+}
+
+/**
+ * Dessine une configuration de Thalès papillon (en X)
+ * Deux triangles qui se croisent en un point central
+ * @param {number} AB - Longueur de A au centre
+ * @param {number} AC - Longueur totale depuis A
+ * @param {number} AD - Longueur de A vers D
+ * @param {number} AE - Longueur totale de A vers E (calculée si non fournie)
+ */
+function drawThalesPapillon(AB, AC, AD, AE = null) {
+  // Si AE n'est pas fourni, on utilise le rapport : AB/AC = AD/AE
+  if (AE === null) {
+    AE = (AD * AC) / AB;
+  }
+  
+  console.log(`🦋 Thalès papillon: AB=${AB}, AC=${AC}, AD=${AD}, AE=${AE.toFixed(2)}`);
+  
+  // Point central A
+  const A = board.create('point', [0, 0], { name: '', fixed: true, visible: false });
+  
+  // Points sur la première diagonale (horizontale)
+  const B = board.create('point', [-AB, 0], { name: '', fixed: true, visible: false });
+  const C = board.create('point', [AC - AB, 0], { name: '', fixed: true, visible: false });
+  
+  // Points sur la deuxième diagonale (angle ~60°)
+  const angle = Math.PI / 4; // 45 degrés pour une belle visualisation
+  const D = board.create('point', [AD * Math.cos(angle), AD * Math.sin(angle)], { name: '', fixed: true, visible: false });
+  const E = board.create('point', [(AE - AD) * Math.cos(angle + Math.PI), (AE - AD) * Math.sin(angle + Math.PI)], { name: '', fixed: true, visible: false });
+  
+  // Segments principaux
+  const segBC = board.create('segment', [B, C], { strokeColor: 'black', strokeWidth: 2 });
+  const segDE = board.create('segment', [D, E], { strokeColor: 'black', strokeWidth: 2 });
+  const segBD = board.create('segment', [B, D], { strokeColor: 'blue', strokeWidth: 2 });
+  const segCE = board.create('segment', [C, E], { strokeColor: 'blue', strokeWidth: 2 });
+  
+  // Labels des points
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() - 0.3, getLabel(0)], { fontSize: getGlobalFontSize() });
+  const labelB = board.create('text', [B.X() - 0.4, B.Y(), getLabel(1)], { fontSize: getGlobalFontSize() });
+  const labelC = board.create('text', [C.X() + 0.3, C.Y(), getLabel(2)], { fontSize: getGlobalFontSize() });
+  const labelD = board.create('text', [D.X(), D.Y() + 0.4, getLabel(3)], { fontSize: getGlobalFontSize() });
+  const labelE = board.create('text', [E.X(), E.Y() - 0.4, getLabel(4)], { fontSize: getGlobalFontSize() });
+  
+  const newPoints = [A, B, C, D, E];
+  const newTexts = [labelA, labelB, labelC, labelD, labelE];
+  
+  // Stocker les segments
+  extraElements.push(segBC, segDE, segBD, segCE);
+  
+  setPoints(newPoints);
+  setTexts(newTexts);
+  setPolygon(null);
+  
+  // Ajouter le déplacement
+  addThalesDragging(newPoints, newTexts, [segBC, segDE, segBD, segCE]);
+  
+  // Centrer
+  setTimeout(() => centerBoard(), 100);
+  
+  console.log(`✅ Configuration de Thalès papillon générée`);
+}
+
+/**
+ * Ajoute la fonctionnalité de dragging pour les configurations de Thalès
+ */
+function addThalesDragging(thalesPoints, thalesTexts, segments) {
+  let startCoords = null;
+  let isDragging = false;
+  
+  const startDrag = function(e) {
+    isDragging = true;
+    startCoords = board.getUsrCoordsOfMouse(e);
+    e.stopPropagation();
+  };
+  
+  const onMouseMove = function(ev) {
+    if (!isDragging || !startCoords) return;
+    
+    const newCoords = board.getUsrCoordsOfMouse(ev);
+    const dx = newCoords[0] - startCoords[0];
+    const dy = newCoords[1] - startCoords[1];
+    startCoords = newCoords;
+    
+    // Déplacer tous les points
+    thalesPoints.forEach(pt => {
+      try { pt.moveTo([pt.X() + dx, pt.Y() + dy], 0); }
+      catch (err) { try { pt.setPosition(JXG.COORDS_BY_USER, [pt.X() + dx, pt.Y() + dy]); } catch(e){} }
+    });
+    
+    // Déplacer les labels
+    thalesTexts.forEach(txt => {
+      try {
+        if (typeof txt.setPosition === 'function') {
+          txt.setPosition(JXG.COORDS_BY_USER, [txt.X() + dx, txt.Y() + dy]);
+        }
+      } catch (err) { /* ignore */ }
+    });
+    
+    // Déplacer les handles des labels de points si présents
+    if (labelHandles && labelHandles.length > 0) {
+      labelHandles.forEach(h => {
+        try { h.moveTo([h.X() + dx, h.Y() + dy], 0); }
+        catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e){} }
+      });
+    }
+    
+    board.update();
+  };
+  
+  const endDrag = function() {
+    isDragging = false;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', endDrag);
+  };
+  
+  // Attacher les événements à chaque segment
+  segments.forEach(seg => {
+    if (seg && seg.rendNode) {
+      seg.rendNode.style.cursor = 'move';
+      seg.rendNode.addEventListener('mousedown', startDrag);
+    }
+  });
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', endDrag);
+}

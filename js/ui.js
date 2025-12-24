@@ -188,6 +188,35 @@ function generateFigure() {
       console.log(`✅ Octogone généré (côté: ${side})`);
     }
     
+    // CONFIGURATIONS DE THALÈS
+    else if (input.includes("thalès") || input.includes("thales")) {
+      if (input.includes("papillon") || input.includes("butterfly")) {
+        // Thalès papillon : 4 valeurs possibles (AB, AC, AD, AE)
+        const numbers = input.match(/\d+(?:[.,]\d+)?/g);
+        if (numbers && numbers.length >= 3) {
+          const [AB, AC, AD, AE] = numbers.map(n => parseFloat(n.replace(',', '.')));
+          drawThalesPapillon(AB, AC, AD, AE || null);
+          console.log(`✅ Thalès papillon généré (AB=${AB}, AC=${AC}, AD=${AD})`);
+        } else {
+          // Valeurs par défaut pour le papillon
+          drawThalesPapillon(2, 6, 3);
+          console.log(`✅ Thalès papillon généré avec valeurs par défaut`);
+        }
+      } else {
+        // Thalès classique : 3 valeurs (PQ, PR, PT) → calcule PS
+        const numbers = input.match(/\d+(?:[.,]\d+)?/g);
+        if (numbers && numbers.length >= 3) {
+          const [PQ, PR, PT] = numbers.map(n => parseFloat(n.replace(',', '.')));
+          drawThalesClassic(PQ, PR, PT);
+          console.log(`✅ Thalès classique généré (PQ=${PQ}, PR=${PR}, PT=${PT})`);
+        } else {
+          // Valeurs par défaut comme dans l'image
+          drawThalesClassic(4, 12, 5);
+          console.log(`✅ Thalès classique généré avec valeurs par défaut`);
+        }
+      }
+    }
+    
     // FIGURE NON RECONNUE
     else {
       // Essayer d'utiliser les suggestions disponibles
