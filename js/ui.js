@@ -1021,6 +1021,11 @@ function setupEventListeners() {
     });
   }
   
+  // Event listener pour l'angle droit à l'intersection
+  addSafeEventListener('toggleIntersectionRightAngle', 'change', () => {
+    updateDiagonals();
+  }, "Angle droit à l'intersection");
+  
   // Angles égaux
   addSafeEventListener('toggleEqualAngles', 'change', (e) => {
     updateEqualAngleMarkers(e.target.checked);

@@ -203,6 +203,12 @@ function updateDiagonals() {
     try { board.removeObject(intersectionPoint); } catch (e) {}
     setIntersectionPoint(null);
   }
+  
+  // ✅ Nettoyer aussi les marqueurs d'angles droits à l'intersection (si existants)
+  rightAngleMarkers.forEach(m => { 
+    try { board.removeObject(m); } catch (e) {} 
+  });
+  setRightAngleMarkers([]);
 
   // Vérifier si on doit afficher les diagonales
   const show = document.getElementById('toggleDiagonals')?.checked;
@@ -244,6 +250,18 @@ function updateDiagonals() {
   const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
   if (showIntersectionLabel) {
     createIntersectionLabel();
+  }
+  
+  // ✅ CRÉER L'ANGLE DROIT À L'INTERSECTION (si demandé et si perpendiculaire)
+  const showIntersectionRightAngle = document.getElementById('toggleIntersectionRightAngle')?.checked;
+  if (showIntersectionRightAngle) {
+    createIntersectionRightAngle();
+  }
+  
+  // ✅ Remettre à jour les marqueurs d'angles droits réguliers si l'option est active
+  const showRightAngles = document.getElementById('toggleRightAngles')?.checked;
+  if (showRightAngles) {
+    updateRightAngleMarkers(true);
   }
   
   board.update();
@@ -384,6 +402,178 @@ function calculateDiagonalsIntersection() {
     x: intersectionX,
     y: intersectionY
   };
+}
+
+// ✅ FONCTION POUR VÉRIFIER SI LES DIAGONALES SONT PERPENDICULAIRES
+function areDiagonalsPerpendicular() {
+  if (!points || points.length !== 4) return false;
+  
+  const A = points[0];
+  const C = points[2];
+  const B = points[1];
+  const D = points[3];
+  
+  // Vecteurs directeurs des diagonales AC et BD
+  const v1x = C.X() - A.X();
+  const v1y = C.Y() - A.Y();
+  const v2x = D.X() - B.X();
+  const v2y = D.Y() - B.Y();
+  
+  // Produit scalaire
+  const dotProduct = v1x * v2x + v1y * v2y;
+  
+  // Longueurs des vecteurs
+  const len1 = Math.hypot(v1x, v1y);
+  const len2 = Math.hypot(v2x, v2y);
+  
+  if (len1 === 0 || len2 === 0) return false;
+  
+  // Cosinus de l'angle
+  const cosAngle = dotProduct / (len1 * len2);
+  
+  // Tolérance pour considérer l'angle comme droit (90°)
+  const tolerance = 0.05; // ~2.8 degrés
+  
+  return Math.abs(cosAngle) < tolerance;
+}
+
+// ✅ FONCTION : Créer l'angle droit à l'intersection des diagonales
+function createIntersectionRightAngle() {
+  if (!points || points.length !== 4) return;
+  
+  // Vérifier si les diagonales sont perpendiculaires
+  if (!areDiagonalsPerpendicular()) {
+    console.log('ℹ️ Les diagonales ne sont pas perpendiculaires, pas d\'angle droit à afficher');
+    return;
+  }
+  
+  // Taille du marqueur d'angle droit
+  const cornerSize = 0.3;
+  
+  // ✅ Utiliser des fonctions pour que le marqueur suive les points en temps réel
+  const A = points[0];
+  const C = points[2];
+  const B = points[1];
+  const D = points[3];
+  
+  // Créer les deux segments du marqueur d'angle droit avec des fonctions dynamiques
+  const seg1 = board.create('segment', [
+    () => {
+      // Recalculer l'intersection en temps réel
+      const intersection = calculateDiagonalsIntersection();
+      if (!intersection) return [0, 0];
+      
+      const v1x = C.X() - A.X();
+      const v1y = C.Y() - A.Y();
+      const v2x = B.X() - intersection.x;
+      const v2y = B.Y() - intersection.y;
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [intersection.x, intersection.y];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      
+      const p1x = intersection.x + u1x * cornerSize;
+      const p1y = intersection.y + u1y * cornerSize;
+      
+      return [p1x, p1y];
+    },
+    () => {
+      const intersection = calculateDiagonalsIntersection();
+      if (!intersection) return [0, 0];
+      
+      const v1x = C.X() - A.X();
+      const v1y = C.Y() - A.Y();
+      const v2x = B.X() - intersection.x;
+      const v2y = B.Y() - intersection.y;
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [intersection.x, intersection.y];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const p1x = intersection.x + u1x * cornerSize;
+      const p1y = intersection.y + u1y * cornerSize;
+      const p3x = p1x + u2x * cornerSize;
+      const p3y = p1y + u2y * cornerSize;
+      
+      return [p3x, p3y];
+    }
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  const seg2 = board.create('segment', [
+    () => {
+      const intersection = calculateDiagonalsIntersection();
+      if (!intersection) return [0, 0];
+      
+      const v1x = C.X() - A.X();
+      const v1y = C.Y() - A.Y();
+      const v2x = B.X() - intersection.x;
+      const v2y = B.Y() - intersection.y;
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [intersection.x, intersection.y];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const p1x = intersection.x + u1x * cornerSize;
+      const p1y = intersection.y + u1y * cornerSize;
+      const p3x = p1x + u2x * cornerSize;
+      const p3y = p1y + u2y * cornerSize;
+      
+      return [p3x, p3y];
+    },
+    () => {
+      const intersection = calculateDiagonalsIntersection();
+      if (!intersection) return [0, 0];
+      
+      const v2x = B.X() - intersection.x;
+      const v2y = B.Y() - intersection.y;
+      
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len2 === 0) return [intersection.x, intersection.y];
+      
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const p2x = intersection.x + u2x * cornerSize;
+      const p2y = intersection.y + u2y * cornerSize;
+      
+      return [p2x, p2y];
+    }
+  ], {
+    strokeColor: 'black',
+    strokeWidth: 1.5,
+    fixed: true,
+    highlight: false
+  });
+  
+  // Ajouter aux marqueurs d'angles droits pour le nettoyage
+  rightAngleMarkers.push(seg1, seg2);
+  
+  const intersection = calculateDiagonalsIntersection();
+  if (intersection) {
+    console.log(`✅ Angle droit créé à l'intersection des diagonales à (${intersection.x.toFixed(2)}, ${intersection.y.toFixed(2)})`);
+  }
 }
 
 // ==========================================
@@ -627,37 +817,56 @@ function createSingleRightAngleMarker(angleIndex, size, figureSize = 4) {
     return;
   }
   
-  const v1x = prevPoint.X() - vertex.X();
-  const v1y = prevPoint.Y() - vertex.Y();
-  const v2x = nextPoint.X() - vertex.X();
-  const v2y = nextPoint.Y() - vertex.Y();
-  
-  const len1 = Math.hypot(v1x, v1y);
-  const len2 = Math.hypot(v2x, v2y);
-  
-  if (len1 === 0 || len2 === 0) {
-    console.warn(`⚠️ Vecteurs de longueur nulle pour l'angle ${angleIndex}`);
-    return;
-  }
-  
-  const u1x = v1x / len1;
-  const u1y = v1y / len1;
-  const u2x = v2x / len2;
-  const u2y = v2y / len2;
-  
-  const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
-  
-  const p1x = vertex.X() + u1x * cornerSize;
-  const p1y = vertex.Y() + u1y * cornerSize;
-  
-  const p2x = vertex.X() + u2x * cornerSize;
-  const p2y = vertex.Y() + u2y * cornerSize;
-  
-  const p3x = p1x + u2x * cornerSize;
-  const p3y = p1y + u2y * cornerSize;
-  
+  // ✅ Utiliser des fonctions pour que les marqueurs suivent les points en temps réel
   const seg1 = board.create('segment', [
-    [p1x, p1y], [p3x, p3y]
+    () => {
+      const v1x = prevPoint.X() - vertex.X();
+      const v1y = prevPoint.Y() - vertex.Y();
+      const v2x = nextPoint.X() - vertex.X();
+      const v2y = nextPoint.Y() - vertex.Y();
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [vertex.X(), vertex.Y()];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+      
+      const p1x = vertex.X() + u1x * cornerSize;
+      const p1y = vertex.Y() + u1y * cornerSize;
+      
+      return [p1x, p1y];
+    },
+    () => {
+      const v1x = prevPoint.X() - vertex.X();
+      const v1y = prevPoint.Y() - vertex.Y();
+      const v2x = nextPoint.X() - vertex.X();
+      const v2y = nextPoint.Y() - vertex.Y();
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [vertex.X(), vertex.Y()];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+      
+      const p1x = vertex.X() + u1x * cornerSize;
+      const p1y = vertex.Y() + u1y * cornerSize;
+      const p3x = p1x + u2x * cornerSize;
+      const p3y = p1y + u2y * cornerSize;
+      
+      return [p3x, p3y];
+    }
   ], {
     strokeColor: 'black',
     strokeWidth: 1.5,
@@ -666,7 +875,54 @@ function createSingleRightAngleMarker(angleIndex, size, figureSize = 4) {
   });
   
   const seg2 = board.create('segment', [
-    [p3x, p3y], [p2x, p2y]
+    () => {
+      const v1x = prevPoint.X() - vertex.X();
+      const v1y = prevPoint.Y() - vertex.Y();
+      const v2x = nextPoint.X() - vertex.X();
+      const v2y = nextPoint.Y() - vertex.Y();
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [vertex.X(), vertex.Y()];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+      
+      const p1x = vertex.X() + u1x * cornerSize;
+      const p1y = vertex.Y() + u1y * cornerSize;
+      const p3x = p1x + u2x * cornerSize;
+      const p3y = p1y + u2y * cornerSize;
+      
+      return [p3x, p3y];
+    },
+    () => {
+      const v1x = prevPoint.X() - vertex.X();
+      const v1y = prevPoint.Y() - vertex.Y();
+      const v2x = nextPoint.X() - vertex.X();
+      const v2y = nextPoint.Y() - vertex.Y();
+      
+      const len1 = Math.hypot(v1x, v1y);
+      const len2 = Math.hypot(v2x, v2y);
+      
+      if (len1 === 0 || len2 === 0) return [vertex.X(), vertex.Y()];
+      
+      const u1x = v1x / len1;
+      const u1y = v1y / len1;
+      const u2x = v2x / len2;
+      const u2y = v2y / len2;
+      
+      const cornerSize = Math.min(size, Math.min(len1, len2) * 0.3);
+      
+      const p2x = vertex.X() + u2x * cornerSize;
+      const p2y = vertex.Y() + u2y * cornerSize;
+      
+      return [p2x, p2y];
+    }
   ], {
     strokeColor: 'black',
     strokeWidth: 1.5,
