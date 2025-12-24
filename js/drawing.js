@@ -248,6 +248,83 @@ function drawParallelogram(base, sideLength) {
 }
 
 // ==========================================
+// TRAPÈZES
+// ==========================================
+
+function drawTrapezoid(baseBottom, baseTop, height) {
+  // Trapèze avec base inférieure plus grande que la base supérieure
+  const offsetX = (baseBottom - baseTop) / 2;
+  
+  const A = board.create('point', [offsetX, height], { visible: false, fixed: true });
+  const B = board.create('point', [offsetX + baseTop, height], { visible: false, fixed: true });
+  const C = board.create('point', [baseBottom, 0], { visible: false, fixed: true });
+  const D = board.create('point', [0, 0], { visible: false, fixed: true });
+
+  const newPoints = [A, B, C, D];
+  const newPolygon = board.create('polygon', newPoints, {
+    borders: { strokeColor: "black" },
+    fillColor: "white",
+    fillOpacity: 1
+  });
+
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
+  const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: getGlobalFontSize()});
+  const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: getGlobalFontSize()});
+  const labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.3, getLabel(3)], {fontSize: getGlobalFontSize()});
+  const newTexts = [labelA, labelB, labelC, labelD];
+
+  setPoints(newPoints);
+  setPolygon(newPolygon);
+  setTexts(newTexts);
+
+  addDraggingToPolygon(newPolygon, newPoints, newTexts);
+  updateDiagonals();
+  updateCodings();
+  updateLengthLabels();
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
+
+  console.log(`Trapèze créé: Base inf=${baseBottom}, Base sup=${baseTop}, Hauteur=${height}`);
+}
+
+function drawRightTrapezoid(baseBottom, baseTop, height) {
+  // Trapèze rectangle : les côtés AD et BC sont perpendiculaires à la base
+  const A = board.create('point', [0, height], { visible: false, fixed: true });
+  const B = board.create('point', [baseTop, height], { visible: false, fixed: true });
+  const C = board.create('point', [baseBottom, 0], { visible: false, fixed: true });
+  const D = board.create('point', [0, 0], { visible: false, fixed: true });
+
+  const newPoints = [A, B, C, D];
+  const newPolygon = board.create('polygon', newPoints, {
+    borders: { strokeColor: "black" },
+    fillColor: "white",
+    fillOpacity: 1
+  });
+
+  const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
+  const labelB = board.create('text', [B.X() + 0.3, B.Y() + 0.3, getLabel(1)], {fontSize: getGlobalFontSize()});
+  const labelC = board.create('text', [C.X() + 0.3, C.Y() - 0.3, getLabel(2)], {fontSize: getGlobalFontSize()});
+  const labelD = board.create('text', [D.X() - 0.3, D.Y() - 0.3, getLabel(3)], {fontSize: getGlobalFontSize()});
+  const newTexts = [labelA, labelB, labelC, labelD];
+
+  setPoints(newPoints);
+  setPolygon(newPolygon);
+  setTexts(newTexts);
+
+  addDraggingToPolygon(newPolygon, newPoints, newTexts);
+  updateDiagonals();
+  updateCodings();
+  updateLengthLabels();
+  updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
+  
+  // Forcer l'affichage des angles droits si la checkbox est cochée
+  setTimeout(() => {
+    updateRightAngleMarkers(document.getElementById("toggleRightAngles")?.checked);
+  }, 50);
+
+  console.log(`Trapèze rectangle créé: Base inf=${baseBottom}, Base sup=${baseTop}, Hauteur=${height}`);
+}
+
+// ==========================================
 // TRIANGLES
 // ==========================================
 
@@ -455,13 +532,16 @@ function drawCircle(radius) {
     strokeColor: 'black'
   });
 
-  // Point sur le cercle (glider)
+  // Point sur le cercle (glider) - invisible par défaut
   const newCirclePoint = board.create('glider', [radius, 0, newCircleObject], {
     name: '',
     showInfobox: false,
-    size: 3,
+    size: 0,
     strokeColor: 'black',
-    fillColor: 'black'
+    fillColor: 'black',
+    strokeOpacity: 0,
+    fillOpacity: 0,
+    visible: false
   });
 
   const newPoints = [newCirclePoint];
@@ -489,7 +569,7 @@ function drawCircle(radius) {
     name: ''
   });
 
-  // Label du point sur cercle
+  // Label du point sur cercle - invisible par défaut
   const labelPoint = board.create('text', [
     () => newCirclePoint.X() + 0.3,
     () => newCirclePoint.Y(),
@@ -499,7 +579,8 @@ function drawCircle(radius) {
     anchorY: 'bottom',
     fontSize: getGlobalFontSize(),
     fixed: true,
-    name: ''
+    name: '',
+    visible: false
   });
 
   // Event pour déplacer le cercle
@@ -519,6 +600,237 @@ function drawCircle(radius) {
 
   board.update();
   updateCircleExtras();
+}
+
+function drawSemicircle(radius) {
+  // Cleanup
+  if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
+  if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
+  if (circleObject) try { board.removeObject(circleObject); } catch (e) {}
+  if (labelHandles && labelHandles.length) {
+    labelHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+    setLabelHandles([]);
+  }
+  if (labelTexts && labelTexts.length) {
+    labelTexts.forEach(t => { try { board.removeObject(t); } catch (e) {} });
+    setLabelTexts([]);
+  }
+
+  // Créer le centre
+  const newCenterPoint = board.create('point', [0, 0], {
+    name: '',
+    showInfobox: false,
+    fixed: false,
+    size: 4,
+    face: 'x',
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  // Points extrémités du diamètre
+  const pointA = board.create('point', [-radius, 0], {
+    name: '',
+    showInfobox: false,
+    fixed: true,
+    size: 3,
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  const pointB = board.create('point', [radius, 0], {
+    name: '',
+    showInfobox: false,
+    fixed: true,
+    size: 3,
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  // Arc de cercle (demi-cercle supérieur)
+  const semicircle = board.create('arc', [newCenterPoint, pointB, pointA], {
+    strokeWidth: 1.4,
+    strokeColor: 'black'
+  });
+
+  // Diamètre (segment)
+  const diameter = board.create('segment', [pointA, pointB], {
+    strokeWidth: 1.4,
+    strokeColor: 'black'
+  });
+
+  // Labels
+  const labelO = board.create('text', [
+    () => newCenterPoint.X(),
+    () => newCenterPoint.Y() - 0.3,
+    'O'
+  ], {
+    anchorX: 'middle',
+    anchorY: 'top',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const labelA = board.create('text', [
+    () => pointA.X() - 0.3,
+    () => pointA.Y(),
+    'A'
+  ], {
+    anchorX: 'right',
+    anchorY: 'middle',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const labelB = board.create('text', [
+    () => pointB.X() + 0.3,
+    () => pointB.Y(),
+    'B'
+  ], {
+    anchorX: 'left',
+    anchorY: 'middle',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const newPoints = [pointA, pointB];
+  const newTexts = [labelO, labelA, labelB];
+  const newLabelTexts = [labelO, labelA, labelB];
+
+  setCenterPoint(newCenterPoint);
+  setCirclePoint(pointB); // Pour compatibilité avec les fonctions existantes
+  setCircleObject(semicircle);
+  setPoints(newPoints);
+  setLabelTexts(newLabelTexts);
+  setTexts(newTexts);
+
+  extraElements.push(diameter, semicircle);
+
+  board.update();
+  console.log(`✅ Demi-cercle créé (rayon: ${radius})`);
+}
+
+function drawArc(radius, angleStart = 0, angleEnd = 90) {
+  // Cleanup
+  if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
+  if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
+  if (circleObject) try { board.removeObject(circleObject); } catch (e) {}
+  if (labelHandles && labelHandles.length) {
+    labelHandles.forEach(h => { try { board.removeObject(h); } catch (e) {} });
+    setLabelHandles([]);
+  }
+  if (labelTexts && labelTexts.length) {
+    labelTexts.forEach(t => { try { board.removeObject(t); } catch (e) {} });
+    setLabelTexts([]);
+  }
+
+  // Convertir les angles en radians
+  const startRad = (angleStart * Math.PI) / 180;
+  const endRad = (angleEnd * Math.PI) / 180;
+
+  // Créer le centre
+  const newCenterPoint = board.create('point', [0, 0], {
+    name: '',
+    showInfobox: false,
+    fixed: false,
+    size: 4,
+    face: 'x',
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  // Points extrémités de l'arc
+  const pointA = board.create('point', [
+    radius * Math.cos(startRad),
+    radius * Math.sin(startRad)
+  ], {
+    name: '',
+    showInfobox: false,
+    fixed: true,
+    size: 3,
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  const pointB = board.create('point', [
+    radius * Math.cos(endRad),
+    radius * Math.sin(endRad)
+  ], {
+    name: '',
+    showInfobox: false,
+    fixed: true,
+    size: 3,
+    strokeColor: 'black',
+    fillColor: 'black'
+  });
+
+  // Arc de cercle
+  const arc = board.create('arc', [newCenterPoint, pointA, pointB], {
+    strokeWidth: 1.4,
+    strokeColor: 'black'
+  });
+
+  // Rayons optionnels
+  const rayonA = board.create('segment', [newCenterPoint, pointA], {
+    strokeWidth: 1,
+    strokeColor: 'gray',
+    dash: 2
+  });
+
+  const rayonB = board.create('segment', [newCenterPoint, pointB], {
+    strokeWidth: 1,
+    strokeColor: 'gray',
+    dash: 2
+  });
+
+  // Labels
+  const labelO = board.create('text', [
+    () => newCenterPoint.X() - 0.3,
+    () => newCenterPoint.Y() - 0.3,
+    'O'
+  ], {
+    anchorX: 'right',
+    anchorY: 'top',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const labelA = board.create('text', [
+    () => pointA.X() + 0.3,
+    () => pointA.Y() + 0.3,
+    'A'
+  ], {
+    anchorX: 'left',
+    anchorY: 'bottom',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const labelB = board.create('text', [
+    () => pointB.X() + 0.3,
+    () => pointB.Y() + 0.3,
+    'B'
+  ], {
+    anchorX: 'left',
+    anchorY: 'bottom',
+    fontSize: getGlobalFontSize(),
+    fixed: true
+  });
+
+  const newPoints = [pointA, pointB];
+  const newTexts = [labelO, labelA, labelB];
+  const newLabelTexts = [labelO, labelA, labelB];
+
+  setCenterPoint(newCenterPoint);
+  setCirclePoint(pointB);
+  setCircleObject(arc);
+  setPoints(newPoints);
+  setLabelTexts(newLabelTexts);
+  setTexts(newTexts);
+
+  extraElements.push(arc, rayonA, rayonB);
+
+  board.update();
+  console.log(`✅ Arc de cercle créé (rayon: ${radius}, ${angleStart}° à ${angleEnd}°)`);
 }
 
 // ==========================================
@@ -605,7 +917,7 @@ function drawThalesClassic(PQ, PR, PT) {
   const segPR = board.create('segment', [P, R], { strokeColor: 'black', strokeWidth: 2 });
   const segPS = board.create('segment', [P, S], { strokeColor: 'black', strokeWidth: 2 });
   const segRS = board.create('segment', [R, S], { strokeColor: 'black', strokeWidth: 2 });
-  const segQT = board.create('segment', [Q, T], { strokeColor: 'blue', strokeWidth: 2, dash: 2 });
+  const segQT = board.create('segment', [Q, T], { strokeColor: 'black', strokeWidth: 2 });
   
   // Labels des points
   const labelP = board.create('text', [P.X(), P.Y() + 0.4, getLabel(0)], { fontSize: getGlobalFontSize() });
@@ -664,8 +976,8 @@ function drawThalesPapillon(AB, AC, AD, AE = null) {
   // Segments principaux
   const segBC = board.create('segment', [B, C], { strokeColor: 'black', strokeWidth: 2 });
   const segDE = board.create('segment', [D, E], { strokeColor: 'black', strokeWidth: 2 });
-  const segBD = board.create('segment', [B, D], { strokeColor: 'blue', strokeWidth: 2 });
-  const segCE = board.create('segment', [C, E], { strokeColor: 'blue', strokeWidth: 2 });
+  const segBD = board.create('segment', [B, D], { strokeColor: 'black', strokeWidth: 2 });
+  const segCE = board.create('segment', [C, E], { strokeColor: 'black', strokeWidth: 2 });
   
   // Labels des points
   const labelA = board.create('text', [A.X() - 0.3, A.Y() - 0.3, getLabel(0)], { fontSize: getGlobalFontSize() });

@@ -68,8 +68,14 @@ function updateCircleExtras() {
       strokeOpacity: 1,
       fillOpacity: 1,
       strokeColor: 'black',
-      fillColor: 'black'
+      fillColor: 'black',
+      visible: true
     });
+    
+    // Rendre le label du point visible
+    if (labelTexts && labelTexts.length > 1) {
+      labelTexts[1].setAttribute({ visible: true });
+    }
 
     const newRadiusSegment = board.create('segment', [centerPoint, circlePoint], {
       strokeColor: 'black',
@@ -119,8 +125,14 @@ function updateCircleExtras() {
     circlePoint.setAttribute({
       size: 0,
       strokeOpacity: 0,
-      fillOpacity: 0
+      fillOpacity: 0,
+      visible: false
     });
+    
+    // Cacher aussi le label du point
+    if (labelTexts && labelTexts.length > 1) {
+      labelTexts[1].setAttribute({ visible: false });
+    }
   }
 
   // AFFICHAGE DU DIAMÈTRE
@@ -939,6 +951,129 @@ function createSingleRightAngleMarker(angleIndex, size, figureSize = 4) {
 // ANGLES ÉGAUX
 // ==========================================
 
+function createEqualAngleMarkersFromHandler(equalAnglesGroups) {
+  if (!equalAnglesGroups || equalAnglesGroups.length === 0) return;
+  
+  const n = points.length;
+  const baseRadius = 0.42;
+  
+  function pointInPolygon(x, y, polyPts) {
+    let inside = false;
+    for (let i = 0, j = polyPts.length - 1; i < polyPts.length; j = i++) {
+      const xi = polyPts[i][0], yi = polyPts[i][1];
+      const xj = polyPts[j][0], yj = polyPts[j][1];
+      const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+  
+  function normAng(a) { 
+    while (a <= -Math.PI) a += 2*Math.PI; 
+    while (a > Math.PI) a -= 2*Math.PI; 
+    return a; 
+  }
+  
+  function createPerpTick(B, angleOnArc, radius, tickLen, lateralOffset = 0) {
+    const seg = board.create('segment', [
+      () => {
+        const Bx = B.X(), By = B.Y();
+        const cx = Bx + Math.cos(angleOnArc) * radius - Math.sin(angleOnArc) * lateralOffset;
+        const cy = By + Math.sin(angleOnArc) * radius + Math.cos(angleOnArc) * lateralOffset;
+        const rx = Math.cos(angleOnArc), ry = Math.sin(angleOnArc);
+        return [cx - rx * (tickLen / 2), cy - ry * (tickLen / 2)];
+      },
+      () => {
+        const Bx = B.X(), By = B.Y();
+        const cx = Bx + Math.cos(angleOnArc) * radius - Math.sin(angleOnArc) * lateralOffset;
+        const cy = By + Math.sin(angleOnArc) * radius + Math.cos(angleOnArc) * lateralOffset;
+        const rx = Math.cos(angleOnArc), ry = Math.sin(angleOnArc);
+        return [cx + rx * (tickLen / 2), cy + ry * (tickLen / 2)];
+      }
+    ], {
+      strokeColor: 'black',
+      strokeWidth: 1.6,
+      fixed: true,
+      highlight: false
+    });
+    angleMarkers.push(seg);
+  }
+  
+  const polyCoords = points.map(p => [p.X(), p.Y()]);
+  
+  // Parcourir chaque groupe d'angles égaux
+  equalAnglesGroups.forEach(group => {
+    const { angles: angleIndices, markCount } = group;
+    
+    angleIndices.forEach(idx => {
+      const B = points[idx];
+      const A = points[(idx - 1 + n) % n];
+      const C = points[(idx + 1) % n];
+      
+      if (!A || !B || !C) return;
+      
+      const v1x = A.X() - B.X(), v1y = A.Y() - B.Y();
+      const v2x = C.X() - B.X(), v2y = C.Y() - B.Y();
+      const l1 = Math.hypot(v1x, v1y), l2 = Math.hypot(v2x, v2y);
+      if (l1 === 0 || l2 === 0) return;
+      
+      const u1x = v1x / l1, u1y = v1y / l1;
+      const u2x = v2x / l2, u2y = v2y / l2;
+      
+      let a1 = Math.atan2(u1y, u1x);
+      let a2 = Math.atan2(u2y, u2x);
+      let delta = normAng(a2 - a1);
+      
+      const radius = Math.min(baseRadius, Math.min(l1, l2) * 0.22);
+      
+      const midSmall = a1 + delta / 2;
+      const testX = B.X() + Math.cos(midSmall) * radius * 0.9;
+      const testY = B.Y() + Math.sin(midSmall) * radius * 0.9;
+      const smallInside = pointInPolygon(testX, testY, polyCoords);
+      if (!smallInside) {
+        if (delta > 0) delta = delta - 2 * Math.PI;
+        else delta = delta + 2 * Math.PI;
+      }
+      
+      const aStart = a1;
+      const aDelta = delta;
+      
+      // Créer l'arc de cercle
+      const curve = board.create('curve', [
+        function(t) { return B.X() + Math.cos(aStart + t * aDelta) * radius; },
+        function(t) { return B.Y() + Math.sin(aStart + t * aDelta) * radius; },
+        0, 1
+      ], {
+        strokeColor: 'black',
+        strokeWidth: 1.4,
+        fixed: true,
+        highlight: false,
+        dash: 0,
+        name: ''
+      });
+      angleMarkers.push(curve);
+      
+      // Ajouter les marques selon markCount
+      const bisect = normAng(aStart + aDelta / 2);
+      const tickLen = Math.min(0.28, radius * 1.1);
+      const lateralSpacing = Math.min(0.12, radius * 0.6);
+      
+      if (markCount === 1) {
+        createPerpTick(B, bisect, radius, tickLen, 0);
+      } else if (markCount === 2) {
+        createPerpTick(B, bisect, radius, tickLen, -lateralSpacing / 2);
+        createPerpTick(B, bisect, radius, tickLen, +lateralSpacing / 2);
+      } else if (markCount === 3) {
+        createPerpTick(B, bisect, radius, tickLen, -lateralSpacing);
+        createPerpTick(B, bisect, radius, tickLen, 0);
+        createPerpTick(B, bisect, radius, tickLen, +lateralSpacing);
+      }
+    });
+  });
+  
+  console.log(`✅ ${angleMarkers.length} marqueurs d'angles égaux créés depuis le handler`);
+}
+
 function updateEqualAngleMarkers(visible) {
   if (typeof visible === 'object' && visible !== null && 'target' in visible) visible = !!visible.target.checked;
   else visible = !!visible;
@@ -955,6 +1090,18 @@ function updateEqualAngleMarkers(visible) {
   if (fig.subtype === 'square' || fig.subtype === 'rectangle') { 
     board.update(); 
     return; 
+  }
+  
+  // Essayer d'utiliser le handler si disponible
+  const handler = getCurrentFigureHandler();
+  if (handler && typeof handler.getEqualAngles === 'function') {
+    const equalAnglesGroups = handler.getEqualAngles();
+    if (equalAnglesGroups && equalAnglesGroups.length > 0) {
+      console.log(`🎯 Utilisation du handler ${handler.constructor.name} pour angles égaux:`, equalAnglesGroups);
+      createEqualAngleMarkersFromHandler(equalAnglesGroups);
+      board.update();
+      return;
+    }
   }
 
   function pointInPolygon(x, y, polyPts) {

@@ -151,7 +151,18 @@ class FigureDetector {
     } else if (hasParallelSides && uniqueLengths.length === 2) {
       subtype = 'parallelogram';
     } else {
-      subtype = 'irregular';
+      // Vérifier si c'est un trapèze (exactement une paire de côtés parallèles)
+      const isTrapezoid = this._hasTrapezoidProperty(figurePoints, tolerance);
+      if (isTrapezoid) {
+        // Vérifier si c'est un trapèze rectangle (2 angles droits adjacents)
+        if (rightAngles === 2 && this._hasAdjacentRightAngles(figurePoints, tolerance)) {
+          subtype = 'right-trapezoid';
+        } else {
+          subtype = 'trapezoid';
+        }
+      } else {
+        subtype = 'irregular';
+      }
     }
     
     console.log(`✅ Quadrilatère détecté: ${subtype}, côtés: [${sideLengths.map(l => l.toFixed(1)).join(', ')}], angles droits: ${rightAngles}`);
@@ -273,6 +284,62 @@ class FigureDetector {
     
     return opposite1Equal && opposite2Equal;
   }
+  
+  // Vérifier si le quadrilatère a exactement une paire de côtés parallèles (trapèze)
+  static _hasTrapezoidProperty(figurePoints, tolerance) {
+    if (figurePoints.length !== 4) return false;
+    
+    // Vecteurs des 4 côtés
+    const vectors = [];
+    for (let i = 0; i < 4; i++) {
+      const p1 = figurePoints[i];
+      const p2 = figurePoints[(i + 1) % 4];
+      vectors.push({
+        x: p2.X() - p1.X(),
+        y: p2.Y() - p1.Y()
+      });
+    }
+    
+    // Vérifier si deux côtés sont parallèles (produit vectoriel proche de 0)
+    const isParallel = (v1, v2) => {
+      const cross = Math.abs(v1.x * v2.y - v1.y * v2.x);
+      const len1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+      const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+      return cross < tolerance * len1 * len2;
+    };
+    
+    // Vérifier les côtés opposés (0-2 et 1-3)
+    const parallel02 = isParallel(vectors[0], vectors[2]);
+    const parallel13 = isParallel(vectors[1], vectors[3]);
+    
+    // Un trapèze a exactement une paire de côtés parallèles
+    return (parallel02 && !parallel13) || (!parallel02 && parallel13);
+  }
+  
+  // Vérifier si le quadrilatère a deux angles droits adjacents
+  static _hasAdjacentRightAngles(figurePoints, tolerance) {
+    if (figurePoints.length !== 4) return false;
+    
+    const rightAngleIndices = [];
+    
+    for (let i = 0; i < 4; i++) {
+      const A = figurePoints[(i - 1 + 4) % 4];
+      const B = figurePoints[i];
+      const C = figurePoints[(i + 1) % 4];
+      
+      if (this._isRightAngle(A, B, C, tolerance)) {
+        rightAngleIndices.push(i);
+      }
+    }
+    
+    // Vérifier si deux angles droits sont adjacents
+    if (rightAngleIndices.length === 2) {
+      const [a, b] = rightAngleIndices;
+      return Math.abs(a - b) === 1 || Math.abs(a - b) === 3;
+    }
+    
+    return false;
+  }
 }
 
 // ==========================================
@@ -345,6 +412,7 @@ class BaseFigureHandler {
   getSidesToShow() { return []; }
   getRightAngles() { return []; }
   getCodings() { return { groups: [], type: 'none' }; }
+  getEqualAngles() { return []; }
   shouldShowSingleRightAngle() { return false; }
   shouldHideHypotenuse() { return false; }
   getHypotenuseIndex() { return -1; }
@@ -409,6 +477,37 @@ class ParallelogramHandler extends BaseFigureHandler {
       ],
       type: 'opposite-pairs'
     };
+  }
+}
+
+class TrapezoidHandler extends BaseFigureHandler {
+  getSidesToShow() { return [0, 1, 2, 3]; }
+  getRightAngles() { return []; }
+  getCodings() {
+    // Pas de codages spécifiques pour un trapèze quelconque
+    return { groups: [], type: 'none' };
+  }
+  getEqualAngles() {
+    // Les angles aux bases parallèles sont égaux
+    return [
+      { angles: [0, 1], markCount: 1 }, // Angles A et B (base supérieure)
+      { angles: [2, 3], markCount: 2 }  // Angles C et D (base inférieure)
+    ];
+  }
+}
+
+class RightTrapezoidHandler extends BaseFigureHandler {
+  getSidesToShow() { return [0, 1, 2, 3]; }
+  getRightAngles() { return [0, 3]; } // Angles A et D (côté gauche perpendiculaire)
+  getCodings() {
+    // Pas de codages spécifiques
+    return { groups: [], type: 'none' };
+  }
+  getEqualAngles() {
+    // Les angles à chaque base (sauf les angles droits)
+    return [
+      { angles: [1, 2], markCount: 1 } // Angles B et C (côté oblique)
+    ];
   }
 }
 
@@ -553,6 +652,8 @@ class FigureHandlerFactory {
         case 'rectangle': return new RectangleHandler(figurePoints, figureInfo);
         case 'rhombus': return new RhombusHandler(figurePoints, figureInfo);
         case 'parallelogram': return new ParallelogramHandler(figurePoints, figureInfo);
+        case 'trapezoid': return new TrapezoidHandler(figurePoints, figureInfo);
+        case 'right-trapezoid': return new RightTrapezoidHandler(figurePoints, figureInfo);
         default: return new DefaultFigureHandler(figurePoints, figureInfo);
       }
     }

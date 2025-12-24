@@ -112,6 +112,23 @@ function generateFigure() {
       }
     }
     
+    // TRAPÈZES (vérifier AVANT rectangle car "trapèze rectangle" contient "rectangle")
+    else if (input.includes("trapèze") || input.includes("trapeze")) {
+      if (input.includes("rectangle")) {
+        // Trapèze rectangle
+        const numbers = extractThreeNumbers(input, [6, 4, 3]);
+        const [baseBottom, baseTop, height] = numbers;
+        drawRightTrapezoid(baseBottom, baseTop, height);
+        console.log(`✅ Trapèze rectangle généré (base inf: ${baseBottom}, base sup: ${baseTop}, hauteur: ${height})`);
+      } else {
+        // Trapèze quelconque
+        const numbers = extractThreeNumbers(input, [6, 4, 3]);
+        const [baseBottom, baseTop, height] = numbers;
+        drawTrapezoid(baseBottom, baseTop, height);
+        console.log(`✅ Trapèze généré (base inf: ${baseBottom}, base sup: ${baseTop}, hauteur: ${height})`);
+      }
+    }
+    
     // RECTANGLES
     else if (input.includes("rectangle")) {
       const [width, height] = extractTwoNumbers(input, [5, 3]);
@@ -134,6 +151,27 @@ function generateFigure() {
     }
     
     // CERCLES
+    else if (input.includes("demi-cercle") || input.includes("demi cercle") || input.includes("demicercle")) {
+      const radius = extractNumber(input, 3);
+      drawSemicircle(radius);
+      console.log(`✅ Demi-cercle généré (rayon: ${radius})`);
+    }
+    else if (input.includes("arc de cercle") || input.includes("arc")) {
+      // Arc avec angles optionnels : "arc 3 60 120" ou "arc de cercle 3"
+      const numbers = input.match(/\d+(?:[.,]\d+)?/g);
+      if (numbers && numbers.length >= 3) {
+        const [radius, angleStart, angleEnd] = numbers.map(n => parseFloat(n.replace(',', '.')));
+        drawArc(radius, angleStart, angleEnd);
+        console.log(`✅ Arc de cercle généré (rayon: ${radius}, ${angleStart}° à ${angleEnd}°)`);
+      } else if (numbers && numbers.length >= 1) {
+        const radius = parseFloat(numbers[0].replace(',', '.'));
+        drawArc(radius, 0, 90); // Arc par défaut de 0° à 90°
+        console.log(`✅ Arc de cercle généré (rayon: ${radius}, 0° à 90°)`);
+      } else {
+        drawArc(3, 0, 90);
+        console.log(`✅ Arc de cercle généré avec valeurs par défaut`);
+      }
+    }
     else if (input.includes("cercle")) {
       const radius = extractNumber(input, 2);
       drawCircle(radius);
@@ -210,8 +248,8 @@ function generateFigure() {
           drawThalesClassic(PQ, PR, PT);
           console.log(`✅ Thalès classique généré (PQ=${PQ}, PR=${PR}, PT=${PT})`);
         } else {
-          // Valeurs par défaut comme dans l'image
-          drawThalesClassic(4, 12, 5);
+          // Valeurs par défaut
+          drawThalesClassic(4, 8, 5);
           console.log(`✅ Thalès classique généré avec valeurs par défaut`);
         }
       }
@@ -1148,49 +1186,70 @@ function setupEventListeners() {
   // ==========================================
   // 5. INTERACTION AVEC LA LISTE DES FIGURES
   // ==========================================
+  // 5. GESTION DE LA LISTE INTERACTIVE DES FIGURES (ACCORDÉON)
+  // ==========================================
   
-  if (figuresList && promptInput) {
-    figuresList.addEventListener('click', function (e) {
-      const listItem = e.target.closest('li');
-      if (!listItem) return;
+  // Gestion de l'accordéon des catégories
+  const categoryHeaders = document.querySelectorAll('.category-header');
+  const toggleAllBtn = document.getElementById('toggleAllCategories');
+  let allOpen = false;
+
+  categoryHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const category = this.closest('.accordion-category');
+      const wasOpen = category.classList.contains('open');
       
-      // Récupérer le prompt depuis l'attribut data-prompt ou générer depuis le texte
-      let figurePrompt = listItem.getAttribute('data-prompt');
+      // Fermer toutes les catégories (une seule ouverte à la fois)
+      document.querySelectorAll('.accordion-category').forEach(cat => {
+        cat.classList.remove('open');
+      });
       
-      if (!figurePrompt) {
-        const itemText = listItem.textContent || listItem.innerText;
-        
-        // Mapping texte → prompt pour génération
-        const textToPromptMap = {
-          'Carré': 'carré de côté 4',
-          'Rectangle': 'rectangle de 5 sur 3',
-          'Triangle équilatéral': 'triangle équilatéral de côté 4',
-          'Triangle rectangle': 'triangle rectangle de base 3 et hauteur 4',
-          'Triangle isocèle': 'triangle isocèle de base 6 et hauteur 4',
-          'Triangle quelconque': 'triangle côtés 4.5, 5, 7',
-          'Cercle': 'cercle de rayon 2',
-          'Losange': 'losange de côté 5',
-          'Parallélogramme': 'parallélogramme base 5 hauteur 3',
-          'Hexagone': 'hexagone de côté 4',
-          'Pentagone': 'pentagone de côté 4'
-        };
-        
-        // Chercher la correspondance
-        figurePrompt = Object.entries(textToPromptMap).find(([key]) => 
-          itemText.includes(key)
-        )?.[1] || itemText.toLowerCase();
+      // Ouvrir la catégorie cliquée si elle était fermée
+      if (!wasOpen) {
+        category.classList.add('open');
       }
+    });
+  });
+
+  // Bouton Tout ouvrir / Tout fermer
+  if (toggleAllBtn) {
+    toggleAllBtn.addEventListener('click', function() {
+      const categories = document.querySelectorAll('.accordion-category');
       
-      // Appliquer le prompt et générer la figure
-      promptInput.value = figurePrompt;
-      generateFigure();
-      
-      // Marquer visuellement l'élément sélectionné
-      figuresList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
-      listItem.classList.add('selected');
+      if (allOpen) {
+        // Tout fermer
+        categories.forEach(cat => cat.classList.remove('open'));
+        toggleAllBtn.textContent = '⊞ Tout ouvrir';
+        allOpen = false;
+      } else {
+        // Tout ouvrir
+        categories.forEach(cat => cat.classList.add('open'));
+        toggleAllBtn.textContent = '⊟ Tout fermer';
+        allOpen = true;
+      }
+    });
+  }
+
+  // Gestion du clic sur les figures dans l'accordéon
+  const figureItems = document.querySelectorAll('.category-content li');
+  
+  if (figureItems.length > 0 && promptInput) {
+    figureItems.forEach(item => {
+      item.addEventListener('click', function() {
+        const figurePrompt = this.getAttribute('data-prompt');
+        
+        if (figurePrompt) {
+          promptInput.value = figurePrompt;
+          generateFigure();
+          
+          // Marquer visuellement l'élément sélectionné
+          figureItems.forEach(li => li.classList.remove('selected'));
+          this.classList.add('selected');
+        }
+      });
     });
     
-    console.log('✅ Liste des figures interactive configurée');
+    console.log('✅ Accordéon des figures configuré');
   }
 
   // ==========================================
@@ -1253,7 +1312,7 @@ function setupEventListeners() {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin: 0;
         flex-shrink: 0;
-        order: 1;
+        order: 2;
       `;
       
       exportButton.addEventListener('mouseenter', () => {
@@ -1292,7 +1351,7 @@ function setupEventListeners() {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin: 0;
         flex-shrink: 0;
-        order: 2;
+        order: 1;
       `;
       
       copyButton.addEventListener('mouseenter', () => {

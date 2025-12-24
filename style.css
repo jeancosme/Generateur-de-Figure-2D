@@ -506,6 +506,149 @@ button:focus { outline: 3px solid rgba(98, 115, 255, 0.18); outline-offset: 2px;
 .figures-list li { display: flex; align-items: center; gap: 6px; }
 .figures-list .figure-name, .figures-list .figure-desc { white-space: normal; overflow: hidden; text-overflow: ellipsis; }
 
+/* ========================
+   ACCORDÉON DES FIGURES
+   ======================== */
+
+/* Bouton Tout ouvrir/fermer */
+.toggle-all-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toggle-all-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.toggle-all-btn:active {
+  transform: translateY(0);
+}
+
+/* Container de l'accordéon */
+.figures-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Catégorie individuelle */
+.accordion-category {
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #e0e0e0;
+}
+
+/* Header de catégorie (cliquable) */
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #f0f3f7, #e4e9f0);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  border-left: 3px solid #6c5ce7;
+}
+
+.category-header:hover {
+  background: linear-gradient(135deg, #e4e9f0, #d8dde6);
+}
+
+.category-header:active {
+  background: linear-gradient(135deg, #d8dde6, #ccd1da);
+}
+
+/* Icône de la flèche */
+.category-icon {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+}
+
+.accordion-category.open .category-icon {
+  transform: rotate(90deg);
+}
+
+/* Titre de la catégorie */
+.category-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #2d3436;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+/* Compteur de figures */
+.category-count {
+  font-size: 12px;
+  color: #636e72;
+  font-weight: 500;
+}
+
+/* Contenu de la catégorie (liste des figures) */
+.category-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: white;
+}
+
+.accordion-category.open .category-content {
+  max-height: 500px;
+}
+
+/* Items de figures dans l'accordéon */
+.category-content li {
+  padding: 10px 12px 10px 32px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-content li:last-child {
+  border-bottom: none;
+}
+
+.category-content li:hover {
+  background: #f0f4ff;
+}
+
+.category-content li:active {
+  background: #e8ecff;
+}
+
+.category-content .figure-name {
+  font-weight: 700;
+  color: #222;
+}
+
+.category-content .figure-desc {
+  font-weight: 400;
+  color: #666;
+  margin-left: 6px;
+}
+
 /* Masquer les contrôles JSXGraph lors de l'export */
 .jxg-controls {
   /* Utilise un attribut spécial pour masquer pendant l'export */
