@@ -13,11 +13,11 @@
   --accent: #3498db;
   --control-bg: rgba(255,255,255,0.98);
 
-  --btn-size: 48px;       /* taille visuelle des boutons */
-  --btn-radius: 10px;
-  --icon-default: 18px;   /* taille svg générique */
-  --zoom-icon: 10px;      /* symbole + / - — plus petit */
-  --rotate-icon: 24px;    /* symbole ↶/↷ — plus grand */
+  --btn-size: 34px;       /* taille visuelle des boutons (réduite de 30%) */
+  --btn-radius: 9px;
+  --icon-default: 13px;   /* taille svg générique (réduite de 30%) */
+  --zoom-icon: 7px;       /* symbole + / - — plus petit (réduit de 30%) */
+  --rotate-icon: 17px;    /* symbole ↶/↷ — plus grand (réduit de 30%) */
 }
 
 /* ========================
@@ -295,28 +295,36 @@ footer {
 
 /* Specific control types (background colors) */
 .jxg-controls button.zoom-btn {
-  background: #d2b9f7 !important;   /* violet clair */
-  border: 1px solid #dfc7ff !important;
+  background: #b3e5fc !important;   /* bleu ciel */
+  border: 1px solid #81d4fa !important;
 }
 .jxg-controls button.rotate-btn {
   background: #e8f8ea !important;   /* vert clair */
   border: 1px solid #cfeed0 !important;
+}
+.jxg-controls button.font-btn {
+  background: #fff9c4 !important;   /* jaune clair */
+  border: 1px solid #fff59d !important;
 }
 .jxg-controls button.reset-btn {
   background: #f3f3f4 !important;
   border: 1px solid #ddd !important;
   width: auto !important;           /* reset is sized by its text */
   min-width: 0 !important;
-  height: auto !important;
+  height: 34px !important;          /* même hauteur que les autres boutons */
   min-height: 0 !important;
-  padding: 8px 14px !important;
-  font-size: 15px !important;
-  border-radius: 10px !important;
+  padding: 0 12px !important;       /* padding horizontal seulement */
+  font-size: 11px !important;       /* réduit de 30% (15→11) */
+  border-radius: 7px !important;    /* réduit de 30% (10→7) */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* Hover states */
-.jxg-controls button.zoom-btn:hover { background: #e6d9ff !important; }
+.jxg-controls button.zoom-btn:hover { background: #81d4fa !important; }
 .jxg-controls button.rotate-btn:hover { background: #dff2df !important; }
+.jxg-controls button.font-btn:hover { background: #fff59d !important; }
 .jxg-controls button.reset-btn:hover { background: #ececec !important; }
 
 /* center reset row */
@@ -339,8 +347,17 @@ footer {
 
 /* fallback texte pour + / - (si utilisé) : réduire la police uniquement */
 .jxg-controls button.zoom-btn {
-  font-size: 12px !important;
+  font-size: 8px !important;       /* réduit de 30% (12→8) */
   line-height: 1 !important;
+}
+
+/* Style texte pour A+ / A- */
+.jxg-controls button.font-btn {
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 500 !important;
+  font-family: Arial, 'Helvetica Neue', sans-serif !important;
+  letter-spacing: -0.5px !important;
 }
 
 /* Rotate icons — agrandir et épaissir (s'applique aux SVG ou au texte) */
@@ -350,7 +367,7 @@ footer {
   display: block;
 }
 .jxg-controls button.rotate-btn {
-  font-size: 20px !important;      /* pour les flèches textuelles (↶/↷) */
+  font-size: 14px !important;      /* pour les flèches textuelles (↶/↷) réduit de 30% (20→14) */
   font-weight: 700 !important;     /* rendre gras */
   line-height: 1 !important;
 }

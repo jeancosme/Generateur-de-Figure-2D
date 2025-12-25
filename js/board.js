@@ -118,14 +118,14 @@ function createBoardControls() {
   row4.className = 'small-row';
 
   const fontMinus = document.createElement('button');
-  fontMinus.className = 'zoom-btn';
+  fontMinus.className = 'font-btn';
   fontMinus.innerHTML = 'A-';
   fontMinus.title = 'Réduire la taille du texte';
   fontMinus.setAttribute('aria-label','Réduire la taille du texte');
   fontMinus.addEventListener('click', (e) => { e.stopPropagation(); decreaseFontSize(); });
 
   const fontPlus = document.createElement('button');
-  fontPlus.className = 'zoom-btn';
+  fontPlus.className = 'font-btn';
   fontPlus.innerHTML = 'A+';
   fontPlus.title = 'Augmenter la taille du texte';
   fontPlus.setAttribute('aria-label','Augmenter la taille du texte');
