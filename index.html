@@ -21,8 +21,11 @@
 
 <body>
   <h1>Générateur de figure 2D</h1>
+  
+  <!-- MODE SIMPLE -->
+  <div id="modeSimple" class="mode-content">
     <!-- Barre avec prompt + bouton -->
-  <div class="controls">
+    <div class="controls">
     <div class="control-group">
       <label for="promptInput" class="control-label">Nature de la figure</label>
       <div class="input-container">
@@ -44,6 +47,27 @@
       </div>
     </div>
   </div>
+  </div>
+  <!-- FIN MODE SIMPLE -->
+  
+  <!-- MODE CRÉATEUR -->
+  <div id="modeCreator" class="mode-content" style="display: none;">
+    <div class="controls creator-controls">
+      <div class="control-group">
+        <label for="creatorPromptInput" class="control-label">Choisir une figure</label>
+        <div class="input-container">
+          <input type="text" id="creatorPromptInput" placeholder="Ex : carré de côté 4" autocomplete="off">
+          <div class="suggestions" id="creatorSuggestionBox" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div class="control-actions">
+        <button onclick="addFigureToScene()">➕ Ajouter à la scène</button>
+        <button onclick="clearAllFigures()" class="btn-danger">🧹 Tout effacer</button>
+      </div>
+    </div>
+  </div>
+  <!-- FIN MODE CRÉATEUR -->
 
 <div class="layout">
   <!-- zone de dessin (gauche) -->
@@ -119,6 +143,12 @@
 
     <!-- panneau des figures (à droite du panneau d'options) -->
     <div id="figuresPanel" class="figures-panel">
+      <!-- Onglets de mode -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabSimple" onclick="switchMode('simple')">📐 Mode Simple</button>
+        <button class="mode-tab" id="tabCreator" onclick="switchMode('creator')">🎨 Mode Créateur</button>
+      </div>
+      
       <h3>📚 Liste des figures</h3>
       
       <!-- Bouton Tout ouvrir/fermer -->
@@ -238,6 +268,7 @@
   <script src="js/config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/board.js"></script>
+  <script src="js/magnetic.js"></script>  <!-- Module d'aimantation (avant drawing.js) -->
   <script src="js/handlers.js"></script>
   <script src="js/drawing.js"></script>
   <script src="js/markers.js"></script>

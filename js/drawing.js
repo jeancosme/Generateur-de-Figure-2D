@@ -16,9 +16,14 @@
  */
 function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) {
   let startCoords = null;
+  let magneticPairs = []; // Paires de points détectés pour l'aimantation
 
   polygon.rendNode.addEventListener('mousedown', function (e) {
     startCoords = board.getUsrCoordsOfMouse(e);
+    magneticPairs = []; // Réinitialiser
+    
+    // Utiliser les textes mis à jour après fusion si disponibles
+    const currentTexts = polygon._figureTexts || figureTexts;
 
     function onMouseMove(ev) {
       const newCoords = board.getUsrCoordsOfMouse(ev);
@@ -54,8 +59,8 @@ function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) 
         catch (err) { try { h.setPosition(JXG.COORDS_BY_USER, [h.X() + dx, h.Y() + dy]); } catch(e){} }
       });
 
-      // 5. Déplacer les textes
-      figureTexts.forEach(txt => {
+      // 5. Déplacer les textes (utiliser currentTexts au lieu de figureTexts)
+      currentTexts.forEach(txt => {
         try {
           if (typeof txt.setPosition === 'function') {
             txt.setPosition(JXG.COORDS_BY_USER, [txt.X() + dx, txt.Y() + dy]);
@@ -63,7 +68,17 @@ function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) 
         } catch (err) { /* ignore */ }
       });
 
-      // 6. Mettre à jour les codages
+      // 6. DÉTECTION MAGNÉTIQUE (Mode Créateur uniquement)
+      if (typeof detectMagneticPoints === 'function') {
+        magneticPairs = detectMagneticPoints(figurePoints);
+        if (magneticPairs.length > 0) {
+          showMagneticIndicators(magneticPairs);
+        } else {
+          clearMagneticIndicators();
+        }
+      }
+
+      // 7. Mettre à jour les codages
       updateCodings();
       board.update();
     }
@@ -71,6 +86,13 @@ function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) 
     function onMouseUp() {
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      
+      // AIMANTATION FINALE au relâchement
+      if (typeof applyMagneticSnap === 'function' && magneticPairs.length > 0) {
+        applyMagneticSnap(magneticPairs, figurePoints, figureTexts);
+      }
+      
+      clearMagneticIndicators();
       
       // Mise à jour complète après le déplacement
       setTimeout(() => {
@@ -91,11 +113,11 @@ function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) 
 // CARRÉS
 // ==========================================
 
-function drawSquare(size) {
-  const A = board.create('point', [0, size], {name: '', fixed: true, visible: false});
-  const B = board.create('point', [size, size], {name: '', fixed: true, visible: false});
-  const C = board.create('point', [size, 0], {name: '', fixed: true, visible: false});
-  const D = board.create('point', [0, 0], {name: '', fixed: true, visible: false});
+function drawSquare(size, offsetX = 0, offsetY = 0) {
+  const A = board.create('point', [0 + offsetX, size + offsetY], {name: '', fixed: true, visible: false});
+  const B = board.create('point', [size + offsetX, size + offsetY], {name: '', fixed: true, visible: false});
+  const C = board.create('point', [size + offsetX, 0 + offsetY], {name: '', fixed: true, visible: false});
+  const D = board.create('point', [0 + offsetX, 0 + offsetY], {name: '', fixed: true, visible: false});
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -126,11 +148,11 @@ function drawSquare(size) {
 // RECTANGLES
 // ==========================================
 
-function drawRectangle(width, height) {
-  const A = board.create('point', [0, height], { name: '', fixed: true, visible: false });
-  const B = board.create('point', [width, height], { name: '', fixed: true, visible: false });
-  const C = board.create('point', [width, 0], { name: '', fixed: true, visible: false });
-  const D = board.create('point', [0, 0], { name: '', fixed: true, visible: false });
+function drawRectangle(width, height, offsetX = 0, offsetY = 0) {
+  const A = board.create('point', [0 + offsetX, height + offsetY], { name: '', fixed: true, visible: false });
+  const B = board.create('point', [width + offsetX, height + offsetY], { name: '', fixed: true, visible: false });
+  const C = board.create('point', [width + offsetX, 0 + offsetY], { name: '', fixed: true, visible: false });
+  const D = board.create('point', [0 + offsetX, 0 + offsetY], { name: '', fixed: true, visible: false });
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -160,7 +182,7 @@ function drawRectangle(width, height) {
 // LOSANGES
 // ==========================================
 
-function drawLosange(side) {
+function drawLosange(side, addOffsetX = 0, addOffsetY = 0) {
   const theta = Math.PI / 3;
   const ox = side * Math.cos(theta);
   const oy = side * Math.sin(theta);
@@ -182,10 +204,10 @@ function drawLosange(side) {
   const [rotC_x, rotC_y] = rotate(baseC[0], baseC[1]);
   const [rotD_x, rotD_y] = rotate(baseD[0], baseD[1]);
 
-  const A = board.create('point', [rotA_x, rotA_y], { visible: false, fixed: true });
-  const B = board.create('point', [rotB_x, rotB_y], { visible: false, fixed: true });
-  const C = board.create('point', [rotC_x, rotC_y], { visible: false, fixed: true });
-  const D = board.create('point', [rotD_x, rotD_y], { visible: false, fixed: true });
+  const A = board.create('point', [rotA_x + addOffsetX, rotA_y + addOffsetY], { visible: false, fixed: true });
+  const B = board.create('point', [rotB_x + addOffsetX, rotB_y + addOffsetY], { visible: false, fixed: true });
+  const C = board.create('point', [rotC_x + addOffsetX, rotC_y + addOffsetY], { visible: false, fixed: true });
+  const D = board.create('point', [rotD_x + addOffsetX, rotD_y + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -207,19 +229,24 @@ function drawLosange(side) {
   addDraggingToPolygon(newPolygon, newPoints, newTexts);
 }
 
+// Alias pour compatibilité
+function drawRhombus(side, offsetX = 0, offsetY = 0) {
+  return drawLosange(side, offsetX, offsetY);
+}
+
 // ==========================================
 // PARALLÉLOGRAMMES
 // ==========================================
 
-function drawParallelogram(base, sideLength) {
+function drawParallelogram(base, sideLength, addOffsetX = 0, addOffsetY = 0) {
   const theta = Math.PI / 3;
   const offset = sideLength * Math.cos(theta);
   const height = sideLength * Math.sin(theta);
 
-  const A = board.create('point', [-offset, height], { visible: false, fixed: true });
-  const B = board.create('point', [base - offset, height], { visible: false, fixed: true });
-  const C = board.create('point', [base, 0], { visible: false, fixed: true });
-  const D = board.create('point', [0, 0], { visible: false, fixed: true });
+  const A = board.create('point', [-offset + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const B = board.create('point', [base - offset + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const C = board.create('point', [base + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
+  const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -251,14 +278,14 @@ function drawParallelogram(base, sideLength) {
 // TRAPÈZES
 // ==========================================
 
-function drawTrapezoid(baseBottom, baseTop, height) {
+function drawTrapezoid(baseBottom, baseTop, height, addOffsetX = 0, addOffsetY = 0) {
   // Trapèze avec base inférieure plus grande que la base supérieure
   const offsetX = (baseBottom - baseTop) / 2;
   
-  const A = board.create('point', [offsetX, height], { visible: false, fixed: true });
-  const B = board.create('point', [offsetX + baseTop, height], { visible: false, fixed: true });
-  const C = board.create('point', [baseBottom, 0], { visible: false, fixed: true });
-  const D = board.create('point', [0, 0], { visible: false, fixed: true });
+  const A = board.create('point', [offsetX + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const B = board.create('point', [offsetX + baseTop + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const C = board.create('point', [baseBottom + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
+  const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -286,12 +313,12 @@ function drawTrapezoid(baseBottom, baseTop, height) {
   console.log(`Trapèze créé: Base inf=${baseBottom}, Base sup=${baseTop}, Hauteur=${height}`);
 }
 
-function drawRightTrapezoid(baseBottom, baseTop, height) {
+function drawRightTrapezoid(baseBottom, baseTop, height, addOffsetX = 0, addOffsetY = 0) {
   // Trapèze rectangle : les côtés AD et BC sont perpendiculaires à la base
-  const A = board.create('point', [0, height], { visible: false, fixed: true });
-  const B = board.create('point', [baseTop, height], { visible: false, fixed: true });
-  const C = board.create('point', [baseBottom, 0], { visible: false, fixed: true });
-  const D = board.create('point', [0, 0], { visible: false, fixed: true });
+  const A = board.create('point', [0 + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const B = board.create('point', [baseTop + addOffsetX, height + addOffsetY], { visible: false, fixed: true });
+  const C = board.create('point', [baseBottom + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
+  const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
   const newPolygon = board.create('polygon', newPoints, {
@@ -328,11 +355,11 @@ function drawRightTrapezoid(baseBottom, baseTop, height) {
 // TRIANGLES
 // ==========================================
 
-function drawEquilateralTriangle(side) {
-  const A = board.create('point', [0, 0], {visible: false});
-  const B = board.create('point', [side, 0], {visible: false});
+function drawEquilateralTriangle(side, offsetX = 0, offsetY = 0) {
+  const A = board.create('point', [0 + offsetX, 0 + offsetY], {visible: false});
+  const B = board.create('point', [side + offsetX, 0 + offsetY], {visible: false});
   const height = (Math.sqrt(3) / 2) * side;
-  const C = board.create('point', [side / 2, height], {visible: false});
+  const C = board.create('point', [side / 2 + offsetX, height + offsetY], {visible: false});
 
   const newPoints = [A, B, C];
   const newPolygon = board.create('polygon', newPoints, {
@@ -354,9 +381,9 @@ function drawEquilateralTriangle(side) {
   addDraggingToPolygon(newPolygon, newPoints, newTexts);
 }
 
-function drawRightTriangle(base, height) {
-  const offsetX = -base / 2;
-  const offsetY = -height / 2;
+function drawRightTriangle(base, height, addOffsetX = 0, addOffsetY = 0) {
+  const offsetX = -base / 2 + addOffsetX;
+  const offsetY = -height / 2 + addOffsetY;
 
   const A = board.create('point', [offsetX, offsetY], {visible: false, fixed: true});
   const B = board.create('point', [offsetX + base, offsetY], {visible: false, fixed: true});
@@ -383,10 +410,10 @@ function drawRightTriangle(base, height) {
   console.log("→ Triangle rectangle généré avec base =", base, "et hauteur =", height);
 }
 
-function drawIsoscelesTriangle(base = 4, height = 3) {
-  const A = board.create('point', [0, 0], {visible: false, fixed: true});
-  const B = board.create('point', [base, 0], {visible: false, fixed: true});
-  const C = board.create('point', [base / 2, height], {visible: false, fixed: true});
+function drawIsoscelesTriangle(base = 4, height = 3, offsetX = 0, offsetY = 0) {
+  const A = board.create('point', [0 + offsetX, 0 + offsetY], {visible: false, fixed: true});
+  const B = board.create('point', [base + offsetX, 0 + offsetY], {visible: false, fixed: true});
+  const C = board.create('point', [base / 2 + offsetX, height + offsetY], {visible: false, fixed: true});
 
   const newPoints = [A, B, C];
   const newPolygon = board.create('polygon', newPoints, {
@@ -412,7 +439,7 @@ function drawIsoscelesTriangle(base = 4, height = 3) {
   updateDiagonals();
 }
 
-function drawScaleneTriangleFromSides(a, b, c) {
+function drawScaleneTriangleFromSides(a, b, c, offsetX = 0, offsetY = 0) {
   // Vérification de l'inégalité triangulaire
   if (a + b <= c || a + c <= b || b + c <= a) {
     alert(`⚠️ Impossible de construire un triangle avec ces côtés !\n\n` +
@@ -435,9 +462,9 @@ function drawScaleneTriangleFromSides(a, b, c) {
   const centerX = a / 2;
   const centerY = Cy / 2;
   
-  const A = board.create('point', [-centerX, -centerY], {visible: false, fixed: true});
-  const B = board.create('point', [a - centerX, -centerY], {visible: false, fixed: true});
-  const C = board.create('point', [Cx - centerX, Cy - centerY], {visible: false, fixed: true});
+  const A = board.create('point', [-centerX + offsetX, -centerY + offsetY], {visible: false, fixed: true});
+  const B = board.create('point', [a - centerX + offsetX, -centerY + offsetY], {visible: false, fixed: true});
+  const C = board.create('point', [Cx - centerX + offsetX, Cy - centerY + offsetY], {visible: false, fixed: true});
 
   const newPoints = [A, B, C];
   const newPolygon = board.create('polygon', newPoints, {
@@ -465,8 +492,8 @@ function drawScaleneTriangleFromSides(a, b, c) {
 // POLYGONES RÉGULIERS
 // ==========================================
 
-function drawRegularPolygon(n, side) {
-  const center = [0, 0];
+function drawRegularPolygon(n, side, addOffsetX = 0, addOffsetY = 0) {
+  const center = [0 + addOffsetX, 0 + addOffsetY];
   const angle = (2 * Math.PI) / n;
   const radius = side / (2 * Math.sin(Math.PI / n));
 
@@ -501,7 +528,7 @@ function drawRegularPolygon(n, side) {
 // CERCLES
 // ==========================================
 
-function drawCircle(radius) {
+function drawCircle(radius, offsetX = 0, offsetY = 0) {
   // Cleanup
   if (centerPoint) try { board.removeObject(centerPoint); } catch (e) {}
   if (circlePoint) try { board.removeObject(circlePoint); } catch (e) {}
@@ -516,7 +543,7 @@ function drawCircle(radius) {
   }
 
   // Créer le centre
-  const newCenterPoint = board.create('point', [0, 0], {
+  const newCenterPoint = board.create('point', [0 + offsetX, 0 + offsetY], {
     name: '',
     showInfobox: false,
     fixed: false,
@@ -533,7 +560,7 @@ function drawCircle(radius) {
   });
 
   // Point sur le cercle (glider) - invisible par défaut
-  const newCirclePoint = board.create('glider', [radius, 0, newCircleObject], {
+  const newCirclePoint = board.create('glider', [radius + offsetX, 0 + offsetY, newCircleObject], {
     name: '',
     showInfobox: false,
     size: 0,

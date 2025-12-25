@@ -845,13 +845,16 @@ function calculateFigureBounds() {
 function setupEventListeners() {
   console.log('🚀 Initialisation du générateur de figures 2D...');
 
+  // Déclaration des éléments DOM principaux
+  const simpleInput = document.getElementById("promptInput");
+  const simpleSuggestions = document.getElementById("suggestionBox");
+  const creatorInput = document.getElementById("creatorPromptInput");
+  const creatorSuggestions = document.getElementById("creatorSuggestionBox");
+
   // ==========================================
   // 1. SYSTÈME DE SUGGESTIONS INTELLIGENTES
   // ==========================================
   
-  const input = document.getElementById("promptInput");
-  const suggestionsDiv = document.getElementById("suggestionBox");
-
   const suggestionsList = [
     "carré de côté 4",
     "rectangle de 5 sur 3",
@@ -870,10 +873,18 @@ function setupEventListeners() {
     "polygone régulier n=8 de côté 3"
   ];
 
-  let selectedSuggestionIndex = -1;
+  /**
+   * Configure le système de suggestions pour un champ input
+   * @param {HTMLInputElement} input - Le champ input
+   * @param {HTMLElement} suggestionsDiv - La div des suggestions
+   * @param {Function} onSelect - Fonction appelée quand une suggestion est sélectionnée
+   */
+  function setupSuggestions(input, suggestionsDiv, onSelect) {
+    if (!input || !suggestionsDiv) return;
+    
+    let selectedSuggestionIndex = -1;
 
-  // Affichage dynamique des suggestions pendant la frappe
-  if (input && suggestionsDiv) {
+    // Affichage dynamique des suggestions pendant la frappe
     input.addEventListener("input", function () {
       const value = input.value.trim().toLowerCase();
       suggestionsDiv.innerHTML = "";
@@ -912,7 +923,7 @@ function setupEventListeners() {
           input.value = suggestion;
           suggestionsDiv.style.display = "none";
           selectedSuggestionIndex = -1;
-          generateFigure();
+          onSelect();
         });
         
         suggestionsDiv.appendChild(div);
@@ -929,13 +940,13 @@ function setupEventListeners() {
         e.preventDefault();
         if (items.length > 0) {
           selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, items.length - 1);
-          highlightSuggestion(items);
+          highlightSuggestion(items, selectedSuggestionIndex);
         }
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         if (items.length > 0) {
           selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
-          highlightSuggestion(items);
+          highlightSuggestion(items, selectedSuggestionIndex);
         }
       } else if (e.key === "Tab") {
         e.preventDefault();
@@ -966,27 +977,31 @@ function setupEventListeners() {
             input.value = suggestionToUse;
             suggestionsDiv.style.display = "none";
             selectedSuggestionIndex = -1;
-            generateFigure();
+            onSelect();
             return;
           }
         }
         
         // Si pas de suggestions, générer avec le texte actuel
         if (suggestionsDiv.style.display !== "block" && input.value.trim()) {
-          generateFigure();
+          onSelect();
         }
       }
     });
-
-    console.log('✅ Système de suggestions configuré');
   }
 
   // Fonction helper pour highlight
-  function highlightSuggestion(items) {
+  function highlightSuggestion(items, selectedIndex) {
     items.forEach((item, i) => {
-      item.style.background = i === selectedSuggestionIndex ? "#f0f0f0" : "white";
+      item.style.background = i === selectedIndex ? "#f0f0f0" : "white";
     });
   }
+
+  // Configuration des suggestions pour les deux modes
+  setupSuggestions(simpleInput, simpleSuggestions, generateFigure);
+  setupSuggestions(creatorInput, creatorSuggestions, addFigureToScene);
+
+  console.log('✅ Système de suggestions configuré pour les deux modes');
 
   // ==========================================
   // 2. RESET INITIAL DE L'INTERFACE
@@ -997,20 +1012,18 @@ function setupEventListeners() {
     cb.checked = false;
   });
   
-  // Reset des champs de saisie
-  const promptInput = document.getElementById('promptInput');
+  // Reset des champs de saisie (réutilisation des variables déjà déclarées)
   const labelInput = document.getElementById('labelInput');
   const figureSearch = document.getElementById('figureSearch');
   
-  if (promptInput) promptInput.value = '';
+  if (simpleInput) simpleInput.value = '';
   if (labelInput) labelInput.value = '';
   if (figureSearch) figureSearch.value = '';
   
-  // Reset des suggestions
-  const suggestionBox = document.getElementById('suggestionBox');
-  if (suggestionBox) {
-    suggestionBox.style.display = 'none';
-    suggestionBox.innerHTML = '';
+  // Reset des suggestions (réutilisation de la variable déjà déclarée)
+  if (simpleSuggestions) {
+    simpleSuggestions.style.display = 'none';
+    simpleSuggestions.innerHTML = '';
   }
   
   // Reset de la liste des figures
@@ -1233,14 +1246,31 @@ function setupEventListeners() {
   // Gestion du clic sur les figures dans l'accordéon
   const figureItems = document.querySelectorAll('.category-content li');
   
-  if (figureItems.length > 0 && promptInput) {
+  if (figureItems.length > 0) {
     figureItems.forEach(item => {
       item.addEventListener('click', function() {
         const figurePrompt = this.getAttribute('data-prompt');
         
         if (figurePrompt) {
-          promptInput.value = figurePrompt;
-          generateFigure();
+          // Détecter le mode actif
+          const creatorMode = document.getElementById('modeCreator');
+          const isCreatorMode = creatorMode && creatorMode.style.display !== 'none';
+          
+          if (isCreatorMode) {
+            // Mode Créateur: remplir creatorPromptInput et ajouter à la scène
+            const creatorInputElem = document.getElementById('creatorPromptInput');
+            if (creatorInputElem) {
+              creatorInputElem.value = figurePrompt;
+              addFigureToScene();
+            }
+          } else {
+            // Mode Simple: remplir promptInput et générer
+            const simpleInputElem = document.getElementById('promptInput');
+            if (simpleInputElem) {
+              simpleInputElem.value = figurePrompt;
+              generateFigure();
+            }
+          }
           
           // Marquer visuellement l'élément sélectionné
           figureItems.forEach(li => li.classList.remove('selected'));
@@ -1475,4 +1505,275 @@ function changeLanguage(lang) {
   });
   
   console.log(`🌍 Langue changée: ${lang}`);
+}
+// ==========================================
+// MODE CRÉATEUR - Gestion multi-figures
+// ==========================================
+
+// Variable globale pour stocker les figures de la scène
+let sceneFigures = [];
+let nextLabelIndex = 0; // Pour continuer l'alphabet
+
+/**
+ * Bascule entre mode simple et mode créateur
+ */
+function switchMode(mode) {
+  const simpleMode = document.getElementById('modeSimple');
+  const creatorMode = document.getElementById('modeCreator');
+  const tabSimple = document.getElementById('tabSimple');
+  const tabCreator = document.getElementById('tabCreator');
+  
+  if (mode === 'simple') {
+    simpleMode.style.display = 'block';
+    creatorMode.style.display = 'none';
+    tabSimple.classList.add('active');
+    tabCreator.classList.remove('active');
+  } else {
+    simpleMode.style.display = 'none';
+    creatorMode.style.display = 'block';
+    tabSimple.classList.remove('active');
+    tabCreator.classList.add('active');
+  }
+}
+
+/**
+ * Ajoute une figure à la scène (mode créateur)
+ */
+function addFigureToScene() {
+  const input = document.getElementById("creatorPromptInput").value.trim().toLowerCase();
+  
+  if (!input) {
+    alert("Veuillez entrer une description de figure.");
+    return;
+  }
+  
+  // Générer des labels alphabétiques continus (on en demande plus car certaines figures en utilisent plus)
+  const labels = generateNextLabels(10); // Demander suffisamment de labels
+  
+  // Position aléatoire autour du centre
+  const offsetX = (Math.random() - 0.5) * 8;
+  const offsetY = (Math.random() - 0.5) * 8;
+  
+  // Définir les labels personnalisés
+  setCustomLabels(labels);
+  
+  // Sauvegarder les offsets pour cette génération
+  window.currentOffsetX = offsetX;
+  window.currentOffsetY = offsetY;
+  
+  // Générer la figure (réutilise la logique de generateFigure mais sans nettoyage)
+  try {
+    console.log(`🎨 Ajout de figure: "${input}" avec offset (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`);
+    
+    // Appeler la logique de parsing de generateFigure (copie simplifiée)
+    // CARRÉS
+    if (input.includes("carré")) {
+      const size = extractNumber(input, 4);
+      drawSquare(size, offsetX, offsetY);
+      nextLabelIndex += 4;
+      console.log(`✅ Carré ajouté (côté: ${size})`);
+    }
+    // TRIANGLES
+    else if (input.includes("triangle")) {
+      if ((input.includes("côté") || input.includes("cote") || input.includes("longueur")) 
+          && input.match(/(\d+(?:[.,]\d+)?)/g)?.length >= 3) {
+        const [a, b, c] = extractThreeNumbers(input, [3, 4, 5]);
+        drawScaleneTriangleFromSides(a, b, c, offsetX, offsetY);
+        nextLabelIndex += 3;
+      }
+      else if (input.includes("rectangle") || input.includes("droit")) {
+        const [base, height] = extractTwoNumbers(input, [3, 4]);
+        drawRightTriangle(base, height, offsetX, offsetY);
+        nextLabelIndex += 3;
+      }
+      else if (input.includes("équilatéral") || input.includes("equilateral")) {
+        const side = extractNumber(input, 4);
+        drawEquilateralTriangle(side, offsetX, offsetY);
+        nextLabelIndex += 3;
+      }
+      else if (input.includes("isocèle") || input.includes("isocele")) {
+        const [base, height] = extractTwoNumbers(input, [6, 4]);
+        drawIsoscelesTriangle(base, height, offsetX, offsetY);
+        nextLabelIndex += 3;
+      }
+      console.log(`✅ Triangle ajouté`);
+    }
+    // CERCLES
+    else if (input.includes("cercle")) {
+      const radius = extractNumber(input, 3);
+      drawCircle(radius, offsetX, offsetY);
+      nextLabelIndex += 2; // O et A
+      console.log(`✅ Cercle ajouté (rayon: ${radius})`);
+    }
+    // RECTANGLES
+    else if (input.includes("rectangle")) {
+      const [width, height] = extractTwoNumbers(input, [5, 3]);
+      drawRectangle(width, height, offsetX, offsetY);
+      nextLabelIndex += 4;
+      console.log(`✅ Rectangle ajouté (${width} × ${height})`);
+    }
+    // LOSANGES
+    else if (input.includes("losange")) {
+      const side = extractNumber(input, 5);
+      drawRhombus(side, offsetX, offsetY);
+      nextLabelIndex += 4;
+      console.log(`✅ Losange ajouté (côté: ${side})`);
+    }
+    // PARALLÉLOGRAMMES
+    else if (input.includes("parallélogramme") || input.includes("parallelogramme")) {
+      const [width, height] = extractTwoNumbers(input, [5, 3]);
+      drawParallelogram(width, height, offsetX, offsetY);
+      nextLabelIndex += 4;
+      console.log(`✅ Parallélogramme ajouté`);
+    }
+    // TRAPÈZES
+    else if (input.includes("trapèze") || input.includes("trapeze")) {
+      const [base1, base2, height] = extractThreeNumbers(input, [6, 4, 3]);
+      if (input.includes("rectangle")) {
+        drawRightTrapezoid(base1, base2, height, offsetX, offsetY);
+      } else {
+        drawTrapezoid(base1, base2, height, offsetX, offsetY);
+      }
+      nextLabelIndex += 4;
+      console.log(`✅ Trapèze ajouté`);
+    }
+    // HEXAGONES
+    else if (input.includes("hexagone")) {
+      const side = extractNumber(input, 4);
+      drawHexagon(side, offsetX, offsetY);
+      nextLabelIndex += 6;
+      console.log(`✅ Hexagone ajouté (côté: ${side})`);
+    }
+    // POLYGONES RÉGULIERS
+    else if (input.includes("polygone")) {
+      const sides = extractNumber(input, 6);
+      const sideLength = 4;
+      drawRegularPolygon(sides, sideLength, offsetX, offsetY);
+      nextLabelIndex += sides;
+      console.log(`✅ Polygone régulier ajouté (${sides} côtés)`);
+    }
+    else {
+      alert("Type de figure non reconnu. Essayez: carré, triangle, cercle, rectangle, etc.");
+      return;
+    }
+    
+    // Mettre à jour l'affichage
+    board.update();
+    
+    // L'aimantation magnétique est gérée automatiquement par addDraggingToPolygon()
+    
+    // Nettoyer le champ
+    document.getElementById("creatorPromptInput").value = '';
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'ajout:', error);
+    alert('Erreur lors de l\'ajout de la figure: ' + error.message);
+  }
+  
+  // Réinitialiser les offsets
+  window.currentOffsetX = 0;
+  window.currentOffsetY = 0;
+}
+
+/**
+ * Génère les prochains labels alphabétiques
+ */
+function generateNextLabels(count) {
+  const labels = [];
+  for (let i = 0; i < count; i++) {
+    const index = nextLabelIndex + i;
+    labels.push(String.fromCharCode(65 + (index % 26))); // A-Z puis recommence
+  }
+  return labels;
+}
+
+/**
+ * Met à jour la liste des figures dans l'interface
+ */
+function updateFiguresList() {
+  const listContainer = document.getElementById('figuresList');
+  const countSpan = document.getElementById('figureCount');
+  
+  // Si les éléments n'existent pas, ne rien faire (mode créateur désactivé)
+  if (!listContainer || !countSpan) return;
+  
+  listContainer.innerHTML = '';
+  countSpan.textContent = sceneFigures.length;
+  
+  sceneFigures.forEach((figure, index) => {
+    const item = document.createElement('div');
+    item.className = 'figure-item';
+    item.innerHTML = `
+      <div class="figure-item-info">
+        <span class="figure-item-name">#${index + 1} ${figure.labels}</span>
+        <span class="figure-item-desc">${figure.type}</span>
+      </div>
+      <div class="figure-item-actions">
+        <button class="btn-toggle" onclick="toggleFigureVisibility(${figure.id})">
+          ${figure.visible ? '👁️' : '👁️‍🗨️'}
+        </button>
+        <button class="btn-delete" onclick="deleteFigure(${figure.id})">
+          🗑️
+        </button>
+      </div>
+    `;
+    listContainer.appendChild(item);
+  });
+}
+
+/**
+ * Bascule la visibilité d'une figure
+ */
+function toggleFigureVisibility(id) {
+  const figure = sceneFigures.find(f => f.id === id);
+  if (figure) {
+    figure.visible = !figure.visible;
+    updateFiguresList();
+    // TODO: Masquer/afficher réellement la figure sur le board
+    console.log(`👁️ Visibilité de la figure ${id}: ${figure.visible}`);
+  }
+}
+
+/**
+ * Supprime une figure de la scène
+ */
+function deleteFigure(id) {
+  sceneFigures = sceneFigures.filter(f => f.id !== id);
+  updateFiguresList();
+  // TODO: Supprimer réellement la figure du board
+  console.log(`🗑️ Figure ${id} supprimée`);
+}
+
+/**
+ * Efface toutes les figures de la scène
+ */
+function clearAllFigures() {
+  if (sceneFigures.length > 0) {
+    if (!confirm('Voulez-vous vraiment effacer toutes les figures ?')) {
+      return;
+    }
+  }
+  
+  sceneFigures = [];
+  nextLabelIndex = 0;
+  
+  // Mettre à jour l'interface si elle existe
+  const listContainer = document.getElementById('figuresList');
+  if (listContainer) {
+    updateFiguresList();
+  }
+  
+  // Nettoyer le board seulement s'il y a des objets
+  if (board && board.objectsList && board.objectsList.length > 0) {
+    const objectsCopy = [...board.objectsList];
+    objectsCopy.forEach(obj => {
+      try {
+        board.removeObject(obj);
+      } catch (e) {
+        console.warn('Erreur lors de la suppression d\'un objet:', e);
+      }
+    });
+  }
+  
+  console.log('🧹 Toutes les figures ont été effacées');
 }
