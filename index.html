@@ -119,10 +119,7 @@
 
     <!-- panneau des figures (à droite du panneau d'options) -->
     <div id="figuresPanel" class="figures-panel">
-      <h3>📚 Liste des figures</h3>
-      
-      <!-- Bouton Tout ouvrir/fermer -->
-      <button id="toggleAllCategories" class="toggle-all-btn">⊞ Tout ouvrir</button>
+      <h3 data-en="📚 Figure List">📚 Liste des figures</h3>
       
       <div id="figuresAccordion" class="figures-accordion">
         
@@ -130,16 +127,16 @@
         <div class="accordion-category">
           <div class="category-header" data-category="quadrilaterals">
             <span class="category-icon">▶</span>
-            <span class="category-title">🔷 QUADRILATÈRES</span>
+            <span class="category-title" data-en="🔷 QUADRILATERALS">🔷 QUADRILATÈRES</span>
             <span class="category-count">(6)</span>
           </div>
           <ul class="category-content">
-            <li data-prompt="carré de côté 4"><span class="figure-name">Carré</span><span class="figure-desc"> — côté 4</span></li>
-            <li data-prompt="rectangle 5 sur 3"><span class="figure-name">Rectangle</span><span class="figure-desc"> — 5 × 3</span></li>
-            <li data-prompt="losange de côté 5"><span class="figure-name">Losange</span><span class="figure-desc"> — côté 5</span></li>
-            <li data-prompt="parallélogramme 5 x 3 "><span class="figure-name">Parallélogramme</span><span class="figure-desc"> — 5 x 3</span></li>
-            <li data-prompt="trapèze 6 4 3"><span class="figure-name">Trapèze</span><span class="figure-desc"> — bases 6 et 4, h=3</span></li>
-            <li data-prompt="trapèze rectangle 6 4 3"><span class="figure-name">Trapèze rectangle</span><span class="figure-desc"> — bases 6 et 4, h=3</span></li>
+            <li data-prompt="carré de côté 4"><span class="figure-name" data-en="Square">Carré</span><span class="figure-desc" data-en=" — side 4"> — côté 4</span></li>
+            <li data-prompt="rectangle 5 sur 3"><span class="figure-name" data-en="Rectangle">Rectangle</span><span class="figure-desc" data-en=" — 5 × 3"> — 5 × 3</span></li>
+            <li data-prompt="losange de côté 5"><span class="figure-name" data-en="Rhombus">Losange</span><span class="figure-desc" data-en=" — side 5"> — côté 5</span></li>
+            <li data-prompt="parallélogramme 5 x 3 "><span class="figure-name" data-en="Parallelogram">Parallélogramme</span><span class="figure-desc" data-en=" — 5 x 3"> — 5 x 3</span></li>
+            <li data-prompt="trapèze 6 4 3"><span class="figure-name" data-en="Trapezoid">Trapèze</span><span class="figure-desc" data-en=" — bases 6 and 4, h=3"> — bases 6 et 4, h=3</span></li>
+            <li data-prompt="trapèze rectangle 6 4 3"><span class="figure-name" data-en="Right Trapezoid">Trapèze rectangle</span><span class="figure-desc" data-en=" — bases 6 and 4, h=3"> — bases 6 et 4, h=3</span></li>
           </ul>
         </div>
         
@@ -147,14 +144,14 @@
         <div class="accordion-category">
           <div class="category-header" data-category="triangles">
             <span class="category-icon">▶</span>
-            <span class="category-title">🔺 TRIANGLES</span>
+            <span class="category-title" data-en="🔺 TRIANGLES">🔺 TRIANGLES</span>
             <span class="category-count">(4)</span>
           </div>
           <ul class="category-content">
-            <li data-prompt="triangle équilatéral de côté 4"><span class="figure-name">Triangle équilatéral</span><span class="figure-desc"> — côté 4</span></li>
-            <li data-prompt="triangle isocèle de base 6 et hauteur 4"><span class="figure-name">Triangle isocèle</span><span class="figure-desc"> — base 6, hauteur 4</span></li>
-            <li data-prompt="triangle rectangle de base 3 et hauteur 4"><span class="figure-name">Triangle rectangle</span><span class="figure-desc"> — base 3, hauteur 4</span></li>
-            <li data-prompt="triangle côtés 4.5, 5, 7"><span class="figure-name">Triangle quelconque</span><span class="figure-desc"> — côtés 4.5, 5, 7</span></li>
+            <li data-prompt="triangle équilatéral de côté 4"><span class="figure-name" data-en="Equilateral Triangle">Triangle équilatéral</span><span class="figure-desc" data-en=" — side 4"> — côté 4</span></li>
+            <li data-prompt="triangle isocèle de base 6 et hauteur 4"><span class="figure-name" data-en="Isosceles Triangle">Triangle isocèle</span><span class="figure-desc" data-en=" — base 6, height 4"> — base 6, hauteur 4</span></li>
+            <li data-prompt="triangle rectangle de base 3 et hauteur 4"><span class="figure-name" data-en="Right Triangle">Triangle rectangle</span><span class="figure-desc" data-en=" — base 3, height 4"> — base 3, hauteur 4</span></li>
+            <li data-prompt="triangle côtés 4.5, 5, 7"><span class="figure-name" data-en="Scalene Triangle">Triangle quelconque</span><span class="figure-desc" data-en=" — sides 4.5, 5, 7"> — côtés 4.5, 5, 7</span></li>
           </ul>
         </div>
         
@@ -162,12 +159,12 @@
         <div class="accordion-category">
           <div class="category-header" data-category="thales">
             <span class="category-icon">▶</span>
-            <span class="category-title">📐 THÉORÈME DE THALÈS</span>
+            <span class="category-title" data-en="📐 THALES' THEOREM <span style='color: #ff4444; font-size: 1em; font-weight: bold;'>(in progress)</span>">📐 THÉORÈME DE THALÈS <span style="color: #ff4444; font-size: 1em; font-weight: bold;">(en cours)</span></span>
             <span class="category-count">(2)</span>
           </div>
           <ul class="category-content">
-            <li data-prompt="thalès 4 8 5"><span class="figure-name">Thalès classique</span><span class="figure-desc"> — PQ=4, PR=8, PT=5</span></li>
-            <li data-prompt="thalès papillon 2 6 3"><span class="figure-name">Thalès papillon</span><span class="figure-desc"> — AB=2, AC=6, AD=3</span></li>
+            <li data-prompt="thalès 4 8 5"><span class="figure-name" data-en="Classic Thales">Thalès classique</span><span class="figure-desc" data-en=" — PQ=4, PR=8, PT=5"> — PQ=4, PR=8, PT=5</span></li>
+            <li data-prompt="thalès papillon 2 6 3"><span class="figure-name" data-en="Butterfly Thales">Thalès papillon</span><span class="figure-desc" data-en=" — AB=2, AC=6, AD=3"> — AB=2, AC=6, AD=3</span></li>
           </ul>
         </div>
         
@@ -175,13 +172,13 @@
         <div class="accordion-category">
           <div class="category-header" data-category="circle">
             <span class="category-icon">▶</span>
-            <span class="category-title">⭕ CERCLE</span>
+            <span class="category-title" data-en="⭕ CIRCLE">⭕ CERCLE</span>
             <span class="category-count">(3)</span>
           </div>
           <ul class="category-content">
-            <li data-prompt="cercle de rayon 2"><span class="figure-name">Cercle</span><span class="figure-desc"> — rayon 2</span></li>
-            <li data-prompt="demi-cercle 3"><span class="figure-name">Demi-cercle</span><span class="figure-desc"> — rayon 3</span></li>
-            <li data-prompt="arc 3 0 90"><span class="figure-name">Arc de cercle</span><span class="figure-desc"> — rayon 3, 0° à 90°</span></li>
+            <li data-prompt="cercle de rayon 2"><span class="figure-name" data-en="Circle">Cercle</span><span class="figure-desc" data-en=" — radius 2"> — rayon 2</span></li>
+            <li data-prompt="demi-cercle 3"><span class="figure-name" data-en="Semicircle">Demi-cercle</span><span class="figure-desc" data-en=" — radius 3"> — rayon 3</span></li>
+            <li data-prompt="arc 3 0 90"><span class="figure-name" data-en="Arc">Arc de cercle</span><span class="figure-desc" data-en=" — radius 3, 0° to 90°"> — rayon 3, 0° à 90°</span></li>
           </ul>
         </div>
         
@@ -189,12 +186,12 @@
         <div class="accordion-category">
           <div class="category-header" data-category="polygons">
             <span class="category-icon">▶</span>
-            <span class="category-title">⬡ POLYGONES RÉGULIERS</span>
+            <span class="category-title" data-en="⬡ REGULAR POLYGONS">⬡ POLYGONES RÉGULIERS</span>
             <span class="category-count">(2)</span>
           </div>
           <ul class="category-content">
-            <li data-prompt="hexagone de côté 4"><span class="figure-name">Hexagone</span><span class="figure-desc"> — côté 4</span></li>
-            <li data-prompt="polygone régulier n=8 de côté 3"><span class="figure-name">Polygone régulier</span><span class="figure-desc"> — n=8, côté 3</span></li>
+            <li data-prompt="hexagone de côté 4"><span class="figure-name" data-en="Hexagon">Hexagone</span><span class="figure-desc" data-en=" — side 4"> — côté 4</span></li>
+            <li data-prompt="polygone régulier n=8 de côté 3"><span class="figure-name" data-en="Regular Polygon">Polygone régulier</span><span class="figure-desc" data-en=" — n=8, side 3"> — n=8, côté 3</span></li>
           </ul>
         </div>
         

@@ -535,6 +535,7 @@ function drawCircle(radius) {
   // Point sur le cercle (glider) - invisible par défaut
   const newCirclePoint = board.create('glider', [radius, 0, newCircleObject], {
     name: '',
+    withLabel: false,
     showInfobox: false,
     size: 0,
     strokeColor: 'black',
@@ -569,27 +570,15 @@ function drawCircle(radius) {
     name: ''
   });
 
-  // Label du point sur cercle - invisible par défaut
-  const labelPoint = board.create('text', [
-    () => newCirclePoint.X() + 0.3,
-    () => newCirclePoint.Y(),
-    pointLabel
-  ], {
-    anchorX: 'middle',
-    anchorY: 'bottom',
-    fontSize: getGlobalFontSize(),
-    fixed: true,
-    name: '',
-    visible: false
-  });
+  // Note: Les labels A, B, C sont créés par updateCircleExtras() selon les options activées
 
   // Event pour déplacer le cercle
   newCenterPoint.on('drag', function() {
     board.update();
   });
 
-  const newLabelTexts = [labelCenter, labelPoint];
-  const newTexts = [labelCenter, labelPoint];
+  const newLabelTexts = [labelCenter];
+  const newTexts = [labelCenter];
 
   setCenterPoint(newCenterPoint);
   setCirclePoint(newCirclePoint);

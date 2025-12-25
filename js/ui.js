@@ -1189,17 +1189,15 @@ function setupEventListeners() {
   // 5. GESTION DE LA LISTE INTERACTIVE DES FIGURES (ACCORDÉON)
   // ==========================================
   
-  // Gestion de l'accordéon des catégories
+  // Gestion de l'accordéon des catégories (une seule catégorie ouverte à la fois)
   const categoryHeaders = document.querySelectorAll('.category-header');
-  const toggleAllBtn = document.getElementById('toggleAllCategories');
-  let allOpen = false;
 
   categoryHeaders.forEach(header => {
     header.addEventListener('click', function() {
       const category = this.closest('.accordion-category');
       const wasOpen = category.classList.contains('open');
       
-      // Fermer toutes les catégories (une seule ouverte à la fois)
+      // Fermer toutes les catégories
       document.querySelectorAll('.accordion-category').forEach(cat => {
         cat.classList.remove('open');
       });
@@ -1210,25 +1208,6 @@ function setupEventListeners() {
       }
     });
   });
-
-  // Bouton Tout ouvrir / Tout fermer
-  if (toggleAllBtn) {
-    toggleAllBtn.addEventListener('click', function() {
-      const categories = document.querySelectorAll('.accordion-category');
-      
-      if (allOpen) {
-        // Tout fermer
-        categories.forEach(cat => cat.classList.remove('open'));
-        toggleAllBtn.textContent = '⊞ Tout ouvrir';
-        allOpen = false;
-      } else {
-        // Tout ouvrir
-        categories.forEach(cat => cat.classList.add('open'));
-        toggleAllBtn.textContent = '⊟ Tout fermer';
-        allOpen = true;
-      }
-    });
-  }
 
   // Gestion du clic sur les figures dans l'accordéon
   const figureItems = document.querySelectorAll('.category-content li');
@@ -1462,14 +1441,19 @@ function changeLanguage(lang) {
   // Liste des figures
   document.querySelector('#figuresPanel h3').textContent = getTranslation('figuresList');
   
-  // Mettre à jour les noms de figures dans la liste
-  const figureItems = document.querySelectorAll('#figuresList li');
-  const figureKeys = ['square', 'circle', 'hexagon', 'rhombus', 'parallelogram', 'regularPolygon', 'rectangle', 'equilateralTriangle', 'isoscelesTriangle', 'scaleneTriangle', 'rightTriangle'];
-  figureItems.forEach((item, index) => {
-    if (index < figureKeys.length) {
-      const nameSpan = item.querySelector('.figure-name');
-      if (nameSpan) {
-        nameSpan.textContent = getTranslation(figureKeys[index]);
+  // Mettre à jour TOUS les éléments avec data-en selon la langue
+  document.querySelectorAll('[data-en]').forEach(element => {
+    if (lang === 'en') {
+      // Sauvegarder le texte français si pas déjà fait
+      if (!element.hasAttribute('data-fr')) {
+        element.setAttribute('data-fr', element.innerHTML);
+      }
+      // Appliquer le texte anglais
+      element.innerHTML = element.getAttribute('data-en');
+    } else {
+      // Restaurer le texte français
+      if (element.hasAttribute('data-fr')) {
+        element.innerHTML = element.getAttribute('data-fr');
       }
     }
   });

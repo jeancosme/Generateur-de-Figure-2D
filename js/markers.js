@@ -30,7 +30,22 @@ function updateCircleExtras() {
   const showUnits = document.getElementById("showUnitsCheckbox")?.checked || false;
   const unit = document.getElementById("unitSelector")?.value || "cm";
 
-  // ✅ SECTION 1 : NETTOYAGE (y compris les codages existants)
+  // ✅ SECTION 1 : NETTOYAGE RADICAL - TOUT SUPPRIMER
+  
+  // Supprimer TOUS les objets text du board (même le O, on le recréera)
+  const allBoardObjects = [...board.objectsList];
+  allBoardObjects.forEach(obj => {
+    if (obj.elType === 'text') {
+      try { board.removeObject(obj); } catch (e) {}
+    }
+  });
+  
+  // Nettoyer tous les handles de labels
+  labelHandles.forEach(h => {
+    try { board.removeObject(h); } catch (e) {}
+  });
+  setLabelHandles([]);
+  
   if (radiusSegment) {
     try { board.removeObject(radiusSegment); } catch (e) {}
     setRadiusSegment(null);
@@ -58,24 +73,68 @@ function updateCircleExtras() {
   const dy = circlePoint.Y() - centerPoint.Y();
   const r = Math.sqrt(dx * dx + dy * dy);
 
-  // ✅ SECTION 2 : CRÉER LES ÉLÉMENTS GÉOMÉTRIQUES D'ABORD
+  // ✅ SECTION 2 : CRÉER LES ÉLÉMENTS GÉOMÉTRIQUES
+  
+  // Arrays locaux pour collecter les nouveaux éléments
+  const newTexts = [];
+  const newHandles = [];
+  
+  // TOUJOURS créer le label O du centre
+  const labelO = board.create('text', [
+    () => centerPoint.X() - 0.1,
+    () => centerPoint.Y() + 0.2,
+    'O'
+  ], {
+    anchorX: 'middle',
+    anchorY: 'bottom',
+    fontSize: getGlobalFontSize(),
+    fixed: true,
+    name: ''
+  });
+  newTexts.push(labelO);
   
   // AFFICHAGE DU RAYON
   if (showRadius) {
     circlePoint.setAttribute({
       fixed: false,
-      size: 3,
-      strokeOpacity: 1,
-      fillOpacity: 1,
+      size: 0,
+      strokeOpacity: 0,
+      fillOpacity: 0,
       strokeColor: 'black',
       fillColor: 'black',
-      visible: true
+      visible: false
     });
     
-    // Rendre le label du point visible
-    if (labelTexts && labelTexts.length > 1) {
-      labelTexts[1].setAttribute({ visible: true });
-    }
+    // Créer un handle pour déplacer le label "A"
+    const labelAHandle = board.create('point', [
+      circlePoint.X() + 0.3,
+      circlePoint.Y()
+    ], {
+      name: '',
+      withLabel: false,
+      size: 6,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      fixed: false,
+      highlight: false,
+      showInfobox: false
+    });
+    
+    // Créer ou mettre à jour le label "A" déplaçable
+    const labelA = board.create('text', [
+      () => labelAHandle.X(),
+      () => labelAHandle.Y(),
+      'A'
+    ], {
+      anchorX: 'middle',
+      anchorY: 'middle',
+      fontSize: getGlobalFontSize(),
+      fixed: false
+    });
+    
+    // Ajouter le handle et le label aux arrays locaux
+    newHandles.push(labelAHandle);
+    newTexts.push(labelA);
 
     const newRadiusSegment = board.create('segment', [centerPoint, circlePoint], {
       strokeColor: 'black',
@@ -128,11 +187,6 @@ function updateCircleExtras() {
       fillOpacity: 0,
       visible: false
     });
-    
-    // Cacher aussi le label du point
-    if (labelTexts && labelTexts.length > 1) {
-      labelTexts[1].setAttribute({ visible: false });
-    }
   }
 
   // AFFICHAGE DU DIAMÈTRE
@@ -144,27 +198,87 @@ function updateCircleExtras() {
       () => centerPoint.X() + r * Math.cos(angleB),
       () => centerPoint.Y() + r * Math.sin(angleB)
     ], {
-      name: 'B',
+      name: '',
+      withLabel: false,
       showInfobox: false,
       fixed: true,
-      size: 3,
-      strokeColor: 'black',
-      fillColor: 'black'
+      size: 0,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      visible: false
     });
 
     const C = board.create('point', [
       () => centerPoint.X() - r * Math.cos(angleB),
       () => centerPoint.Y() - r * Math.sin(angleB)
     ], {
-      name: 'C',
+      name: '',
+      withLabel: false,
       showInfobox: false,
       fixed: true,
-      size: 3,
-      strokeColor: 'black',
-      fillColor: 'black'
+      size: 0,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      visible: false
     });
 
     setDiameterPoints([B, C]);
+
+    // Créer les handles pour les labels B et C avec des coordonnées statiques
+    const labelBHandle = board.create('point', [
+      B.X() + 0.3,
+      B.Y() + 0.2
+    ], {
+      name: '',
+      withLabel: false,
+      size: 6,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      fixed: false,
+      highlight: false,
+      showInfobox: false
+    });
+    
+    const labelCHandle = board.create('point', [
+      C.X() - 0.3,
+      C.Y() - 0.2
+    ], {
+      name: '',
+      withLabel: false,
+      size: 6,
+      strokeOpacity: 0,
+      fillOpacity: 0,
+      fixed: false,
+      highlight: false,
+      showInfobox: false
+    });
+    
+    // Créer les labels B et C déplaçables
+    const labelB = board.create('text', [
+      () => labelBHandle.X(),
+      () => labelBHandle.Y(),
+      'B'
+    ], {
+      anchorX: 'middle',
+      anchorY: 'middle',
+      fontSize: getGlobalFontSize(),
+      fixed: false
+    });
+    
+    const labelC = board.create('text', [
+      () => labelCHandle.X(),
+      () => labelCHandle.Y(),
+      'C'
+    ], {
+      anchorX: 'middle',
+      anchorY: 'middle',
+      fontSize: getGlobalFontSize(),
+      fixed: false
+    });
+    
+    // Ajouter les handles et labels aux arrays locaux
+    newHandles.push(labelBHandle, labelCHandle);
+    newTexts.push(labelB, labelC);
 
     const newDiameterSegment = board.create('segment', [B, C], {
       strokeColor: 'black',
@@ -193,7 +307,12 @@ function updateCircleExtras() {
     }
   }
 
-  // ✅ SECTION 4 : MISE À JOUR FINALE
+  // ✅ SECTION 4 : MISE À JOUR DES ARRAYS GLOBAUX À LA FIN
+  setLabelHandles(newHandles);
+  setTexts(newTexts);
+  setLabelTexts([labelO]); // Le label O est toujours présent
+  
+  // ✅ SECTION 5 : MISE À JOUR FINALE
   board.update();
   console.log(`✅ updateCircleExtras terminé - Codages: ${showCodings}, Rayon: ${showRadius}, Diamètre: ${showDiameter}`);
 }
