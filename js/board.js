@@ -119,7 +119,7 @@ function createBoardControls() {
 
   const fontMinus = document.createElement('button');
   fontMinus.className = 'font-btn';
-  fontMinus.innerHTML = 'A-';
+  fontMinus.innerHTML = 'A<span style="font-weight: 500; font-size: 16px;">−</span>';
   fontMinus.title = 'Réduire la taille du texte';
   fontMinus.setAttribute('aria-label','Réduire la taille du texte');
   fontMinus.addEventListener('click', (e) => { e.stopPropagation(); decreaseFontSize(); });

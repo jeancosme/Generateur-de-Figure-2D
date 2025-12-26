@@ -621,18 +621,14 @@ function drawSemicircle(radius) {
     name: '',
     showInfobox: false,
     fixed: true,
-    size: 3,
-    strokeColor: 'black',
-    fillColor: 'black'
+    visible: false
   });
 
   const pointB = board.create('point', [radius, 0], {
     name: '',
     showInfobox: false,
     fixed: true,
-    size: 3,
-    strokeColor: 'black',
-    fillColor: 'black'
+    visible: false
   });
 
   // Arc de cercle (demi-cercle supérieur)
@@ -647,38 +643,38 @@ function drawSemicircle(radius) {
     strokeColor: 'black'
   });
 
-  // Labels
+  // Labels déplaçables
   const labelO = board.create('text', [
-    () => newCenterPoint.X(),
-    () => newCenterPoint.Y() - 0.3,
+    newCenterPoint.X(),
+    newCenterPoint.Y() - 0.3,
     'O'
   ], {
     anchorX: 'middle',
     anchorY: 'top',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const labelA = board.create('text', [
-    () => pointA.X() - 0.3,
-    () => pointA.Y(),
+    pointA.X() - 0.3,
+    pointA.Y(),
     'A'
   ], {
     anchorX: 'right',
     anchorY: 'middle',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const labelB = board.create('text', [
-    () => pointB.X() + 0.3,
-    () => pointB.Y(),
+    pointB.X() + 0.3,
+    pointB.Y(),
     'B'
   ], {
     anchorX: 'left',
     anchorY: 'middle',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const newPoints = [pointA, pointB];
@@ -735,9 +731,7 @@ function drawArc(radius, angleStart = 0, angleEnd = 90) {
     name: '',
     showInfobox: false,
     fixed: true,
-    size: 3,
-    strokeColor: 'black',
-    fillColor: 'black'
+    visible: false
   });
 
   const pointB = board.create('point', [
@@ -747,9 +741,7 @@ function drawArc(radius, angleStart = 0, angleEnd = 90) {
     name: '',
     showInfobox: false,
     fixed: true,
-    size: 3,
-    strokeColor: 'black',
-    fillColor: 'black'
+    visible: false
   });
 
   // Arc de cercle
@@ -771,38 +763,38 @@ function drawArc(radius, angleStart = 0, angleEnd = 90) {
     dash: 2
   });
 
-  // Labels
+  // Labels déplaçables
   const labelO = board.create('text', [
-    () => newCenterPoint.X() - 0.3,
-    () => newCenterPoint.Y() - 0.3,
+    newCenterPoint.X() - 0.3,
+    newCenterPoint.Y() - 0.3,
     'O'
   ], {
     anchorX: 'right',
     anchorY: 'top',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const labelA = board.create('text', [
-    () => pointA.X() + 0.3,
-    () => pointA.Y() + 0.3,
+    pointA.X() + 0.3,
+    pointA.Y() + 0.3,
     'A'
   ], {
     anchorX: 'left',
     anchorY: 'bottom',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const labelB = board.create('text', [
-    () => pointB.X() + 0.3,
-    () => pointB.Y() + 0.3,
+    pointB.X() + 0.3,
+    pointB.Y() + 0.3,
     'B'
   ], {
     anchorX: 'left',
     anchorY: 'bottom',
     fontSize: getGlobalFontSize(),
-    fixed: true
+    fixed: false
   });
 
   const newPoints = [pointA, pointB];

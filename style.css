@@ -309,12 +309,12 @@ footer {
 .jxg-controls button.reset-btn {
   background: #f3f3f4 !important;
   border: 1px solid #ddd !important;
-  width: auto !important;           /* reset is sized by its text */
+  width: 76px !important;           /* largeur totale de 2 boutons + gap (34 + 8 + 34) */
   min-width: 0 !important;
   height: 34px !important;          /* même hauteur que les autres boutons */
   min-height: 0 !important;
-  padding: 0 12px !important;       /* padding horizontal seulement */
-  font-size: 11px !important;       /* réduit de 30% (15→11) */
+  padding: 0 8px !important;        /* padding horizontal réduit */
+  font-size: 10px !important;       /* taille de police réduite */
   border-radius: 7px !important;    /* réduit de 30% (10→7) */
   display: flex !important;
   align-items: center !important;

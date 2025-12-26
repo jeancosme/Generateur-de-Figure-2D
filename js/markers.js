@@ -341,52 +341,116 @@ function updateDiagonals() {
   });
   setIntersectionRightAngleMarkers([]);
 
+  // ✅ Nettoyer les anciens handles et labels (y compris les labels de centre de polygone)
+  lengthHandles.forEach(h => {
+    if (h && h.elType === 'point') {
+      // Supprimer tous les labels texte attachés à ce handle
+      board.objectsList.forEach(obj => {
+        if (obj.elType === 'text') {
+          const coords = obj.coords;
+          if (coords && typeof coords.usrCoords[1] === 'function') {
+            // C'est un label attaché à un handle, le supprimer
+            try { board.removeObject(obj); } catch (e) {}
+          }
+        }
+      });
+      try { board.removeObject(h); } catch (e) {}
+    }
+  });
+  setLengthHandles([]);
+
   // Vérifier si on doit afficher les diagonales
   const show = document.getElementById('toggleDiagonals')?.checked;
   const intersectionGroup = document.getElementById('intersectionGroup');
   
-  if (!show || !points || points.length !== 4) {
+  if (!show || !points || points.length < 4) {
     // Masquer l'option d'intersection si pas de diagonales
     if (intersectionGroup) intersectionGroup.style.display = 'none';
     return;
   }
 
-  // ✅ AFFICHER l'option d'intersection quand les diagonales sont cochées
-  if (intersectionGroup) intersectionGroup.style.display = 'block';
-
-  console.log('Création diagonales pour quadrilatère avec', points.length, 'points');
-
-  // QUADRILATÈRE : 2 diagonales uniquement
-  const diag1 = board.create('segment', [points[0], points[2]], {
-    strokeColor: 'black',
-    strokeWidth: 1,
-    dash: 0,
-    fixed: true,
-    withLabel: false
-  });
+  const n = points.length;
   
-  const diag2 = board.create('segment', [points[1], points[3]], {
-    strokeColor: 'black', 
-    strokeWidth: 1,
-    dash: 0,
-    fixed: true,
-    withLabel: false
-  });
+  // QUADRILATÈRE (4 sommets) : 2 diagonales avec intersection
+  if (n === 4) {
+    // ✅ AFFICHER l'option d'intersection quand les diagonales sont cochées
+    if (intersectionGroup) intersectionGroup.style.display = 'block';
 
-  const newDiagonals = [diag1, diag2];
-  setDiagonals(newDiagonals);
-  console.log('✅ 2 diagonales créées');
-  
-  // ✅ CRÉER LE LABEL D'INTERSECTION (si demandé)
-  const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
-  if (showIntersectionLabel) {
-    createIntersectionLabel();
+    console.log('Création diagonales pour quadrilatère avec', points.length, 'points');
+
+    const diag1 = board.create('segment', [points[0], points[2]], {
+      strokeColor: 'black',
+      strokeWidth: 1,
+      dash: 0,
+      fixed: true,
+      withLabel: false
+    });
+    
+    const diag2 = board.create('segment', [points[1], points[3]], {
+      strokeColor: 'black', 
+      strokeWidth: 1,
+      dash: 0,
+      fixed: true,
+      withLabel: false
+    });
+
+    const newDiagonals = [diag1, diag2];
+    setDiagonals(newDiagonals);
+    console.log('✅ 2 diagonales créées');
+    
+    // ✅ CRÉER LE LABEL D'INTERSECTION (si demandé)
+    const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
+    if (showIntersectionLabel) {
+      createIntersectionLabel();
+    }
+    
+    // ✅ CRÉER L'ANGLE DROIT À L'INTERSECTION (si demandé et si perpendiculaire)
+    const showIntersectionRightAngle = document.getElementById('toggleIntersectionRightAngle')?.checked;
+    if (showIntersectionRightAngle) {
+      createIntersectionRightAngle();
+    }
   }
-  
-  // ✅ CRÉER L'ANGLE DROIT À L'INTERSECTION (si demandé et si perpendiculaire)
-  const showIntersectionRightAngle = document.getElementById('toggleIntersectionRightAngle')?.checked;
-  if (showIntersectionRightAngle) {
-    createIntersectionRightAngle();
+  // POLYGONE RÉGULIER avec nombre pair de sommets : diagonales passant par le centre
+  else if (n >= 5 && n % 2 === 0) {
+    // Afficher l'option d'intersection (label uniquement, pas d'angle droit)
+    if (intersectionGroup) {
+      intersectionGroup.style.display = 'block';
+      // Masquer l'option angle droit (pas applicable pour polygones réguliers)
+      const angleCheckbox = document.getElementById('toggleIntersectionRightAngle');
+      if (angleCheckbox && angleCheckbox.parentElement) {
+        angleCheckbox.parentElement.style.display = 'none';
+      }
+    }
+
+    console.log('Création diagonales pour polygone régulier à', n, 'sommets');
+
+    const newDiagonals = [];
+    // Créer n/2 diagonales reliant les sommets opposés
+    for (let i = 0; i < n / 2; i++) {
+      const diag = board.create('segment', [points[i], points[i + n / 2]], {
+        strokeColor: 'black',
+        strokeWidth: 1,
+        dash: 0,
+        fixed: true,
+        withLabel: false
+      });
+      newDiagonals.push(diag);
+    }
+
+    setDiagonals(newDiagonals);
+    console.log(`✅ ${n / 2} diagonales créées pour polygone régulier`);
+    
+    // ✅ CRÉER LE LABEL D'INTERSECTION (si demandé)
+    const showIntersectionLabel = document.getElementById('toggleIntersectionLabel')?.checked;
+    if (showIntersectionLabel) {
+      createPolygonCenterLabel();
+    }
+  }
+  else {
+    // Polygone avec nombre impair de sommets : pas de diagonales passant par le centre
+    if (intersectionGroup) intersectionGroup.style.display = 'none';
+    console.log('⚠️ Diagonales non supportées pour ce type de polygone');
+    return;
   }
   
   // ✅ Remettre à jour les marqueurs d'angles droits réguliers si l'option est active
@@ -501,6 +565,131 @@ function createIntersectionLabel() {
   lengthHandles.push(intersectionHandle);
   
   console.log(`✅ Label d'intersection déplaçable créé: "${labelText}" à (${intersection.x.toFixed(2)}, ${intersection.y.toFixed(2)})`);
+}
+
+// ✅ FONCTION POUR CRÉER LE LABEL DU CENTRE D'UN POLYGONE RÉGULIER
+function createPolygonCenterLabel() {
+  if (!points || points.length < 3) {
+    console.warn('⚠️ Pas assez de points pour créer un label de centre');
+    return;
+  }
+
+  // ✅ Utiliser le même input que pour les quadrilatères
+  const labelInput = document.getElementById('intersectionTextInput');
+  const labelText = labelInput ? labelInput.value.trim() || 'I' : 'I';
+  
+  // Calculer le centre géométrique du polygone
+  const center = calculatePolygonCenter();
+  
+  if (!center) {
+    console.warn('⚠️ Impossible de calculer le centre du polygone');
+    return;
+  }
+
+  console.log(`📍 Centre du polygone calculé: (${center.x.toFixed(2)}, ${center.y.toFixed(2)})`);
+
+  // Créer un handle invisible au centre (avec petit décalage)
+  const centerHandle = board.create('point', [center.x + 0.2, center.y + 0.2], {
+    name: '',
+    size: 6,
+    strokeOpacity: 0,
+    fillOpacity: 0,
+    fixed: false,
+    highlight: false,
+    showInfobox: false
+  });
+
+  // Point de calcul du centre (invisible)
+  const centerPoint = board.create('point', [center.x, center.y], {
+    visible: false,
+    fixed: true,
+    name: ''
+  });
+  setIntersectionPoint(centerPoint);
+
+  // Créer le label attaché au handle
+  const centerLabel = board.create('text', [
+    () => centerHandle.X(),
+    () => centerHandle.Y(),
+    labelText
+  ], {
+    fontSize: getGlobalFontSize(),
+    color: '#000',
+    anchorX: 'middle',
+    anchorY: 'middle',
+    fixed: false,
+    highlight: false
+  });
+
+  // ✅ Stocker le label pour pouvoir le mettre à jour
+  setIntersectionLabel(centerLabel);
+
+  // Rendre le label déplaçable
+  try {
+    if (centerHandle.rendNode) {
+      centerHandle.rendNode.style.cursor = 'move';
+    }
+    
+    if (centerLabel.rendNode) {
+      centerLabel.rendNode.style.cursor = 'move';
+      
+      centerLabel.rendNode.addEventListener('pointerdown', function (ev) {
+        ev.stopPropagation();
+        ev.preventDefault();
+        
+        const start = board.getUsrCoordsOfMouse(ev);
+        
+        function onMove(e) {
+          const pos = board.getUsrCoordsOfMouse(e);
+          const dx = pos[0] - start[0];
+          const dy = pos[1] - start[1];
+          
+          try {
+            centerHandle.moveTo([centerHandle.X() + dx, centerHandle.Y() + dy], 0);
+          } catch (err) {
+            try {
+              centerHandle.setPosition(JXG.COORDS_BY_USER, [centerHandle.X() + dx, centerHandle.Y() + dy]);
+            } catch (e) {}
+          }
+          
+          start[0] = pos[0];
+          start[1] = pos[1];
+          board.update();
+        }
+        
+        function onUp() {
+          document.removeEventListener('pointermove', onMove);
+          document.removeEventListener('pointerup', onUp);
+        }
+        
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+      }, { passive: false });
+    }
+  } catch (e) {
+    console.warn('⚠️ Impossible de configurer le drag and drop pour le label du centre:', e);
+  }
+  
+  lengthHandles.push(centerHandle);
+  
+  console.log(`✅ Label du centre du polygone créé: "${labelText}" à (${center.x.toFixed(2)}, ${center.y.toFixed(2)})`);
+}
+
+// ✅ FONCTION POUR CALCULER LE CENTRE GÉOMÉTRIQUE D'UN POLYGONE
+function calculatePolygonCenter() {
+  if (!points || points.length < 3) return null;
+  
+  let sumX = 0, sumY = 0;
+  
+  for (let i = 0; i < points.length; i++) {
+    sumX += points[i].X();
+    sumY += points[i].Y();
+  }
+  
+  return {
+    x: sumX / points.length,
+    y: sumY / points.length
+  };
 }
 
 // ✅ FONCTION POUR CALCULER L'INTERSECTION DES DIAGONALES
