@@ -314,7 +314,16 @@ function generateFigure() {
   console.log(`✅ Figure générée et optimisée avec le système de handlers`);
   
   // ==========================================
-  // 5. FEEDBACK UTILISATEUR
+  // 5. SAUVEGARDE DE L'ÉTAT POUR HISTORIQUE
+  // ==========================================
+  
+  // Sauvegarder l'état après génération réussie
+  setTimeout(() => {
+    saveState();
+  }, 200);
+  
+  // ==========================================
+  // 6. FEEDBACK UTILISATEUR
   // ==========================================
   
   const suggestionBox = document.getElementById('suggestionBox');
@@ -1547,6 +1556,9 @@ function addFigureToScene() {
     return;
   }
   
+  // Enregistrer la commande dans l'historique (mode créateur)
+  figureCommandHistory.push(input);
+  
   // Générer des labels alphabétiques continus (on en demande plus car certaines figures en utilisent plus)
   const labels = generateNextLabels(10); // Demander suffisamment de labels
   
@@ -1662,6 +1674,11 @@ function addFigureToScene() {
     
     // L'aimantation magnétique est gérée automatiquement par addDraggingToPolygon()
     
+    // Sauvegarder l'état APRÈS l'ajout
+    setTimeout(() => {
+      saveState();
+    }, 100);
+    
     // Nettoyer le champ
     document.getElementById("creatorPromptInput").value = '';
     
@@ -1774,6 +1791,9 @@ function clearAllFigures() {
       }
     });
   }
+  
+  // Effacer l'historique après tout effacement
+  clearHistory();
   
   console.log('🧹 Toutes les figures ont été effacées');
 }

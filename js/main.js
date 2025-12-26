@@ -42,6 +42,7 @@ window.updateEqualAngleMarkers = updateEqualAngleMarkers;
 window.updateDiagonals = updateDiagonals;
 window.updateCircleExtras = updateCircleExtras;
 window.changeLanguage = changeLanguage;
+window.undoLastAction = undoLastAction;
 
 console.log('✅ Fonctions exposées globalement');
 
@@ -62,6 +63,10 @@ if (typeof JXG === 'undefined') {
   
   // 3. Initialiser la langue par défaut (français)
   document.getElementById('flagFR').classList.add('active');
+  
+  // 4. Sauvegarder l'état initial vide
+  saveState();
+  console.log('✅ État initial sauvegardé');
   
   console.log('🎉 Application prête !');
 }

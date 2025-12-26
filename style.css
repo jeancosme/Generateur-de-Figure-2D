@@ -133,6 +133,20 @@ button {
 }
 button:hover { background-color: #2980b9; }
 
+/* Style pour le bouton Annuler */
+.btn-undo {
+  background-color: #f39c12;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn-undo:hover:not(:disabled) {
+  background-color: #e67e22;
+}
+.btn-undo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #95a5a6;
+}
+
 /* regroupe les actions (boutons) pour rester alignées */
 .control-actions {
   display: flex;
