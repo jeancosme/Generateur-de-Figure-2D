@@ -374,7 +374,14 @@ function updateDiagonals() {
   // QUADRILATÈRE (4 sommets) : 2 diagonales avec intersection
   if (n === 4) {
     // ✅ AFFICHER l'option d'intersection quand les diagonales sont cochées
-    if (intersectionGroup) intersectionGroup.style.display = 'block';
+    if (intersectionGroup) {
+      intersectionGroup.style.display = 'block';
+      // ✅ Réafficher l'option angle droit pour les quadrilatères
+      const angleCheckbox = document.getElementById('toggleIntersectionRightAngle');
+      if (angleCheckbox && angleCheckbox.parentElement) {
+        angleCheckbox.parentElement.style.display = 'flex';
+      }
+    }
 
     console.log('Création diagonales pour quadrilatère avec', points.length, 'points');
 
