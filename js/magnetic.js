@@ -1,5 +1,5 @@
 /**
- * Module de gestion de l'aimantation magnétique pour le Mode Créateur
+ * Module de gestion de l'aimantation magnétique pour les Figures Complexes
  * Permet de fusionner automatiquement les figures lorsque leurs segments se rapprochent
  */
 

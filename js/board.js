@@ -471,15 +471,26 @@ function handleEraserClick(obj) {
   if (!eraserMode) return;
   
   const objType = obj.elType;
+  console.log(`🧹 Tentative de suppression de type: ${objType}, id: ${obj.id}`);
   
-  // Effacer les segments (borders des polygones)
-  if (objType === 'line') {
+  // Effacer les segments et lignes
+  if (objType === 'line' || objType === 'segment') {
     console.log(`🧹 Suppression du segment ${obj.id || obj.name || 'sans nom'}`);
     try {
-      board.removeObject(obj);
+      // Rendre invisible
+      obj.visProp.visible = false;
+      obj.visPropCalc.visible = false;
+      
+      // Supprimer du DOM
+      if (obj.rendNode) {
+        obj.rendNode.style.display = 'none';
+      }
+      
       board.update();
+      console.log('✅ Segment supprimé avec succès');
     } catch (e) {
-      console.warn('Erreur lors de la suppression:', e);
+      console.warn('❌ Erreur lors de la suppression:', e);
+      console.error(e);
     }
   }
   
@@ -487,10 +498,20 @@ function handleEraserClick(obj) {
   else if (objType === 'text') {
     console.log(`🧹 Suppression du label "${obj.plaintext}"`);
     try {
-      board.removeObject(obj);
+      // Rendre invisible
+      obj.visProp.visible = false;
+      obj.visPropCalc.visible = false;
+      
+      // Supprimer du DOM
+      if (obj.rendNode) {
+        obj.rendNode.style.display = 'none';
+      }
+      
       board.update();
+      console.log('✅ Label supprimé avec succès');
     } catch (e) {
-      console.warn('Erreur lors de la suppression:', e);
+      console.warn('❌ Erreur lors de la suppression:', e);
+      console.error(e);
     }
   }
   
@@ -521,8 +542,14 @@ function setupEraserListeners() {
     let closestType = '';
     
     // PARCOURIR TOUTES LES LIGNES DU BOARD (segments et bordures)
-    const allLines = board.objectsList.filter(obj => obj.elType === 'line');
-    console.log(`🔍 ${allLines.length} lignes détectées sur le board`);
+    let allLines = board.objectsList.filter(obj => obj.elType === 'line' || obj.elType === 'segment');
+    
+    // Ajouter aussi les segments de la figure stockés globalement
+    if (figureSegments && figureSegments.length > 0) {
+      allLines = allLines.concat(figureSegments);
+    }
+    
+    console.log(`🔍 ${allLines.length} lignes détectées sur le board (${figureSegments?.length || 0} segments de figure)`);
     
     allLines.forEach(line => {
       if (line.point1 && line.point2) {
@@ -530,8 +557,8 @@ function setupEraserListeners() {
         if (dist < 0.3 && dist < minDist) {
           minDist = dist;
           closestObj = line;
-          closestType = 'line';
-          console.log(`  📏 Ligne proche trouvée: distance=${dist.toFixed(3)}`);
+          closestType = line.elType || 'line';
+          console.log(`  📏 Ligne proche trouvée: distance=${dist.toFixed(3)}, type=${closestType}`);
         }
       }
     });

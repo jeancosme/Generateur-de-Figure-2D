@@ -68,7 +68,7 @@ function addDraggingToPolygon(polygon, figurePoints, figureTexts, handles = []) 
         } catch (err) { /* ignore */ }
       });
 
-      // 6. DÉTECTION MAGNÉTIQUE (Mode Créateur uniquement)
+      // 6. DÉTECTION MAGNÉTIQUE (Figures complexes uniquement)
       if (typeof detectMagneticPoints === 'function') {
         magneticPairs = detectMagneticPoints(figurePoints);
         if (magneticPairs.length > 0) {
@@ -120,11 +120,24 @@ function drawSquare(size, offsetX = 0, offsetY = 0) {
   const D = board.create('point', [0 + offsetX, 0 + offsetY], {name: '', fixed: true, visible: false});
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels au lieu d'un polygone
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  // Stocker les segments dans la variable globale
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  console.log('✅ Segments du carré créés:', figureSegments.length);
+  
+  // Créer un polygone invisible pour le remplissage
   const newPolygon = board.create('polygon', newPoints, {
     withLabel: false,
-    borders: {strokeColor: "black", fixed: true },
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.2, getLabel(0)]);
@@ -155,10 +168,21 @@ function drawRectangle(width, height, offsetX = 0, offsetY = 0) {
   const D = board.create('point', [0 + offsetX, 0 + offsetY], { name: '', fixed: true, visible: false });
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: {strokeColor: "black", fixed: true},
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.2, getLabel(0)]);
@@ -210,10 +234,21 @@ function drawLosange(side, addOffsetX = 0, addOffsetY = 0) {
   const D = board.create('point', [rotD_x + addOffsetX, rotD_y + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: { strokeColor: 'black', fixed: true },
+    withLabel: false,
+    borders: {visible: false},
     fillColor: 'white',
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const LA = board.create('text', [A.X() - 0.4, A.Y(), getLabel(0)], {fontSize: getGlobalFontSize()});
@@ -249,10 +284,21 @@ function drawParallelogram(base, sideLength, addOffsetX = 0, addOffsetY = 0) {
   const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: { strokeColor: "black" },
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
@@ -288,10 +334,21 @@ function drawTrapezoid(baseBottom, baseTop, height, addOffsetX = 0, addOffsetY =
   const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: { strokeColor: "black" },
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
@@ -321,10 +378,21 @@ function drawRightTrapezoid(baseBottom, baseTop, height, addOffsetX = 0, addOffs
   const D = board.create('point', [0 + addOffsetX, 0 + addOffsetY], { visible: false, fixed: true });
 
   const newPoints = [A, B, C, D];
+  
+  // Créer 4 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCD = board.create('segment', [C, D], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentDA = board.create('segment', [D, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCD, segmentDA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: { strokeColor: "black" },
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X() - 0.3, A.Y() + 0.3, getLabel(0)], {fontSize: getGlobalFontSize()});
@@ -362,10 +430,20 @@ function drawEquilateralTriangle(side, offsetX = 0, offsetY = 0) {
   const C = board.create('point', [side / 2 + offsetX, height + offsetY], {visible: false});
 
   const newPoints = [A, B, C];
+  
+  // Créer 3 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCA = board.create('segment', [C, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: {strokeColor: "black"},
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
@@ -390,10 +468,20 @@ function drawRightTriangle(base, height, addOffsetX = 0, addOffsetY = 0) {
   const C = board.create('point', [offsetX, offsetY + height], {visible:false, fixed: true});
 
   const newPoints = [A, B, C];
+  
+  // Créer 3 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCA = board.create('segment', [C, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: {strokeColor: "black", fixed: true},
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
@@ -416,10 +504,20 @@ function drawIsoscelesTriangle(base = 4, height = 3, offsetX = 0, offsetY = 0) {
   const C = board.create('point', [base / 2 + offsetX, height + offsetY], {visible: false, fixed: true});
 
   const newPoints = [A, B, C];
+  
+  // Créer 3 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCA = board.create('segment', [C, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: { strokeColor: 'black' },
+    withLabel: false,
+    borders: {visible: false},
     fillColor: 'white',
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
@@ -467,10 +565,20 @@ function drawScaleneTriangleFromSides(a, b, c, offsetX = 0, offsetY = 0) {
   const C = board.create('point', [Cx - centerX + offsetX, Cy - centerY + offsetY], {visible: false, fixed: true});
 
   const newPoints = [A, B, C];
+  
+  // Créer 3 segments individuels
+  const segmentAB = board.create('segment', [A, B], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentBC = board.create('segment', [B, C], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  const segmentCA = board.create('segment', [C, A], {strokeColor: 'black', strokeWidth: 2, fixed: false});
+  
+  figureSegments = [segmentAB, segmentBC, segmentCA];
+  
   const newPolygon = board.create('polygon', newPoints, {
-    borders: {strokeColor: "black", fixed: true},
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const labelA = board.create('text', [A.X(), A.Y() - 0.3, getLabel(0)]);
@@ -504,10 +612,26 @@ function drawRegularPolygon(n, side, addOffsetX = 0, addOffsetY = 0) {
     newPoints.push(board.create('point', [x, y], {visible: false, fixed: true}));
   }
 
+  // Créer n segments individuels
+  const segments = [];
+  for (let i = 0; i < n; i++) {
+    const nextIndex = (i + 1) % n;
+    const segment = board.create('segment', [newPoints[i], newPoints[nextIndex]], {
+      strokeColor: 'black', 
+      strokeWidth: 2, 
+      fixed: false
+    });
+    segments.push(segment);
+  }
+  
+  figureSegments = segments;
+
   const newPolygon = board.create('polygon', newPoints, {
-    borders: {strokeColor: "black", fixed: true},
+    withLabel: false,
+    borders: {visible: false},
     fillColor: "white",
-    fillOpacity: 1
+    fillOpacity: 1,
+    vertices: {visible: false}
   });
 
   const newTexts = [];

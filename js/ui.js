@@ -1266,7 +1266,7 @@ function setupEventListeners() {
           const isCreatorMode = creatorMode && creatorMode.style.display !== 'none';
           
           if (isCreatorMode) {
-            // Mode Créateur: remplir creatorPromptInput et ajouter à la scène
+            // Figures complexes: remplir creatorPromptInput et ajouter à la scène
             const creatorInputElem = document.getElementById('creatorPromptInput');
             if (creatorInputElem) {
               creatorInputElem.value = figurePrompt;
@@ -1516,7 +1516,7 @@ function changeLanguage(lang) {
   console.log(`🌍 Langue changée: ${lang}`);
 }
 // ==========================================
-// MODE CRÉATEUR - Gestion multi-figures
+// FIGURES COMPLEXES - Gestion multi-figures
 // ==========================================
 
 // Variable globale pour stocker les figures de la scène
@@ -1524,7 +1524,7 @@ let sceneFigures = [];
 let nextLabelIndex = 0; // Pour continuer l'alphabet
 
 /**
- * Bascule entre mode simple et mode créateur
+ * Bascule entre mode simple et figures complexes
  */
 function switchMode(mode) {
   const simpleMode = document.getElementById('modeSimple');
@@ -1546,7 +1546,7 @@ function switchMode(mode) {
 }
 
 /**
- * Ajoute une figure à la scène (mode créateur)
+ * Ajoute une figure à la scène (figures complexes)
  */
 function addFigureToScene() {
   const input = document.getElementById("creatorPromptInput").value.trim().toLowerCase();
@@ -1556,7 +1556,7 @@ function addFigureToScene() {
     return;
   }
   
-  // Enregistrer la commande dans l'historique (mode créateur)
+  // Enregistrer la commande dans l'historique (figures complexes)
   figureCommandHistory.push(input);
   
   // Générer des labels alphabétiques continus (on en demande plus car certaines figures en utilisent plus)
@@ -1711,7 +1711,7 @@ function updateFiguresList() {
   const listContainer = document.getElementById('figuresList');
   const countSpan = document.getElementById('figureCount');
   
-  // Si les éléments n'existent pas, ne rien faire (mode créateur désactivé)
+  // Si les éléments n'existent pas, ne rien faire (figures complexes désactivé)
   if (!listContainer || !countSpan) return;
   
   listContainer.innerHTML = '';

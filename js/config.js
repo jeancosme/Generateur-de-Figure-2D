@@ -49,6 +49,7 @@ let codingMarks = [];
 let codingSegments = [];
 let angleMarkers = [];
 let diagonals = [];
+let figureSegments = []; // Segments individuels de la figure (pour la gomme)
 
 // ==========================================
 // PARAMÈTRES D'AFFICHAGE
@@ -110,7 +111,7 @@ let _lengthSyncAttached = false;
 let historyStack = [];
 let maxHistorySize = 20; // Limite de 20 états
 let isRestoringState = false; // Flag pour éviter la sauvegarde pendant la restauration
-let figureCommandHistory = []; // Historique des commandes de figures ajoutées (mode créateur)
+let figureCommandHistory = []; // Historique des commandes de figures ajoutées (figures complexes)
 
 // ==========================================
 // SETTERS POUR MODIFICATION D'ÉTAT
@@ -220,7 +221,7 @@ function saveState() {
   const allTexts = board.objectsList.filter(obj => obj.elType === 'text');
   
   const state = {
-    timestamp: Date.now(),    // Historique des commandes de figures (mode créateur)
+    timestamp: Date.now(),    // Historique des commandes de figures (figures complexes)
     figureCommands: [...figureCommandHistory],    // Capturer tous les points avec nom du board
     allBoardObjects: {
       points: allPoints.map(p => ({
@@ -408,7 +409,7 @@ function restoreState(state) {
   // Restaurer l'historique des commandes
   figureCommandHistory = [...(state.figureCommands || [])];
 
-  // MODE CRÉATEUR : rejouer les commandes sauvegardées
+  // FIGURES COMPLEXES : rejouer les commandes sauvegardées
   if (state.figureCommands && state.figureCommands.length > 0) {
     console.log(`🔄 Rejeu de ${state.figureCommands.length} commandes...`);
     window.nextLabelIndex = 0; // Réinitialiser les labels
