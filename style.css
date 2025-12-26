@@ -334,12 +334,19 @@ footer {
   align-items: center !important;
   justify-content: center !important;
 }
+.jxg-controls button.eraser-btn {
+  background: #ffe6e6 !important;   /* rose clair */
+  border: 1px solid #ffcccc !important;
+  font-size: 18px !important;
+  transition: all 0.2s ease;
+}
 
 /* Hover states */
 .jxg-controls button.zoom-btn:hover { background: #81d4fa !important; }
 .jxg-controls button.rotate-btn:hover { background: #dff2df !important; }
 .jxg-controls button.font-btn:hover { background: #fff59d !important; }
 .jxg-controls button.reset-btn:hover { background: #ececec !important; }
+.jxg-controls button.eraser-btn:hover { background: #ffcccc !important; }
 
 /* center reset row */
 .jxg-controls .reset-row { justify-content: center; }

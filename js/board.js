@@ -35,6 +35,9 @@ function initBoard() {
   // Ajouter le zoom à la molette
   setupWheelZoom();
   
+  // Configurer les listeners pour le mode gomme
+  setupEraserListeners();
+  
   return newBoard;
 }
 
@@ -134,10 +137,25 @@ function createBoardControls() {
   row4.appendChild(fontMinus);
   row4.appendChild(fontPlus);
 
+  // Rangée 5 : Gomme
+  const row5 = document.createElement('div');
+  row5.className = 'small-row';
+
+  const eraser = document.createElement('button');
+  eraser.id = 'eraserBtn';
+  eraser.className = 'eraser-btn';
+  eraser.innerHTML = '🧹';
+  eraser.title = 'Gomme : cliquer pour effacer segments ou labels';
+  eraser.setAttribute('aria-label', 'Mode gomme');
+  eraser.addEventListener('click', (e) => { e.stopPropagation(); toggleEraserMode(); });
+
+  row5.appendChild(eraser);
+
   panel.appendChild(row1);
   panel.appendChild(row2);
   panel.appendChild(row3);
   panel.appendChild(row4);
+  panel.appendChild(row5);
 
   container.appendChild(panel);
 }
@@ -196,33 +214,15 @@ function decreaseFontSize() {
 function updateAllFontSizes() {
   const fontSize = getGlobalFontSize();
   
-  // Mettre à jour tous les labels de points (texts)
-  if (texts && texts.length > 0) {
-    texts.forEach(text => {
-      if (text && typeof text.setAttribute === 'function') {
-        text.setAttribute({ fontSize: fontSize });
-      }
-    });
-  }
+  // Mettre à jour TOUS les textes du board (y compris les labels magnétiques)
+  const allTexts = board.objectsList.filter(obj => obj.elType === 'text');
+  allTexts.forEach(text => {
+    if (text && typeof text.setAttribute === 'function') {
+      text.setAttribute({ fontSize: fontSize });
+    }
+  });
   
-  // Mettre à jour tous les labels de longueurs
-  if (lengthLabels && lengthLabels.length > 0) {
-    lengthLabels.forEach(label => {
-      if (label && typeof label.setAttribute === 'function') {
-        label.setAttribute({ fontSize: fontSize });
-      }
-    });
-  }
-  
-  // Mettre à jour le label d'intersection
-  if (intersectionLabel && typeof intersectionLabel.setAttribute === 'function') {
-    intersectionLabel.setAttribute({ fontSize: fontSize });
-  }
-  
-  // Mettre à jour le label du rayon
-  if (radiusLabel && typeof radiusLabel.setAttribute === 'function') {
-    radiusLabel.setAttribute({ fontSize: fontSize });
-  }
+  console.log(`📝 ${allTexts.length} labels mis à jour avec fontSize: ${fontSize}px`);
   
   board.update();
 }
@@ -436,4 +436,162 @@ function centerFigure() {
   updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
   
   board.update();
+}
+
+// ==========================================
+// MODE GOMME (ERASER)
+// ==========================================
+
+let eraserMode = false;
+
+/**
+ * Active/désactive le mode gomme
+ */
+function toggleEraserMode() {
+  eraserMode = !eraserMode;
+  const eraserBtn = document.getElementById('eraserBtn');
+  
+  if (eraserMode) {
+    eraserBtn.style.backgroundColor = '#e74c3c';
+    eraserBtn.style.color = 'white';
+    document.getElementById('jxgbox').style.cursor = 'crosshair';
+    console.log('🧹 Mode gomme ACTIVÉ - Cliquez sur un segment ou label pour l\'effacer');
+  } else {
+    eraserBtn.style.backgroundColor = '';
+    eraserBtn.style.color = '';
+    document.getElementById('jxgbox').style.cursor = 'default';
+    console.log('🧹 Mode gomme DÉSACTIVÉ');
+  }
+}
+
+/**
+ * Gère le clic sur un objet en mode gomme
+ */
+function handleEraserClick(obj) {
+  if (!eraserMode) return;
+  
+  const objType = obj.elType;
+  
+  // Effacer les segments (borders des polygones)
+  if (objType === 'line') {
+    console.log(`🧹 Suppression du segment ${obj.id || obj.name || 'sans nom'}`);
+    try {
+      board.removeObject(obj);
+      board.update();
+    } catch (e) {
+      console.warn('Erreur lors de la suppression:', e);
+    }
+  }
+  
+  // Effacer les labels text
+  else if (objType === 'text') {
+    console.log(`🧹 Suppression du label "${obj.plaintext}"`);
+    try {
+      board.removeObject(obj);
+      board.update();
+    } catch (e) {
+      console.warn('Erreur lors de la suppression:', e);
+    }
+  }
+  
+  // Autres types d'objets (pour l'instant juste un message)
+  else {
+    console.log(`⚠️ Type d'objet non supporté par la gomme: ${objType}`);
+  }
+}
+
+/**
+ * Configure les écouteurs d'événements pour le mode gomme
+ */
+function setupEraserListeners() {
+  // Écouter les clics sur tous les objets du board
+  board.on('down', function(e) {
+    if (!eraserMode) return;
+    
+    // Trouver l'objet sous le curseur
+    const coords = board.getUsrCoordsOfMouse(e);
+    const x = coords[0];
+    const y = coords[1];
+    
+    console.log(`🧹 Clic en (${x.toFixed(2)}, ${y.toFixed(2)})`);
+    
+    // Chercher les objets proches du clic
+    let minDist = Infinity;
+    let closestObj = null;
+    let closestType = '';
+    
+    // PARCOURIR TOUTES LES LIGNES DU BOARD (segments et bordures)
+    const allLines = board.objectsList.filter(obj => obj.elType === 'line');
+    console.log(`🔍 ${allLines.length} lignes détectées sur le board`);
+    
+    allLines.forEach(line => {
+      if (line.point1 && line.point2) {
+        const dist = distancePointToSegment(x, y, line.point1, line.point2);
+        if (dist < 0.3 && dist < minDist) {
+          minDist = dist;
+          closestObj = line;
+          closestType = 'line';
+          console.log(`  📏 Ligne proche trouvée: distance=${dist.toFixed(3)}`);
+        }
+      }
+    });
+    
+    // Chercher les textes
+    const allTexts = board.objectsList.filter(obj => obj.elType === 'text');
+    allTexts.forEach(text => {
+      if (text.X && text.Y) {
+        const dist = Math.sqrt(Math.pow(x - text.X(), 2) + Math.pow(y - text.Y(), 2));
+        if (dist < 0.5 && dist < minDist) {
+          minDist = dist;
+          closestObj = text;
+          closestType = 'text';
+          console.log(`  📝 Texte proche trouvé: "${text.plaintext}", distance=${dist.toFixed(3)}`);
+        }
+      }
+    });
+    
+    if (closestObj) {
+      console.log(`✅ Objet le plus proche: ${closestType}, distance=${minDist.toFixed(3)}`);
+      handleEraserClick(closestObj);
+    } else {
+      console.log(`❌ Aucun objet trouvé à portée`);
+    }
+  });
+}
+
+/**
+ * Calcule la distance d'un point à un segment
+ */
+function distancePointToSegment(x, y, p1, p2) {
+  const x1 = p1.X(), y1 = p1.Y();
+  const x2 = p2.X(), y2 = p2.Y();
+  
+  const A = x - x1;
+  const B = y - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  let param = -1;
+  
+  if (lenSq !== 0) param = dot / lenSq;
+  
+  let xx, yy;
+  
+  if (param < 0) {
+    xx = x1;
+    yy = y1;
+  } else if (param > 1) {
+    xx = x2;
+    yy = y2;
+  } else {
+    xx = x1 + param * C;
+    yy = y1 + param * D;
+  }
+  
+  const dx = x - xx;
+  const dy = y - yy;
+  
+  return Math.sqrt(dx * dx + dy * dy);
 }

@@ -181,21 +181,29 @@ function renumberAllLabels(fusedPairsCount) {
     return b.point.Y() - a.point.Y();
   });
   
-  // ÉTAPE 6: Créer un nouveau label pour chaque point ET l'associer au polygone
+  // ÉTAPE 6: Créer des labels DÉPLAÇABLES pour chaque point unique
   const newTextsByPolygon = new Map();
+  const createdLabels = []; // Pour éviter les doublons
+  
   pointsWithPolygon.forEach((item, index) => {
     if (index < newLabels.length) {
       const point = item.point;
       const poly = item.polygon;
       
+      // Créer le label texte DÉPLAÇABLE directement
       const label = board.create('text', [
-        () => point.X(), 
-        () => point.Y() + 0.3,
+        point.X() - 0.3, 
+        point.Y() + 0.3,
         newLabels[index]
       ], {
-        fontSize: 16,
+        fontSize: getGlobalFontSize(),
         anchorX: 'middle',
-        anchorY: 'bottom'
+        anchorY: 'middle',
+        fixed: false,  // Déplaçable
+        highlight: true,
+        cssClass: 'draggable-label',
+        highlightStrokeColor: '#3498db',
+        highlightStrokeWidth: 2
       });
       
       // Associer le label au polygone
@@ -203,8 +211,9 @@ function renumberAllLabels(fusedPairsCount) {
         newTextsByPolygon.set(poly, []);
       }
       newTextsByPolygon.get(poly).push(label);
+      createdLabels.push(label);
       
-      console.log(`✏️  Label "${newLabels[index]}" créé à (${point.X().toFixed(2)}, ${point.Y().toFixed(2)})`);
+      console.log(`✏️  Label déplaçable "${newLabels[index]}" créé à (${point.X().toFixed(2)}, ${point.Y().toFixed(2)})`);
     }
   });
   
