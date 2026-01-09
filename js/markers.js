@@ -1613,34 +1613,32 @@ function updateLengthLabels() {
   const showUnits = document.getElementById("showUnitsCheckbox")?.checked;
   const unit = document.getElementById("unitSelector")?.value || 'cm';
   
-  // Triangle helper (importé depuis drawing.js)
+  // Triangle helper - Détection plus précise avec le théorème de Pythagore
   function isRightTriangle() {
-    if (!points || points.length !== 3) return false;
+    if (!points || points.length !== 3) return { isRight: false, rightAngleIndex: -1 };
     
-    const tolerance = 0.1;
+    // Calculer les longueurs des trois côtés
+    const sides = [
+      { length: Math.hypot(points[1].X() - points[0].X(), points[1].Y() - points[0].Y()), opposite: 2 },
+      { length: Math.hypot(points[2].X() - points[1].X(), points[2].Y() - points[1].Y()), opposite: 0 },
+      { length: Math.hypot(points[0].X() - points[2].X(), points[0].Y() - points[2].Y()), opposite: 1 }
+    ];
     
-    for (let i = 0; i < 3; i++) {
-      const A = points[(i - 1 + 3) % 3];
-      const B = points[i];
-      const C = points[(i + 1) % 3];
-      
-      const v1x = A.X() - B.X();
-      const v1y = A.Y() - B.Y();
-      const v2x = C.X() - B.X();
-      const v2y = C.Y() - B.Y();
-      
-      const dotProduct = v1x * v2x + v1y * v2y;
-      const len1 = Math.hypot(v1x, v1y);
-      const len2 = Math.hypot(v2x, v2y);
-      
-      if (len1 > 0 && len2 > 0) {
-        const cosAngle = dotProduct / (len1 * len2);
-        const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
-        
-        if (Math.abs(angle - Math.PI/2) < tolerance) {
-          return { isRight: true, rightAngleIndex: i };
-        }
-      }
+    // Trier les côtés par longueur
+    sides.sort((a, b) => a.length - b.length);
+    
+    const a = sides[0].length;
+    const b = sides[1].length;
+    const c = sides[2].length; // hypoténuse (le plus long)
+    
+    // Théorème de Pythagore : a² + b² = c²
+    // Tolérance relative de 1% pour tenir compte des erreurs de calcul
+    const tolerance = 0.01 * (c * c);
+    const pythagorasCheck = Math.abs(a * a + b * b - c * c);
+    
+    if (pythagorasCheck < tolerance) {
+      // C'est un triangle rectangle, l'angle droit est au sommet opposé à l'hypoténuse
+      return { isRight: true, rightAngleIndex: sides[2].opposite };
     }
     
     return { isRight: false, rightAngleIndex: -1 };
@@ -1655,6 +1653,33 @@ function updateLengthLabels() {
   } else {
     if (hypotenuseGroup) hypotenuseGroup.style.display = 'none';
     if (hideHypotenuseCheckbox) hideHypotenuseCheckbox.checked = false;
+  }
+  
+  // Afficher/masquer l'option triangle semblable (uniquement pour les triangles)
+  const similarTriangleCheckbox = document.getElementById('toggleSimilarTriangle');
+  const similarTriangleLabel = document.getElementById('similarTriangleLabel');
+  const similarTriangleGroup = document.getElementById('similarTriangleRatioGroup');
+  
+  if (points.length === 3) {
+    // C'est un triangle, on montre l'option
+    if (similarTriangleLabel) {
+      similarTriangleLabel.style.display = 'block';
+      // Si la checkbox est cochée, créer le triangle semblable
+      if (similarTriangleCheckbox && similarTriangleCheckbox.checked) {
+        const ratioSlider = document.getElementById('similarTriangleRatioSlider');
+        const ratio = ratioSlider ? parseFloat(ratioSlider.value) : 2.0;
+        setTimeout(() => createSimilarTriangle(ratio), 100);
+      }
+    }
+  } else {
+    // Ce n'est pas un triangle, on cache l'option
+    if (similarTriangleLabel) {
+      similarTriangleLabel.style.display = 'none';
+      if (similarTriangleGroup) similarTriangleGroup.style.display = 'none';
+      if (similarTriangleCheckbox) similarTriangleCheckbox.checked = false;
+      // Nettoyer le triangle semblable s'il existe
+      removeSimilarTriangle();
+    }
   }
   
   const hideHypotenuse = hideHypotenuseCheckbox && hideHypotenuseCheckbox.checked;

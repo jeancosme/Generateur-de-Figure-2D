@@ -41,6 +41,11 @@ function generateFigure() {
   if (intersectionLabel) try { board.removeObject(intersectionLabel); } catch (e) {}
   if (intersectionPoint) try { board.removeObject(intersectionPoint); } catch (e) {}
 
+  // Nettoyer le triangle semblable
+  if (similarTriangle) try { board.removeObject(similarTriangle); } catch (e) {}
+  similarTrianglePoints.forEach(p => { try { board.removeObject(p); } catch (e) {} });
+  similarTriangleTexts.forEach(t => { try { board.removeObject(t); } catch (e) {} });
+
   // Reset des variables globales via config.js
   resetAllGlobalVariables();
 
@@ -1183,6 +1188,37 @@ function setupEventListeners() {
     }
   }, 'Intensité main levée');
 
+  // Triangle semblable
+  addSafeEventListener('toggleSimilarTriangle', 'change', (e) => {
+    const isEnabled = e.target.checked;
+    const ratioGroup = document.getElementById('similarTriangleRatioGroup');
+    
+    if (isEnabled) {
+      if (ratioGroup) ratioGroup.style.display = 'block';
+      const ratioSlider = document.getElementById('similarTriangleRatioSlider');
+      const ratio = ratioSlider ? parseFloat(ratioSlider.value) : 2.0;
+      createSimilarTriangle(ratio);
+    } else {
+      if (ratioGroup) ratioGroup.style.display = 'none';
+      removeSimilarTriangle();
+    }
+  }, 'Triangle semblable');
+  
+  // Event listener pour le curseur de rapport d'agrandissement
+  addSafeEventListener('similarTriangleRatioSlider', 'input', (e) => {
+    const ratioValue = document.getElementById('similarTriangleRatioValue');
+    const ratio = parseFloat(e.target.value);
+    if (ratioValue) {
+      ratioValue.textContent = ratio.toFixed(1);
+    }
+    
+    // Mettre à jour le triangle semblable avec le nouveau ratio
+    const similarTriangleCheckbox = document.getElementById('toggleSimilarTriangle');
+    if (similarTriangleCheckbox && similarTriangleCheckbox.checked) {
+      updateSimilarTriangle(ratio);
+    }
+  }, 'Rapport d\'agrandissement');
+
   // ==========================================
   // 5. INTERACTION AVEC LA LISTE DES FIGURES
   // ==========================================
@@ -1410,6 +1446,7 @@ function changeLanguage(lang) {
   updateCheckboxLabel('toggleRadius', 'showRadius');
   updateCheckboxLabel('toggleDiameter', 'showDiameter');
   updateCheckboxLabel('toggleHandDrawn', 'handDrawn');
+  updateCheckboxLabel('toggleSimilarTriangle', 'similarTriangle');
   
   // Label d'intensité
   const intensityLabel = document.querySelector('label[for="handDrawnIntensitySlider"]');
@@ -1417,6 +1454,14 @@ function changeLanguage(lang) {
     const intensityValue = document.getElementById('handDrawnIntensityValue');
     const currentValue = intensityValue ? intensityValue.textContent : '50';
     intensityLabel.innerHTML = `${getTranslation('intensity')}: <span id="handDrawnIntensityValue">${currentValue}</span>%`;
+  }
+  
+  // Label du rapport d'agrandissement
+  const ratioLabel = document.querySelector('label[for="similarTriangleRatioSlider"]');
+  if (ratioLabel) {
+    const ratioValue = document.getElementById('similarTriangleRatioValue');
+    const currentValue = ratioValue ? ratioValue.textContent : '2.0';
+    ratioLabel.innerHTML = `${getTranslation('scalingRatio')}: <span id="similarTriangleRatioValue">${currentValue}</span>`;
   }
   
   // Boutons

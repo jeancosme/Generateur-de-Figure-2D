@@ -352,6 +352,7 @@ function drawEquilateralTriangle(side) {
 
   updateEqualAngleMarkers(document.getElementById("toggleEqualAngles")?.checked);
   addDraggingToPolygon(newPolygon, newPoints, newTexts);
+  updateLengthLabels();
 }
 
 function drawRightTriangle(base, height) {
@@ -380,6 +381,7 @@ function drawRightTriangle(base, height) {
 
   addDraggingToPolygon(newPolygon, newPoints, newTexts);
   updateRightAngleMarkers(document.getElementById("toggleRightAngles").checked);
+  updateLengthLabels();
   console.log("→ Triangle rectangle généré avec base =", base, "et hauteur =", height);
 }
 
@@ -895,10 +897,10 @@ function drawThalesClassic(PQ, PR, PT) {
   const S = board.create('point', [PS * 0.4, 3 - PS * 0.6], { name: '', fixed: true, visible: false });
   
   // Segments principaux
-  const segPR = board.create('segment', [P, R], { strokeColor: 'black', strokeWidth: 2 });
-  const segPS = board.create('segment', [P, S], { strokeColor: 'black', strokeWidth: 2 });
-  const segRS = board.create('segment', [R, S], { strokeColor: 'black', strokeWidth: 2 });
-  const segQT = board.create('segment', [Q, T], { strokeColor: 'black', strokeWidth: 2 });
+  const segPR = board.create('segment', [P, R], { strokeColor: 'black', strokeWidth: 1 });
+  const segPS = board.create('segment', [P, S], { strokeColor: 'black', strokeWidth: 1 });
+  const segRS = board.create('segment', [R, S], { strokeColor: 'black', strokeWidth: 1 });
+  const segQT = board.create('segment', [Q, T], { strokeColor: 'black', strokeWidth: 1 });
   
   // Labels des points
   const labelP = board.create('text', [P.X(), P.Y() + 0.4, getLabel(0)], { fontSize: getGlobalFontSize() });
@@ -955,10 +957,10 @@ function drawThalesPapillon(AB, AC, AD, AE = null) {
   const E = board.create('point', [(AE - AD) * Math.cos(angle + Math.PI), (AE - AD) * Math.sin(angle + Math.PI)], { name: '', fixed: true, visible: false });
   
   // Segments principaux
-  const segBC = board.create('segment', [B, C], { strokeColor: 'black', strokeWidth: 2 });
-  const segDE = board.create('segment', [D, E], { strokeColor: 'black', strokeWidth: 2 });
-  const segBD = board.create('segment', [B, D], { strokeColor: 'black', strokeWidth: 2 });
-  const segCE = board.create('segment', [C, E], { strokeColor: 'black', strokeWidth: 2 });
+  const segBC = board.create('segment', [B, C], { strokeColor: 'black', strokeWidth: 1 });
+  const segDE = board.create('segment', [D, E], { strokeColor: 'black', strokeWidth: 1 });
+  const segBD = board.create('segment', [B, D], { strokeColor: 'black', strokeWidth: 1 });
+  const segCE = board.create('segment', [C, E], { strokeColor: 'black', strokeWidth: 1 });
   
   // Labels des points
   const labelA = board.create('text', [A.X() - 0.3, A.Y() - 0.3, getLabel(0)], { fontSize: getGlobalFontSize() });

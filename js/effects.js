@@ -398,3 +398,131 @@ function createHandDrawnSegmentMultiLayer(startPoint, endPoint) {
   
   return curves;
 }
+
+// ==========================================
+// TRIANGLE SEMBLABLE
+// ==========================================
+
+/**
+ * Crée un triangle semblable au triangle principal
+ * @param {number} ratio - Rapport d'agrandissement (0.5 à 5)
+ */
+function createSimilarTriangle(ratio = 2.0) {
+  // Vérifier qu'on a bien un triangle
+  if (!points || points.length !== 3) {
+    console.warn('⚠️ Triangle semblable : nécessite exactement 3 points');
+    return;
+  }
+  
+  // Nettoyer l'ancien triangle semblable s'il existe
+  removeSimilarTriangle();
+  
+  console.log(`🔺 Création d'un triangle semblable avec ratio ${ratio}`);
+  
+  // Calculer le centre de gravité du triangle original
+  const centerX = (points[0].X() + points[1].X() + points[2].X()) / 3;
+  const centerY = (points[0].Y() + points[1].Y() + points[2].Y()) / 3;
+  
+  // Décalage pour positionner le triangle semblable à côté
+  const offsetX = 5; // Décalage horizontal
+  const offsetY = 0;
+  
+  // Créer les nouveaux points
+  const newPoints = [];
+  for (let i = 0; i < 3; i++) {
+    const originalPoint = points[i];
+    
+    // Vecteur depuis le centre vers le point
+    const dx = originalPoint.X() - centerX;
+    const dy = originalPoint.Y() - centerY;
+    
+    // Appliquer le ratio et le décalage
+    const newX = centerX + dx * ratio + offsetX;
+    const newY = centerY + dy * ratio + offsetY;
+    
+    const newPoint = board.create('point', [newX, newY], {
+      name: '',
+      fixed: true,
+      visible: false
+    });
+    
+    newPoints.push(newPoint);
+  }
+  
+  // Créer le polygone semblable
+  const newPolygon = board.create('polygon', newPoints, {
+    fillColor: 'transparent',
+    strokeColor: '#0066cc',
+    strokeWidth: 1,
+    borders: {
+      strokeColor: '#0066cc',
+      strokeWidth: 1
+    },
+    fixed: true,
+    hasInnerPoints: false
+  });
+  
+  // Créer les labels des points
+  const labelOffsets = [
+    { dx: 0, dy: 0.4 },    // Point 0 : en haut
+    { dx: -0.4, dy: -0.3 }, // Point 1 : en bas à gauche
+    { dx: 0.4, dy: -0.3 }   // Point 2 : en bas à droite
+  ];
+  
+  const newTexts = [];
+  for (let i = 0; i < 3; i++) {
+    const label = board.create('text', [
+      newPoints[i].X() + labelOffsets[i].dx,
+      newPoints[i].Y() + labelOffsets[i].dy,
+      `${getLabel(i)}'`  // Ajouter un prime (') pour différencier
+    ], {
+      fontSize: getGlobalFontSize(),
+      fixed: true
+    });
+    
+    newTexts.push(label);
+  }
+  
+  // Stocker dans les variables globales
+  similarTriangle = newPolygon;
+  similarTrianglePoints = newPoints;
+  similarTriangleTexts = newTexts;
+  isSimilarTriangleMode = true;
+  
+  console.log(`✅ Triangle semblable créé avec succès`);
+  board.update();
+}
+
+/**
+ * Supprime le triangle semblable
+ */
+function removeSimilarTriangle() {
+  if (similarTriangle) {
+    board.removeObject(similarTriangle);
+    similarTriangle = null;
+  }
+  
+  similarTrianglePoints.forEach(pt => {
+    if (pt) board.removeObject(pt);
+  });
+  similarTrianglePoints = [];
+  
+  similarTriangleTexts.forEach(txt => {
+    if (txt) board.removeObject(txt);
+  });
+  similarTriangleTexts = [];
+  
+  isSimilarTriangleMode = false;
+  
+  board.update();
+}
+
+/**
+ * Met à jour le triangle semblable avec un nouveau ratio
+ * @param {number} ratio - Nouveau rapport d'agrandissement
+ */
+function updateSimilarTriangle(ratio) {
+  if (isSimilarTriangleMode) {
+    createSimilarTriangle(ratio);
+  }
+}

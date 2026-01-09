@@ -92,6 +92,15 @@ let handDrawnElements = [];
 let isHandDrawnMode = false;
 
 // ==========================================
+// TRIANGLE SEMBLABLE
+// ==========================================
+
+let similarTriangle = null;
+let similarTrianglePoints = [];
+let similarTriangleTexts = [];
+let isSimilarTriangleMode = false;
+
+// ==========================================
 // DIVERS
 // ==========================================
 
@@ -181,6 +190,10 @@ function resetAllGlobalVariables() {
   originalPolygon = null;
   handDrawnElements = [];
   isHandDrawnMode = false;
+  similarTriangle = null;
+  similarTrianglePoints = [];
+  similarTriangleTexts = [];
+  isSimilarTriangleMode = false;
   extraElements = [];
   r = null;
   _lengthSyncAttached = false;
@@ -215,6 +228,8 @@ const translations = {
     showDiameter: "Afficher un diamètre",
     handDrawn: "Dessin à main levée",
     intensity: "Intensité",
+    similarTriangle: "Triangle semblable",
+    scalingRatio: "Rapport d'agrandissement",
     exportSVG: "Exporter SVG",
     copy: "Copier",
     reset: "Réinitialiser",
@@ -253,6 +268,8 @@ const translations = {
     showDiameter: "Show diameter",
     handDrawn: "Hand-drawn effect",
     intensity: "Intensity",
+    similarTriangle: "Similar triangle",
+    scalingRatio: "Scaling ratio",
     exportSVG: "Export SVG",
     copy: "Copy",
     reset: "Reset",

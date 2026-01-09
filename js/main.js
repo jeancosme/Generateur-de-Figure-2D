@@ -42,6 +42,9 @@ window.updateEqualAngleMarkers = updateEqualAngleMarkers;
 window.updateDiagonals = updateDiagonals;
 window.updateCircleExtras = updateCircleExtras;
 window.changeLanguage = changeLanguage;
+window.createSimilarTriangle = createSimilarTriangle;
+window.removeSimilarTriangle = removeSimilarTriangle;
+window.updateSimilarTriangle = updateSimilarTriangle;
 
 console.log('✅ Fonctions exposées globalement');
 

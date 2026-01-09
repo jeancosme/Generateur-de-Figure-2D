@@ -114,6 +114,17 @@
           <input type="range" id="handDrawnIntensitySlider" min="0" max="100" value="50" 
                  style="width: 150px; cursor: pointer;">
         </div>
+
+        <label id="similarTriangleLabel" style="display: none;"><input type="checkbox" id="toggleSimilarTriangle"> <span data-en="Similar triangle">Triangle semblable</span></label>
+        
+        <!-- Paramètre du rapport d'agrandissement -->
+        <div id="similarTriangleRatioGroup" style="display: none; margin-left: 20px; margin-top: 8px;">
+          <label for="similarTriangleRatioSlider" style="font-size: 13px; display: block; margin-bottom: 5px;">
+            <span data-en="Scaling ratio">Rapport d'agrandissement</span>: <span id="similarTriangleRatioValue">2.0</span>
+          </label>
+          <input type="range" id="similarTriangleRatioSlider" min="0.5" max="5" step="0.1" value="2.0" 
+                 style="width: 150px; cursor: pointer;">
+        </div>
       </div>
     </div>
 
